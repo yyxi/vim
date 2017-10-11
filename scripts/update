@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# @description update vim bundles
+# @import console/die
+# @dependency make
+# @dependency cmake
+# @dependency vim
+
+main () {
+    strict  true
+    verbose true
+
+    if [ -d "$HOME/.vim" ] || [ -L "$HOME/.vim" ]; then
+        if [ ! -f "$HOME/.vim/.ready" ]
+        then
+            _ die "install bundles first"
+        else
+            local path
+            path="$HOME/.vim/bundle"
+            local OPWD=$PWD ; cd "${path}" || exit
+            command=`echo vim -N -u "$HOME/.vim/vimrc-dein" \
+                -c '"try | call dein#update() | finally | qall! | endtry"' \
+                -U NONE -i NONE -V1 -e -s`
+
+            script -qc "${command}"
+            echo ''
+            cd "${OPWD}" || exit
+            touch "$HOME/.vim/vimrc"
+        fi
+    fi
+}
+

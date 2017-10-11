@@ -1,0 +1,6 @@
+[submodule "vendor/manage"]
+	path = vendor/manage
+	url = https://github.com/epiloque/manage.git
+[submodule "vendor/dein.vim"]
+	path = vendor/dein.vim
+	url = https://github.com/Shougo/dein.vim.git

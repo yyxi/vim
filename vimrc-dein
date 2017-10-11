@@ -1,0 +1,29 @@
+if 0 | endif
+set shell=bash
+
+if has('vim_starting')
+    if &compatible
+        set nocompatible
+    endif
+endif
+
+set rtp+=~/.vim/vendor/dein.vim
+
+call dein#begin(expand('~/.vim/bundle'))
+
+if filereadable(expand('~/.vim/vim-bundles'))
+  source ~/.vim/vim-bundles
+endif
+
+call dein#end()
+call dein#save_state()
+
+filetype plugin indent on
+syntax enable
+
+let mapleader=","
+let maplocalleader="\\"
+let g:dein#install_progress_type="echo"
+let g:dein#types#git#clone_depth="1"
+
+

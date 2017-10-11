@@ -1,0 +1,16 @@
+language: bash
+sudo: false
+addons:
+  apt:
+    packages:
+    - vim-nox
+    - build-essential
+    - cmake
+    - python-dev
+    - bc
+script:
+- ln -s $(pwd)/vimrc ~/.vimrc
+- ln -s $(pwd) ~/.vim
+- cd ~/.vim
+- ./manage install
+- ./manage clean

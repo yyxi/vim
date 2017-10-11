@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+#
+# @description install vim bundles
+# @dependency make
+# @dependency cmake
+# @dependency vim
+
+main () {
+    strict  true
+    verbose true
+
+    if [ -d "$HOME/.vim" ] || [ -L "$HOME/.vim" ]; then
+        local path
+        path="$HOME/.vim/bundle"
+        local OPWD=$PWD ; cd "${path}" || exit
+
+        git pull --recurse-submodules
+
+        cd "${path}" || exit
+        command=`echo vim -N -u "$HOME/.vim/vimrc-dein" \
+            -c '"try | call dein#install() | finally | qall! | endtry"' \
+            -U NONE -i NONE -V1 -e -s`
+
+        script -qc "${command}"
+        [ ! -e "$HOME/.vim/.ready" ] && touch "$HOME/.vim/.ready"
+        touch "$HOME/.vim/vimrc"
+        cd "${OPWD}" || exit
+    fi
+}
+
