@@ -24,7 +24,7 @@ syntax enable
 set fenc=utf8 enc=utf8 secure so=5 shm=atI vb t_vb= novb noeb
 set dir=~/.vim/tmp/sessions bdir=~/.vim/tmp/backup
 set nosol tf nonu ru sc sb spr nofen ve=onemore backup
-set gcr=a:blinkon0 ls=2 hi=5000 cot=longest,menuone
+set gcr=a:blinkon0 ls=2 hi=5000
 set hls is ws ic scs so=3 sj=5 siso=7 ss=1 fo-=o sw=4 sts=4 et ai hid
 set cpt+=kspell cpt-=t bs=indent,eol,start vi+=! vi='250,<0,r/tmp
 set lcs=eol:¬,trail:· shm+=filmnrxoOtT ww=<,>,h,l noswf mat=2 ar
@@ -43,12 +43,6 @@ catch /Unknown option/
     " versions of Vim prior to 7.3
 endtry
 
-" Do not display "Pattern not found" messages during YouCompleteMe completion
-try
-  set shortmess+=c
-catch /E539: Illegal character/
-endtry
-
 let g:dein#types#git#clone_depth="1"
 let mapleader="\\"
 
@@ -58,19 +52,13 @@ if filereadable(expand("~/.vim/.ready"))
     nn <left> :BufMRUPrev<CR>
 
     "Mnemonic: [F]ile
-    let g:ctrlp_map = '<leader>f'
+    nn <leader>f :Files<CR>
 
     "Mnemonic: [B]uffer
-    nn <leader>b :CtrlPBuffer<CR>
+    nn <leader>b :Buffers<CR>
 
     "Mnemonic: [C]hoose Window
     nn <leader>c :ChooseWin<CR>
-
-    "Mnemonic: [M]ost Recently Used
-    nn <leader>m :CtrlPMRU<CR>
-
-    "Mnemonic: [S]yntax
-    " nn <leader>s :SyntasticCheck<CR>
 
     "Mnemonic: [U]ndo
     nn <leader>u :UndotreeToggle<CR>

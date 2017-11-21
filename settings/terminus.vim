@@ -4,3 +4,4 @@ let g:TerminusNormalCursorShape=1
 let g:TerminusReplaceCursorShape=1
 let g:TerminusMouse=1
 let g:TerminusFocusReporting=1
+let g:TerminusBracketedPaste=0
