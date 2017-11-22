@@ -1,4 +1,2 @@
-let g:polyglot_disabled = [ 'go',
-                          \ 'javascript',
-                          \ 'typescript' ]
+let g:polyglot_disabled = [ 'go' ]
 

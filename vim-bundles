@@ -2,9 +2,7 @@
 
 call dein#add('chrisbra/csv.vim')
 call dein#add('fatih/vim-go')
-call dein#add('leafgarland/typescript-vim')
 call dein#add('ledger/vim-ledger')
-call dein#add('pangloss/vim-javascript')
 call dein#add('sheerun/vim-polyglot')
 "
 call dein#add('bling/vim-airline')
