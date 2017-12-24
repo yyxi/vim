@@ -37,6 +37,10 @@ set noeb vb t_vb=
 set bkc=yes
 au GUIEnter * set vb t_vb=
 
+if v:version > 703 || v:version == 703 && has('patch541')
+  set formatoptions+=j
+endif
+
 try
     set udir=~/.vim/tmp/undo cc=+1 undofile
 catch /Unknown option/
