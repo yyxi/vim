@@ -8,6 +8,12 @@ let g:ale_linters = {
     \ 'typescript': ['tslint', 'tsserver', 'typecheck'],
     \ 'vue': []
     \}
-" let g:ale_linters = {'vue': []}
-" let g:ale_linter_aliases = {'vue': 'html'}
 
+let g:ale_fixers = {
+    \ 'typescript': ['tslint', 'prettier', 'trim_whitespace'],
+    \ 'javascript': ['eslint', 'prettier', 'trim_whitespace'],
+    \}
+
+let g:ale_javascript_prettier_options = '--single-quote --no-semi --trailing-comma none'
+let g:ale_typescript_prettier_options = '--parser typescript --trailing-comma none --no-semi --single-quote'
+" let g:ale_scss_prettier_options = '--parser scss --trailing-comma none --no-semi --single-quote --tab-width 1'
