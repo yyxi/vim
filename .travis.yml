@@ -13,4 +13,3 @@ script:
 - ln -s $(pwd) ~/.vim
 - cd ~/.vim
 - ./manage install
-- ./manage clean
