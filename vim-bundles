@@ -21,7 +21,6 @@ call dein#add('mbbill/undotree')
 call dein#add('mhinz/vim-sayonara')
 call dein#add('mildred/vim-bufmru')
 call dein#add('t9md/vim-choosewin')
-call dein#add('takac/vim-hardtime')
 call dein#add('tomtom/tcomment_vim')
 call dein#add('tpope/vim-fugitive')
 call dein#add('tpope/vim-repeat')
@@ -32,12 +31,10 @@ call dein#add('wincent/terminus')
 
 " COMPLETION
 
-call dein#add('lifepillar/vim-mucomplete')
-call dein#add('Quramy/tsuquyomi')
-
-" call dein#add('prabirshrestha/async.vim')
-" call dein#add('prabirshrestha/vim-lsp', { 'depends': 'async.vim' })
-" call dein#add('prabirshrestha/asyncomplete.vim', { 'depends': 'vim-lsp' })
-" call dein#add('prabirshrestha/asyncomplete-lsp.vim', { 'depends': 'asyncomplete.vim' })
-
-" call dein#add('maralla/completor.vim')
+if has('nvim')
+    call dein#add('Shougo/deoplete.nvim')
+    call dein#add('mhartington/nvim-typescript')
+else
+    call dein#add('lifepillar/vim-mucomplete')
+    call dein#add('Quramy/tsuquyomi')
+endif

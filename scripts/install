@@ -1,29 +1,38 @@
 #!/usr/bin/env bash
 #
-# @description install vim bundles
-# @dependency make
-# @dependency cmake
-# @dependency vim
+# @description install vim/nvim bundles
+# @import lang/exists
 
 main () {
     strict  true
     verbose true
 
-    if [ -d "$HOME/.vim" ] || [ -L "$HOME/.vim" ]; then
+    [ -d "$HOME/.vim-dist/bin/" ] && PATH="$HOME/.vim-dist/bin:$PATH"
+    [ -d "$HOME/.neovim-dist/bin/" ] && PATH="$HOME/.neovim-dist/bin:$PATH"
+
+    local executable="vim"
+
+    if _ exists nvim
+    then
+        executable="nvim"
+    fi
+
+
+    if [ -d "${MANAGE_REPOSITORY}" ] || [ -L "${MANAGE_REPOSITORY}" ]; then
         local path
-        path="$HOME/.vim/bundle"
+        path="${MANAGE_REPOSITORY}/bundle"
         local OPWD=$PWD ; cd "${path}" || exit
 
-        git pull --recurse-submodules
+        git submodule update --init --recursive
 
         cd "${path}" || exit
-        command=`echo vim -N -u "$HOME/.vim/vimrc-dein" \
+        command=`echo ${executable} -N -u "${MANAGE_REPOSITORY}/vimrc-dein" \
             -c '"try | call dein#install() | finally | qall! | endtry"' \
             -U NONE -i NONE -V1 -e -s`
 
         script -qc "${command}"
-        [ ! -e "$HOME/.vim/.ready" ] && touch "$HOME/.vim/.ready"
-        touch "$HOME/.vim/vimrc"
+        [ ! -e "${MANAGE_REPOSITORY}/.ready" ] && touch "${MANAGE_REPOSITORY}/.ready"
+        touch "${MANAGE_REPOSITORY}/vimrc"
         cd "${OPWD}" || exit
     fi
 }

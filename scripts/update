@@ -1,31 +1,39 @@
 #!/usr/bin/env bash
 #
-# @description update vim bundles
+# @description update vim/nvim bundles
 # @import console/die
-# @dependency make
-# @dependency cmake
-# @dependency vim
+# @import lang/exists
 
 main () {
     strict  true
     verbose true
 
-    if [ -d "$HOME/.vim" ] || [ -L "$HOME/.vim" ]; then
-        if [ ! -f "$HOME/.vim/.ready" ]
+    [ -d "$HOME/.vim-dist/bin/" ] && PATH="$HOME/.vim-dist/bin:$PATH"
+    [ -d "$HOME/.neovim-dist/bin/" ] && PATH="$HOME/.neovim-dist/bin:$PATH"
+
+    local executable="vim"
+
+    if _ exists nvim
+    then
+        executable="nvim"
+    fi
+
+    if [ -d "${MANAGE_REPOSITORY}" ] || [ -L "${MANAGE_REPOSITORY}" ]; then
+        if [ ! -f "${MANAGE_REPOSITORY}/.ready" ]
         then
             _ die "install bundles first"
         else
             local path
-            path="$HOME/.vim/bundle"
+            path="${MANAGE_REPOSITORY}/bundle"
             local OPWD=$PWD ; cd "${path}" || exit
-            command=`echo vim -N -u "$HOME/.vim/vimrc-dein" \
+            command=`echo "${executable}" -N -u "${MANAGE_REPOSITORY}/vimrc-dein" \
                 -c '"try | call dein#update() | finally | qall! | endtry"' \
                 -U NONE -i NONE -V1 -e -s`
 
             script -qc "${command}"
             echo ''
             cd "${OPWD}" || exit
-            touch "$HOME/.vim/vimrc"
+            touch "${MANAGE_REPOSITORY}/vimrc"
         fi
     fi
 }
