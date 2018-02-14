@@ -1,4 +1,6 @@
 if has('nvim')
+    " TODO: https://github.com/mhartington/nvim-typescript/issues/115
+    let deoplete#num_processes = 1
     let g:deoplete#enable_at_startup = 1
     let g:deoplete#max_menu_width = 50
     let g:deoplete#auto_complete_delay = 25
