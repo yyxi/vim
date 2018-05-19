@@ -68,6 +68,9 @@ if filereadable(expand("~/.vim/.ready"))
     "Mnemonic: [U]ndo
     nn <leader>u :UndotreeToggle<CR>
 
+    "Mnemonic: Fi[x]
+    nn <leader>x :ALEFix<CR>
+
     for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
       exe 'source' fpath
     endfor
