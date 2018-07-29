@@ -4,7 +4,8 @@ call dein#add('chrisbra/csv.vim')
 call dein#add('fatih/vim-go')
 call dein#add('ledger/vim-ledger')
 call dein#add('sheerun/vim-polyglot')
-"
+call dein#add('HerringtonDarkholme/yats.vim')
+
 call dein#add('bling/vim-airline')
 call dein#add('kien/rainbow_parentheses.vim')
 call dein#add('morhetz/gruvbox')
@@ -32,8 +33,8 @@ call dein#add('wincent/terminus')
 " COMPLETION
 
 if has('nvim')
+    call dein#add('mhartington/nvim-typescript', {'build': './install.sh'})
     call dein#add('Shougo/deoplete.nvim')
-    call dein#add('mhartington/nvim-typescript')
 else
     call dein#add('lifepillar/vim-mucomplete')
     call dein#add('Quramy/tsuquyomi')

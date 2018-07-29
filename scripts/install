@@ -32,7 +32,8 @@ main () {
 
         script -qc "${command}"
         [ ! -e "${MANAGE_REPOSITORY}/.ready" ] && touch "${MANAGE_REPOSITORY}/.ready"
-        touch "${MANAGE_REPOSITORY}/vimrc"
+        touch /vimrc"
+        ln -s "${MANAGE_REPOSITORY}" "${HOME}/.config/nvim"
         cd "${OPWD}" || exit
     fi
 }
