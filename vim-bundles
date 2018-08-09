@@ -5,6 +5,7 @@ call dein#add('fatih/vim-go')
 call dein#add('ledger/vim-ledger')
 call dein#add('sheerun/vim-polyglot')
 call dein#add('HerringtonDarkholme/yats.vim')
+call dein#add('sgur/vim-editorconfig')
 
 call dein#add('bling/vim-airline')
 call dein#add('kien/rainbow_parentheses.vim')
