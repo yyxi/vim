@@ -40,11 +40,6 @@ autocmd FileType mail let g:airline#extensions#whitespace#checks = [ 'indent' ]
 
 function CheckConsole()
     let l:isconsole = 0
-    if exists('$ISCONSOLE')
-        let l:isconsole = 1
-    else
-        let l:isconsole = 0
-    endif
 
     if exists('$SSH_CLIENT')
         let l:isconsole = 0
@@ -60,7 +55,7 @@ function CheckConsole()
 endfunction
 
 if CheckConsole() == 1
-    set bg=dark term=linux
+    set bg=dark " term=linux
     colo slate
     syntax on
 else
