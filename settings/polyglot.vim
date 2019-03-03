@@ -1,2 +1,2 @@
-let g:polyglot_disabled = [ 'jsx' ]
+let g:polyglot_disabled = [ 'jsx', 'typescript' ]
 

@@ -60,6 +60,7 @@ if CheckConsole() == 1
     syntax on
 else
     set mouse=nv
+    set termguicolors
     colo gruvbox
     set bg=dark
     set noshowmode
