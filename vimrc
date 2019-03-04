@@ -35,7 +35,7 @@ set clipboard=unnamedplus go+=a nuw=6
 set list listchars=tab:¨¨,trail:·,eol:¬
 set noeb vb t_vb=
 set bkc=yes
-set ch=2 noshowmode
+set ch=2 noshowmode nolist
 au GUIEnter * set vb t_vb=
 
 if v:version > 703 || v:version == 703 && has('patch541')
