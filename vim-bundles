@@ -44,3 +44,5 @@ call dein#add('autozimu/LanguageClient-neovim', {
     \ })
 
 call dein#add('HerringtonDarkholme/yats.vim', { 'merged': 0  })
+
+call dein#add('svermeulen/vim-easyclip')
