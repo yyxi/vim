@@ -60,7 +60,9 @@ if CheckConsole() == 1
     syntax on
 else
     set mouse=nv
-    set termguicolors
+    if $COLORTERM == 'truecolor'
+        set termguicolors
+    endif
     colo gruvbox
     set bg=dark
     set noshowmode
