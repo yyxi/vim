@@ -26,11 +26,23 @@ main () {
             local path
             path="${MANAGE_REPOSITORY}/bundle"
             local OPWD=$PWD ; cd "${path}" || exit
-            command=`echo "${executable}" -N -u "${MANAGE_REPOSITORY}/vimrc-dein" \
-                -c '"try | call dein#update() | finally | qall! | endtry"' \
-                -U NONE -i NONE -V1 -e -s`
 
-            script -qc "${command}"
+            if [[ "${executable}" == "vim" ]]
+            then
+                command=`echo "${executable}" -N -u "${MANAGE_REPOSITORY}/vimrc-dein" \
+                    -c '"try | call dein#update() | finally | qall! | endtry"' \
+                    -U NONE -i NONE -V1 -e -s`
+
+                script -qc "${command}"
+            fi
+
+            if [[ "${executable}" == "nvim" ]]
+            then
+                "${executable}" -N -u "${MANAGE_REPOSITORY}/vimrc-dein" \
+                    -c 'try | call dein#update() | endtry' \
+                    +UpdateRemotePlugins +qa -U NONE -i NONE -V0 --headless
+            fi
+
             echo ''
             cd "${OPWD}" || exit
             touch "${MANAGE_REPOSITORY}/vimrc"
