@@ -30,17 +30,16 @@ call dein#add('w0rp/ale')
 call dein#add('wincent/terminus')
 
 " COMPLETION
-"
+
+call dein#add('HerringtonDarkholme/yats.vim', { 'merged': 0  })
+call dein#add('mhartington/nvim-typescript', {'build': './install.sh'})
 call dein#add('roxma/nvim-yarp')
-
 call dein#add('ncm2/ncm2')
-
 call dein#add('ncm2/ncm2-bufword')
 call dein#add('ncm2/ncm2-path')
 
-call dein#add('autozimu/LanguageClient-neovim', {
-    \ 'rev': 'next',
-    \ 'build': 'bash install.sh',
-    \ })
+" call dein#add('autozimu/LanguageClient-neovim', {
+"     \ 'rev': 'next',
+"     \ 'build': 'bash install.sh',
+"     \ })
 
-call dein#add('HerringtonDarkholme/yats.vim', { 'merged': 0  })

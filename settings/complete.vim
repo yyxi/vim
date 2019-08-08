@@ -20,32 +20,32 @@ inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 
 " Required for operations modifying multiple buffers like rename.
-set hidden
+" set hidden
 
-nnoremap <F5> :call LanguageClient_contextMenu()<CR>
-
-let g:LanguageClient_serverCommands = {
-    \ 'rust': ['~/.cargo/bin/rustup', 'run', 'stable', 'rls'],
-    \ 'javascript': ['javascript-typescript-stdio'],
-    \ 'typescript': ['javascript-typescript-stdio'],
-    \ 'javascript.jsx': ['javascript-typescript-stdio'],
-    \ 'python': ['/usr/local/bin/pyls'],
-    \ }
-
-let g:LanguageClient_windowLogMessageLevel="Error"
-let g:LanguageClient_loggingLevel="Error"
-
-nnoremap <buffer>
-  \ <leader>s :call LanguageClient_textDocument_documentSymbol()<cr>
-
-function LC_maps()
-    if has_key(g:LanguageClient_serverCommands, &filetype)
-        nnoremap <buffer> <silent> K :call LanguageClient#textDocument_hover()<cr>
-        nnoremap <buffer> <silent> gd :call LanguageClient#textDocument_definition()<CR>
-        nnoremap <buffer> <silent> <F2> :call LanguageClient#textDocument_rename()<CR>
-    endif
-endfunction
-
-autocmd FileType * call LC_maps()
-
-let g:LanguageClient_diagnosticsEnable=0
+" nnoremap <F5> :call LanguageClient_contextMenu()<CR>
+"
+" let g:LanguageClient_serverCommands = {
+"     \ 'rust': ['~/.cargo/bin/rustup', 'run', 'stable', 'rls'],
+"     \ 'javascript': ['javascript-typescript-stdio'],
+"     \ 'typescript': ['javascript-typescript-stdio'],
+"     \ 'javascript.jsx': ['javascript-typescript-stdio'],
+"     \ 'python': ['/usr/local/bin/pyls'],
+"     \ }
+"
+" let g:LanguageClient_windowLogMessageLevel="Error"
+" let g:LanguageClient_loggingLevel="Error"
+"
+" nnoremap <buffer>
+"   \ <leader>s :call LanguageClient_textDocument_documentSymbol()<cr>
+"
+" function LC_maps()
+"     if has_key(g:LanguageClient_serverCommands, &filetype)
+"         nnoremap <buffer> <silent> K :call LanguageClient#textDocument_hover()<cr>
+"         nnoremap <buffer> <silent> gd :call LanguageClient#textDocument_definition()<CR>
+"         nnoremap <buffer> <silent> <F2> :call LanguageClient#textDocument_rename()<CR>
+"     endif
+" endfunction
+"
+" autocmd FileType * call LC_maps()
+"
+" let g:LanguageClient_diagnosticsEnable=0
