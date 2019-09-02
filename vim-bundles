@@ -4,6 +4,7 @@ call dein#add('chrisbra/csv.vim')
 call dein#add('ledger/vim-ledger')
 call dein#add('sheerun/vim-polyglot')
 call dein#add('sgur/vim-editorconfig')
+call dein#add('vim-scripts/ferm.vim')
 
 call dein#add('bling/vim-airline')
 call dein#add('kien/rainbow_parentheses.vim')
