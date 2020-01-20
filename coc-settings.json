@@ -1,0 +1,11 @@
+{
+  "eslint.packageManager": "npm",
+  "eslint.autoFixOnSave": false,
+  "prettier.eslintIntegration": true,
+  "list.nextKeymap": "<C-n>",
+  "list.previousKeymap": "<C-p>",
+  "list.maxHeight": 15,
+  "list.insertMappings": {
+    "<C-c>": "do:exit"
+  }
+}

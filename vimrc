@@ -53,6 +53,7 @@ let mapleader="\\"
 
 if filereadable(expand("~/.vim/.ready"))
     nn <space> :BufMRUNext<CR>
+    nn <leader><space> :BufMRUPrev<CR>
     nn <right> :BufMRUNext<CR>
     nn <left> :BufMRUPrev<CR>
 
@@ -62,14 +63,42 @@ if filereadable(expand("~/.vim/.ready"))
     "Mnemonic: [B]uffer
     nn <leader>b :Buffers<CR>
 
-    "Mnemonic: [C]hoose Window
-    nn <leader>c :ChooseWin<CR>
+    "Mnemonic: Choose [W]indow
+    nn <leader>w :ChooseWin<CR>
 
     "Mnemonic: [U]ndo
     nn <leader>u :UndotreeToggle<CR>
 
     "Mnemonic: Fi[x]
-    nn <leader>x :ALEFix<CR>
+    nn <leader>x :call CocAction('format')<CR>
+
+    "Mnemonic: [C]ommands
+    nnoremap <silent> <leader>c  :<C-u>CocList commands<cr>
+
+    "Mnemonic: Show all [d]iagnostics
+    nnoremap <silent> <leader>d  :<C-u>CocList diagnostics<cr>
+
+    "Mnemonic: Manage [E]xtensions
+    nnoremap <silent> <leader>e  :<C-u>CocList extensions<cr>
+
+    "Mnemonic: [Outline]
+    nnoremap <silent> <leader>o  :<C-u>CocList outline<cr>
+
+    "Mnemonic: [S]ymbols
+    nnoremap <silent> <leader>s  :<C-u>CocList -I symbols<cr>
+
+    "Mnemonic: [R]emap for [R]ename current word
+    nmap <leader>r <Plug>(coc-rename)
+
+    "Mnemonic: [Q]uiet
+    nmap <leader>q  <Plug>(coc-fix-current)
+
+    "Mnemonic: [A]ction
+    nmap <leader>a  <Plug>(coc-codeaction)
+
+    "Mnemonic: [N]ext [P]rev
+    nmap <silent> <C-p> <Plug>(coc-diagnostic-prev)
+    nmap <silent> <C-n> <Plug>(coc-diagnostic-next)
 
     for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
       exe 'source' fpath
