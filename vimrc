@@ -34,9 +34,10 @@ set wig+=*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]
 set clipboard=unnamedplus go+=a nuw=6
 set list listchars=tab:¨¨,trail:·,eol:¬
 set noeb vb t_vb=
-set bkc=yes
+set bkc=yes nowrap
 set ch=2 noshowmode nolist
 au GUIEnter * set vb t_vb=
+set formatoptions-=t
 
 if v:version > 703 || v:version == 703 && has('patch541')
   set formatoptions+=j
@@ -57,7 +58,7 @@ if filereadable(expand("~/.vim/.ready"))
     nn <right> :BufMRUNext<CR>
     nn <left> :BufMRUPrev<CR>
 
-    "Mnemonic: [F]ile
+    "Mnemonic: [F]iles
     nn <leader>f :Files<CR>
 
     "Mnemonic: [B]uffer
@@ -65,9 +66,6 @@ if filereadable(expand("~/.vim/.ready"))
 
     "Mnemonic: Choose [W]indow
     nn <leader>w :ChooseWin<CR>
-
-    "Mnemonic: [U]ndo
-    nn <leader>u :UndotreeToggle<CR>
 
     "Mnemonic: Fi[x]
     nn <leader>x :call CocAction('format')<CR>
@@ -99,6 +97,18 @@ if filereadable(expand("~/.vim/.ready"))
     "Mnemonic: [N]ext [P]rev
     nmap <silent> <C-p> <Plug>(coc-diagnostic-prev)
     nmap <silent> <C-n> <Plug>(coc-diagnostic-next)
+
+    "Mnemonic: [G]oto
+    nmap <silent> gd <Plug>(coc-definition)
+    nmap <silent> gy <Plug>(coc-type-definition)
+    nmap <silent> gi <Plug>(coc-implementation)
+    nmap <silent> gr <Plug>(coc-references)
+
+    "Mnemonic: Ali[gn]
+    "Start interactive EasyAlign in visual mode (e.g. vipga)
+    xmap gn <Plug>(EasyAlign)
+    "Start interactive EasyAlign for a motion/text object (e.g. gaip)
+    nmap gn <Plug>(EasyAlign)
 
     for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
       exe 'source' fpath

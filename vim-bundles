@@ -7,9 +7,7 @@ call dein#add('sgur/vim-editorconfig')
 call dein#add('vim-scripts/ferm.vim')
 
 call dein#add('bling/vim-airline')
-call dein#add('kien/rainbow_parentheses.vim')
-call dein#add('morhetz/gruvbox')
-call dein#add('vim-airline/vim-airline-themes')
+call dein#add('l5x/monocolor')
 
 call dein#add('airblade/vim-gitgutter')
 call dein#add('christoomey/vim-sort-motion')
@@ -18,8 +16,6 @@ call dein#add('jiangmiao/auto-pairs')
 call dein#add('junegunn/fzf', { 'build': './install --bin', 'merged': 0 })
 call dein#add('junegunn/fzf.vim', { 'depends': 'fzf' })
 call dein#add('justinmk/vim-sneak')
-call dein#add('mbbill/undotree')
-" call dein#add('mhinz/vim-sayonara')
 call dein#add('mildred/vim-bufmru')
 call dein#add('t9md/vim-choosewin')
 call dein#add('tomtom/tcomment_vim')
@@ -28,8 +24,14 @@ call dein#add('tpope/vim-repeat')
 call dein#add('tpope/vim-surround')
 call dein#add('unblevable/quick-scope')
 call dein#add('wincent/terminus')
+call dein#add('junegunn/vim-easy-align')
 
 " COMPLETION
 
 call dein#add('neoclide/coc.nvim', {'merged':0, 'rev': 'release'})
 
+" Development
+" call dein#add('cocopon/pgmnt.vim')
+" call dein#add('cocopon/colorswatch.vim')
+" call dein#local('~/.vim/vendor/monocolor')
+" call dein#add('cocopon/inspecthi.vim')
