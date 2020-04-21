@@ -8,7 +8,6 @@ cm wQ wq
 cm Tabe tabe
 cm w!! w !sudo tee % >/dev/null
 im jj <Esc>
-nnoremap K <nop>
 
 noremap 0 ^
 noremap ^ 0

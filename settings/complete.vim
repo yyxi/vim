@@ -42,11 +42,11 @@ inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
 " Or use `complete_info` if your vim support it, like:
 " inoremap <expr> <cr> complete_info()["selected"] != "-1" ? "\<C-y>" : "\<C-g>u\<CR>"
 
-" Remap keys for gotos
-nmap <silent> gd <Plug>(coc-definition)
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
+" " Remap keys for gotos
+" nmap <silent> gd <Plug>(coc-definition)
+" nmap <silent> gy <Plug>(coc-type-definition)
+" nmap <silent> gi <Plug>(coc-implementation)
+" nmap <silent> gr <Plug>(coc-references)
 
 " Use K to show documentation in preview window
 nnoremap <silent> K :call <SID>show_documentation()<CR>
@@ -130,7 +130,7 @@ endif
 " Required for operations modifying multiple buffers like rename.
 " set hidden
 
-" nnoremap <F5> :call LanguageClient_contextMenu()<CR>
+nnoremap <F5> :call LanguageClient_contextMenu()<CR>
 "
 " let g:LanguageClient_serverCommands = {
 "     \ 'rust': ['~/.cargo/bin/rustup', 'run', 'stable', 'rls'],
