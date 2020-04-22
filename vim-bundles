@@ -9,8 +9,7 @@ Plug 'vim-scripts/ferm.vim'
 
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
-"Plug 'l5x/monocolor'
-Plug '~/devel/monocolor'
+Plug 'l5x/monocolor'
 
 Plug 'airblade/vim-gitgutter'
 Plug 'christoomey/vim-sort-motion'

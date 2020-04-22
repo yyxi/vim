@@ -29,13 +29,14 @@ highlight clear SignColumn
 " autocmd FileType mail let g:airline#extensions#whitespace#checks = [ 'indent' ]
 
 if $TERM=~'linux'
-    " set bg=dark " term=linux
+    set bg=dark
     colo default
     syntax on
 else
     set mouse=nv
+    set bg=light
     set termguicolors
-    colo monocolor_white
+    colo monocolor
 endif
 
 augroup quickfix
