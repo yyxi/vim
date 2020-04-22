@@ -8,6 +8,7 @@ Plug 'sgur/vim-editorconfig'
 Plug 'vim-scripts/ferm.vim'
 
 Plug 'bling/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
 "Plug 'l5x/monocolor'
 Plug '~/devel/monocolor'
 
@@ -17,6 +18,8 @@ Plug 'haya14busa/incsearch.vim'
 Plug 'jiangmiao/auto-pairs'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
+Plug 'junegunn/vim-easy-align'
+Plug 'junegunn/goyo.vim'
 Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
 Plug 't9md/vim-choosewin'
@@ -24,9 +27,10 @@ Plug 'tomtom/tcomment_vim'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
+Plug 'tpope/vim-sensible'
+Plug 'farmergreg/vim-lastplace'
 Plug 'unblevable/quick-scope'
 Plug 'wincent/terminus'
-Plug 'junegunn/vim-easy-align'
 
 " COMPLETION
 

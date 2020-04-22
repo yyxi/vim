@@ -12,6 +12,8 @@ if filereadable(expand('~/.vim/vim-bundles'))
   source ~/.vim/vim-bundles
 endif
 
+silent! source $VIMRUNTIME/defaults.vim
+
 filetype plugin indent on
 syntax enable
 
