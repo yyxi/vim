@@ -1,37 +1,41 @@
 " vim: ft=vim
+call plug#begin('~/.vim/bundle')
 
-call dein#add('chrisbra/csv.vim')
-call dein#add('ledger/vim-ledger')
-call dein#add('sheerun/vim-polyglot')
-call dein#add('sgur/vim-editorconfig')
-call dein#add('vim-scripts/ferm.vim')
+Plug 'chrisbra/csv.vim'
+Plug 'ledger/vim-ledger'
+Plug 'sheerun/vim-polyglot'
+Plug 'sgur/vim-editorconfig'
+Plug 'vim-scripts/ferm.vim'
 
-call dein#add('bling/vim-airline')
-call dein#add('l5x/monocolor')
+Plug 'bling/vim-airline'
+"Plug 'l5x/monocolor'
+Plug '~/devel/monocolor'
 
-call dein#add('airblade/vim-gitgutter')
-call dein#add('christoomey/vim-sort-motion')
-call dein#add('haya14busa/incsearch.vim')
-call dein#add('jiangmiao/auto-pairs')
-call dein#add('junegunn/fzf', { 'build': './install --bin', 'merged': 0 })
-call dein#add('junegunn/fzf.vim', { 'depends': 'fzf' })
-call dein#add('justinmk/vim-sneak')
-call dein#add('mildred/vim-bufmru')
-call dein#add('t9md/vim-choosewin')
-call dein#add('tomtom/tcomment_vim')
-call dein#add('tpope/vim-fugitive')
-call dein#add('tpope/vim-repeat')
-call dein#add('tpope/vim-surround')
-call dein#add('unblevable/quick-scope')
-call dein#add('wincent/terminus')
-call dein#add('junegunn/vim-easy-align')
+Plug 'airblade/vim-gitgutter'
+Plug 'christoomey/vim-sort-motion'
+Plug 'haya14busa/incsearch.vim'
+Plug 'jiangmiao/auto-pairs'
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf.vim'
+Plug 'justinmk/vim-sneak'
+Plug 'mildred/vim-bufmru'
+Plug 't9md/vim-choosewin'
+Plug 'tomtom/tcomment_vim'
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-repeat'
+Plug 'tpope/vim-surround'
+Plug 'unblevable/quick-scope'
+Plug 'wincent/terminus'
+Plug 'junegunn/vim-easy-align'
 
 " COMPLETION
 
-call dein#add('neoclide/coc.nvim', {'merged':0, 'rev': 'release'})
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Development
-" call dein#add('cocopon/pgmnt.vim')
-" call dein#add('cocopon/colorswatch.vim')
-" call dein#local('~/.vim/vendor/monocolor')
-" call dein#add('cocopon/inspecthi.vim')
+" Plug 'cocopon/pgmnt.vim'
+" Plug 'cocopon/colorswatch.vim'
+" Plug 'cocopon/inspecthi.vim'
+" Plug 'l5x/monocolor'
+
+call plug#end()

@@ -1,7 +1,4 @@
-/vendor/monocolor
 .manage_modules
-.ready
 .ropeproject
 .netrwhist
-bundle/*
-!bundle/.gitkeep
+/bundle

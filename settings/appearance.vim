@@ -10,7 +10,6 @@ let g:airline_skip_empty_sections            = 1
 let g:airline_skip_empty_sections            = 1
 let g:airline_theme                          = "monocolor_white"
 
-
 if !exists('g:airline_symbols')
   let g:airline_symbols = {}
 endif
@@ -29,31 +28,13 @@ highlight clear SignColumn
 " autocmd FileType taskedit let g:airline#extensions#whitespace#checks = [ 'indent' ]
 " autocmd FileType mail let g:airline#extensions#whitespace#checks = [ 'indent' ]
 
-function CheckConsole()
-    let l:isconsole = 0
-
-    if exists('$SSH_CLIENT')
-        let l:isconsole = 0
-    elseif exists('$SSH_TTY')
-        let l:isconsole = 0
-    endif
-
-    if !empty(glob("/.dockerinit"))
-        let l:isconsole = 0
-    endif
-
-    return l:isconsole
-endfunction
-
-if CheckConsole() == 1
-    set bg=dark " term=linux
-    colo slate
+if $TERM=~'linux'
+    " set bg=dark " term=linux
+    colo default
     syntax on
 else
     set mouse=nv
-    if $COLORTERM == 'truecolor'
-        set termguicolors
-    endif
+    set termguicolors
     colo monocolor_white
 endif
 

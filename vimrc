@@ -2,23 +2,17 @@ scripte utf-8
 set nocp
 filetype off
 
-if has('vim_starting')
-    set rtp+=~/.vim/vendor/dein.vim
+if empty(glob('~/.vim/autoload/plug.vim'))
+  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 endif
 
-if filereadable(expand('~/.vim/.ready'))
-    call dein#begin(expand('~/.vim/bundle'))
-
-    if filereadable(expand('~/.vim/vim-bundles'))
-      source ~/.vim/vim-bundles
-    endif
-
-    call dein#end()
-    call dein#save_state()
-
-    filetype plugin indent on
+if filereadable(expand('~/.vim/vim-bundles'))
+  source ~/.vim/vim-bundles
 endif
 
+filetype plugin indent on
 syntax enable
 
 set fenc=utf8 enc=utf8 secure so=5 shm=atI vb t_vb= novb noeb
@@ -49,68 +43,65 @@ catch /Unknown option/
     " versions of Vim prior to 7.3
 endtry
 
-let g:dein#types#git#clone_depth="1"
 let mapleader="\\"
 
-if filereadable(expand("~/.vim/.ready"))
-    nn <space> :BufMRUNext<CR>
-    nn <leader><space> :BufMRUPrev<CR>
-    nn <right> :BufMRUNext<CR>
-    nn <left> :BufMRUPrev<CR>
+nn <space> :BufMRUNext<CR>
+nn <leader><space> :BufMRUPrev<CR>
+nn <right> :BufMRUNext<CR>
+nn <left> :BufMRUPrev<CR>
 
-    "Mnemonic: [F]iles
-    nn <leader>f :Files<CR>
+"Mnemonic: [F]iles
+nn <leader>f :Files<CR>
 
-    "Mnemonic: [B]uffer
-    nn <leader>b :Buffers<CR>
+"Mnemonic: [B]uffer
+nn <leader>b :Buffers<CR>
 
-    "Mnemonic: Choose [W]indow
-    nn <leader>w :ChooseWin<CR>
+"Mnemonic: Choose [W]indow
+nn <leader>w :ChooseWin<CR>
 
-    "Mnemonic: Fi[x]
-    nn <leader>x :call CocAction('format')<CR>
+"Mnemonic: Fi[x]
+nn <leader>x :call CocAction('format')<CR>
 
-    "Mnemonic: [C]ommands
-    nnoremap <silent> <leader>c  :<C-u>CocList commands<cr>
+"Mnemonic: [C]ommands
+nnoremap <silent> <leader>c  :<C-u>CocList commands<cr>
 
-    "Mnemonic: Show all [d]iagnostics
-    nnoremap <silent> <leader>d  :<C-u>CocList diagnostics<cr>
+"Mnemonic: Show all [d]iagnostics
+nnoremap <silent> <leader>d  :<C-u>CocList diagnostics<cr>
 
-    "Mnemonic: Manage [E]xtensions
-    nnoremap <silent> <leader>e  :<C-u>CocList extensions<cr>
+"Mnemonic: Manage [E]xtensions
+nnoremap <silent> <leader>e  :<C-u>CocList extensions<cr>
 
-    "Mnemonic: [Outline]
-    nnoremap <silent> <leader>o  :<C-u>CocList outline<cr>
+"Mnemonic: [Outline]
+nnoremap <silent> <leader>o  :<C-u>CocList outline<cr>
 
-    "Mnemonic: [S]ymbols
-    nnoremap <silent> <leader>s  :<C-u>CocList -I symbols<cr>
+"Mnemonic: [S]ymbols
+nnoremap <silent> <leader>s  :<C-u>CocList -I symbols<cr>
 
-    "Mnemonic: [R]emap for [R]ename current word
-    nmap <leader>r <Plug>(coc-rename)
+"Mnemonic: [R]emap for [R]ename current word
+nmap <leader>r <Plug>(coc-rename)
 
-    "Mnemonic: [Q]uiet
-    nmap <leader>q  <Plug>(coc-fix-current)
+"Mnemonic: [Q]uiet
+nmap <leader>q  <Plug>(coc-fix-current)
 
-    "Mnemonic: [A]ction
-    nmap <leader>a  <Plug>(coc-codeaction)
+"Mnemonic: [A]ction
+nmap <leader>a  <Plug>(coc-codeaction)
 
-    "Mnemonic: [N]ext [P]rev
-    nmap <silent> <C-p> <Plug>(coc-diagnostic-prev)
-    nmap <silent> <C-n> <Plug>(coc-diagnostic-next)
+"Mnemonic: [N]ext [P]rev
+nmap <silent> <C-p> <Plug>(coc-diagnostic-prev)
+nmap <silent> <C-n> <Plug>(coc-diagnostic-next)
 
-    "Mnemonic: [G]oto
-    nmap <silent> gd <Plug>(coc-definition)
-    nmap <silent> gy <Plug>(coc-type-definition)
-    nmap <silent> gi <Plug>(coc-implementation)
-    nmap <silent> gr <Plug>(coc-references)
+"Mnemonic: [G]oto
+nmap <silent> gd <Plug>(coc-definition)
+nmap <silent> gy <Plug>(coc-type-definition)
+nmap <silent> gi <Plug>(coc-implementation)
+nmap <silent> gr <Plug>(coc-references)
 
-    "Mnemonic: Ali[gn]
-    "Start interactive EasyAlign in visual mode (e.g. vipga)
-    xmap gn <Plug>(EasyAlign)
-    "Start interactive EasyAlign for a motion/text object (e.g. gaip)
-    nmap gn <Plug>(EasyAlign)
+"Mnemonic: Ali[gn]
+"Start interactive EasyAlign in visual mode (e.g. vipga)
+xmap gn <Plug>(EasyAlign)
+"Start interactive EasyAlign for a motion/text object (e.g. gaip)
+nmap gn <Plug>(EasyAlign)
 
-    for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
-      exe 'source' fpath
-    endfor
-endif
+for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
+	exe 'source' fpath
+endfor
