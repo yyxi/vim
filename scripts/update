@@ -25,12 +25,12 @@ main () {
 
             if [[ "${executable}" == "vim" ]]
             then
-                "${executable}" -es -u vimrc -i NONE -c "PlugUpdate!" -c "qa"
+                "${executable}" -es -u vimrc -i NONE -c "PlugUpdate!" -c "qa" || true
             fi
 
             if [[ "${executable}" == "nvim" ]]
             then
-                "${executable}" -es -u init.vim -i NONE -c "PlugUpdate!" -c "qa"
+                "${executable}" -es -u init.vim -i NONE -c "PlugUpdate!" -c "qa" || true
             fi
 
             cd "${OPWD}" || exit

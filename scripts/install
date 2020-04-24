@@ -28,12 +28,12 @@ main () {
 
         if [[ "${executable}" == "vim" ]]
         then
-            "${executable}" -es -u vimrc -i NONE -c "PlugInstall!" -c "qa"
+            "${executable}" -es -u vimrc -i NONE -c "PlugInstall!" -c "qa" || true
         fi
 
         if [[ "${executable}" == "nvim" ]]
         then
-            "${executable}" -es -u init.vim  -c "PlugInstall!" -c "qa"
+            "${executable}" -es -u init.vim  -c "PlugInstall!" -c "qa" || true
         fi
 
         touch "${MANAGE_REPOSITORY}/vimrc"
