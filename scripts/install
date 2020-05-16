@@ -36,6 +36,8 @@ main () {
             "${executable}" -es -u init.vim  -c "PlugInstall!" -c "qa" || true
         fi
 
+        [ ! -e "${MANAGE_REPOSITORY}/.ready" ] && touch "${MANAGE_REPOSITORY}/.ready"
+
         touch "${MANAGE_REPOSITORY}/vimrc"
 
         mkdir -p "${HOME}/.config"

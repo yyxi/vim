@@ -35,6 +35,7 @@ main () {
 
             cd "${OPWD}" || exit
             touch "${MANAGE_REPOSITORY}/vimrc"
+            touch "${MANAGE_REPOSITORY}/.ready"
     fi
 }
 
