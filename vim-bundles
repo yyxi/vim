@@ -9,7 +9,7 @@ Plug 'vim-scripts/ferm.vim'
 
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
-Plug 'l5x/monocolor'
+" Plug 'l5x/monocolor'
 
 Plug 'airblade/vim-gitgutter'
 Plug 'christoomey/vim-sort-motion'
@@ -39,6 +39,6 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 " Plug 'cocopon/pgmnt.vim'
 " Plug 'cocopon/colorswatch.vim'
 " Plug 'cocopon/inspecthi.vim'
-" Plug 'l5x/monocolor'
+Plug '~/devel/l5x/monocolor'
 
 call plug#end()

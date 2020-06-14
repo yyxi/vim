@@ -8,6 +8,7 @@
   "list.insertMappings": {
     "<C-c>": "do:exit"
   },
+  "diagnostic.level": "warning",
   "diagnostic-languageserver.filetypes": {
     "sh": "shellcheck"
   }
