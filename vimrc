@@ -47,10 +47,8 @@ endtry
 
 let mapleader="\\"
 
-nn <space> :BufMRUNext<CR>
-nn <leader><space> :BufMRUPrev<CR>
-nn <right> :BufMRUNext<CR>
-nn <left> :BufMRUPrev<CR>
+nn <Right> :BufMRUNext<CR>
+nn <Left> :BufMRUPrev<CR>
 
 "Mnemonic: [F]iles
 nn <leader>f :Files<CR>
@@ -88,10 +86,6 @@ nmap <leader>q  <Plug>(coc-fix-current)
 "Mnemonic: [A]ction
 nmap <leader>a  <Plug>(coc-codeaction)
 
-"Mnemonic: [N]ext [P]rev
-nmap <silent> <C-p> <Plug>(coc-diagnostic-prev)
-nmap <silent> <C-n> <Plug>(coc-diagnostic-next)
-
 "Mnemonic: [G]oto
 nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
@@ -103,6 +97,24 @@ nmap <silent> gr <Plug>(coc-references)
 xmap gn <Plug>(EasyAlign)
 "Start interactive EasyAlign for a motion/text object (e.g. gaip)
 nmap gn <Plug>(EasyAlign)
+
+"Mnemonic: Page Scrolling: down is next, up is prev
+
+nnoremap <Up> N
+nnoremap <Down> n
+
+nmap <silent> <C-Up> <Plug>(coc-diagnostic-prev)
+nmap <silent> <C-Down> <Plug>(coc-diagnostic-next)
+
+augroup incsearch-keymap
+    autocmd!
+    autocmd VimEnter * call s:incsearch_keymap()
+augroup END
+
+function! s:incsearch_keymap()
+    IncSearchNoreMap <Up> <Over>(incsearch-prev)
+    IncSearchNoreMap <Down> <Over>(incsearch-next)
+endfunction
 
 for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
 	exe 'source' fpath
