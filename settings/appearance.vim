@@ -8,7 +8,7 @@ let g:airline_right_alt_sep                  = ""
 let g:airline_section_error                  = ""
 let g:airline_skip_empty_sections            = 1
 let g:airline_skip_empty_sections            = 1
-let g:airline_theme                          = "monocolor_black"
+let g:airline_theme                          = "monocolor_white"
 
 if !exists('g:airline_symbols')
   let g:airline_symbols = {}
@@ -34,7 +34,7 @@ if $TERM=~'linux'
     syntax on
 else
     set mouse=nv
-    set bg=dark
+    set bg=light
     set termguicolors
     colo monocolor
 endif
