@@ -1,11 +1,8 @@
 " vim: ft=vim
 call plug#begin('~/.vim/bundle')
 
-Plug 'chrisbra/csv.vim'
-Plug 'ledger/vim-ledger'
 Plug 'sheerun/vim-polyglot'
 Plug 'sgur/vim-editorconfig'
-Plug 'vim-scripts/ferm.vim'
 
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
