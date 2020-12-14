@@ -6,6 +6,7 @@ Plug 'sgur/vim-editorconfig'
 
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
+Plug 'gruvbox-community/gruvbox'
 Plug 'l5x/monocolor'
 
 Plug 'airblade/vim-gitgutter'
@@ -15,27 +16,29 @@ Plug 'jiangmiao/auto-pairs'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 Plug 'junegunn/vim-easy-align'
-Plug 'junegunn/goyo.vim'
 Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
 Plug 't9md/vim-choosewin'
 Plug 'tomtom/tcomment_vim'
-Plug 'tpope/vim-fugitive'
-Plug 'tpope/vim-repeat'
-Plug 'tpope/vim-surround'
 Plug 'tpope/vim-sensible'
 Plug 'farmergreg/vim-lastplace'
 Plug 'unblevable/quick-scope'
 Plug 'wincent/terminus'
+Plug 'rizzatti/dash.vim'
+Plug 'arthurxavierx/vim-unicoder'
+Plug 'machakann/vim-highlightedyank'
 
-" COMPLETION
-
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
+if has('nvim')
+  Plug 'nvim-lua/plenary.nvim'
+  Plug 'neovim/nvim-lspconfig'
+  Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+  Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+  Plug 'nvim-lua/completion-nvim'
+  Plug 'nvim-treesitter/completion-treesitter'
+  Plug 'gfanto/fzf-lsp.nvim'
+endif
 
 " Development
-" Plug 'cocopon/pgmnt.vim'
-" Plug 'cocopon/colorswatch.vim'
-" Plug 'cocopon/inspecthi.vim'
 " Plug '~/devel/l5x/monocolor'
 
 call plug#end()

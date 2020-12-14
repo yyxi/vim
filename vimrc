@@ -2,16 +2,6 @@ scripte utf-8
 set nocp
 filetype off
 
-if empty(glob('~/.vim/autoload/plug.vim'))
-  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
-    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
-endif
-
-if filereadable(expand('~/.vim/vim-bundles'))
-  source ~/.vim/vim-bundles
-endif
-
 silent! source $VIMRUNTIME/defaults.vim
 
 filetype plugin indent on
@@ -40,82 +30,42 @@ if v:version > 703 || v:version == 703 && has('patch541')
 endif
 
 try
-    set udir=~/.vim/tmp/undo cc=+1 undofile
+  set udir=~/.vim/tmp/undo cc=+1 undofile
 catch /Unknown option/
-    " versions of Vim prior to 7.3
+  " versions of Vim prior to 7.3
 endtry
 
 let mapleader="\\"
 
-nn <Right> :BufMRUNext<CR>
-nn <Left> :BufMRUPrev<CR>
+for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
+  if fnamemodify(fpath, ':t') =~ '^000'
+    exe 'source' fpath
+  endif
+endfor
 
-"Mnemonic: [F]iles
-nn <leader>f :Files<CR>
+if empty(glob('~/.vim/autoload/plug.vim'))
+  silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
 
-"Mnemonic: [B]uffer
-nn <leader>b :Buffers<CR>
-
-"Mnemonic: Choose [W]indow
-nn <leader>w :ChooseWin<CR>
-
-"Mnemonic: Fi[x]
-nn <leader>x :call CocAction('format')<CR>
-
-"Mnemonic: [C]ommands
-nnoremap <silent> <leader>c  :<C-u>CocList commands<cr>
-
-"Mnemonic: Show all [d]iagnostics
-nnoremap <silent> <leader>d  :<C-u>CocList diagnostics<cr>
-
-"Mnemonic: Manage [E]xtensions
-nnoremap <silent> <leader>e  :<C-u>CocList extensions<cr>
-
-"Mnemonic: [Outline]
-nnoremap <silent> <leader>o  :<C-u>CocList outline<cr>
-
-"Mnemonic: [S]ymbols
-nnoremap <silent> <leader>s  :<C-u>CocList -I symbols<cr>
-
-"Mnemonic: [R]emap for [R]ename current word
-nmap <leader>r <Plug>(coc-rename)
-
-"Mnemonic: [Q]uiet
-nmap <leader>q  <Plug>(coc-fix-current)
-
-"Mnemonic: [A]ction
-nmap <leader>a  <Plug>(coc-codeaction)
-
-"Mnemonic: [G]oto
-nmap <silent> gd <Plug>(coc-definition)
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
-
-"Mnemonic: Ali[gn]
-"Start interactive EasyAlign in visual mode (e.g. vipga)
-xmap gn <Plug>(EasyAlign)
-"Start interactive EasyAlign for a motion/text object (e.g. gaip)
-nmap gn <Plug>(EasyAlign)
-
-"Mnemonic: Page Scrolling: down is next, up is prev
-
-nnoremap <Up> N
-nnoremap <Down> n
-
-nmap <silent> <C-Up> <Plug>(coc-diagnostic-prev)
-nmap <silent> <C-Down> <Plug>(coc-diagnostic-next)
-
-augroup incsearch-keymap
-    autocmd!
-    autocmd VimEnter * call s:incsearch_keymap()
-augroup END
-
-function! s:incsearch_keymap()
-    IncSearchNoreMap <Up> <Over>(incsearch-prev)
-    IncSearchNoreMap <Down> <Over>(incsearch-next)
-endfunction
+if filereadable(expand('~/.vim/vim-bundles'))
+  source ~/.vim/vim-bundles
+endif
 
 for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
-	exe 'source' fpath
+  if fnamemodify(fpath, ':t') !~ '^000'
+    exe 'source' fpath
+  endif
 endfor
+
+"Mnemonic: Fi[x]
+"Mnemonic: [C]ommands
+"Mnemonic: Show all [d]iagnostics
+"Mnemonic: [Outline]
+"Mnemonic: [S]ymbols
+"Mnemonic: [R]emap for [R]ename current word
+"Mnemonic: [Q]uiet
+"Mnemonic: [A]ction
+"Mnemonic: [G]oto
+

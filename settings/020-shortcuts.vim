@@ -1,8 +1,7 @@
 map <c-j> <c-w>j
 map <c-k> <c-w>k
-map <c-l> <c-w>l
-map <c-h> <c-w>h
-" nn ; :
+map <c-l> <c-w>l map <c-h> <c-w>h
+nn ; :
 cm WQ wq
 cm wQ wq
 cm Tabe tabe
@@ -11,3 +10,8 @@ im jj <Esc>
 
 noremap 0 ^
 noremap ^ 0
+
+"Mnemonic: Page Scrolling: down is next, up is prev
+nnoremap <Up> N
+nnoremap <Down> n
+
