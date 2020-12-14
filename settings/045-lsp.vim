@@ -16,5 +16,5 @@ if has('nvim')
   nmap <silent> <C-Up> <cmd>lua vim.lsp.diagnostic.goto_prev()<CR>
   nmap <silent> <C-Down> <cmd>lua vim.lsp.diagnostic.goto_next()<CR>
 
-  luafile ~/.vim/lua/lsp.lua
+  luafile ~/.vim/lua/user/lsp.lua
 endif

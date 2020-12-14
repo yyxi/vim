@@ -15,5 +15,5 @@ if has('nvim')
       \ 'typescript'
       \ ]
 
-    luafile ~/.vim/lua/treesitter.lua
+    luafile ~/.vim/lua/user/treesitter.lua
 endif
