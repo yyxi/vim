@@ -7,11 +7,9 @@ Plug 'sgur/vim-editorconfig'
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
 Plug 'gruvbox-community/gruvbox'
-Plug 'l5x/monocolor'
 
 Plug 'airblade/vim-gitgutter'
 Plug 'christoomey/vim-sort-motion'
-" Plug 'haya14busa/is.vim'
 Plug 'jiangmiao/auto-pairs'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
