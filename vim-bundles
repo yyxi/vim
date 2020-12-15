@@ -27,7 +27,6 @@ Plug 'wincent/terminus'
 Plug 'rizzatti/dash.vim'
 Plug 'arthurxavierx/vim-unicoder'
 Plug 'machakann/vim-highlightedyank'
-Plug 'kkoomen/vim-doge', { 'do': { -> doge#install() } }
 
 if has('nvim')
   Plug 'nvim-lua/plenary.nvim'
