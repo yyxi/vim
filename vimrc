@@ -58,14 +58,3 @@ for fpath in split(globpath('~/.vim/settings', '*.vim'), '\n')
     exe 'source' fpath
   endif
 endfor
-
-"Mnemonic: Fi[x]
-"Mnemonic: [C]ommands
-"Mnemonic: Show all [d]iagnostics
-"Mnemonic: [Outline]
-"Mnemonic: [S]ymbols
-"Mnemonic: [R]emap for [R]ename current word
-"Mnemonic: [Q]uiet
-"Mnemonic: [A]ction
-"Mnemonic: [G]oto
-

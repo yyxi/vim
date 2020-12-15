@@ -12,6 +12,6 @@ noremap 0 ^
 noremap ^ 0
 
 "Mnemonic: Page Scrolling: down is next, up is prev
-nnoremap <Up> N
-nnoremap <Down> n
+nnoremap <Up> n
+nnoremap <Down> N
 

@@ -11,7 +11,7 @@ Plug 'l5x/monocolor'
 
 Plug 'airblade/vim-gitgutter'
 Plug 'christoomey/vim-sort-motion'
-Plug 'haya14busa/incsearch.vim'
+" Plug 'haya14busa/is.vim'
 Plug 'jiangmiao/auto-pairs'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
@@ -27,6 +27,7 @@ Plug 'wincent/terminus'
 Plug 'rizzatti/dash.vim'
 Plug 'arthurxavierx/vim-unicoder'
 Plug 'machakann/vim-highlightedyank'
+Plug 'kkoomen/vim-doge', { 'do': { -> doge#install() } }
 
 if has('nvim')
   Plug 'nvim-lua/plenary.nvim'
