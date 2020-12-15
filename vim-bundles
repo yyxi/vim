@@ -1,12 +1,13 @@
 " vim: ft=vim
 call plug#begin('~/.vim/bundle')
 
-Plug 'sheerun/vim-polyglot'
+" Plug 'sheerun/vim-polyglot'
 Plug 'sgur/vim-editorconfig'
 
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
 Plug 'gruvbox-community/gruvbox'
+Plug 'chriskempson/base16-vim'
 
 Plug 'airblade/vim-gitgutter'
 Plug 'christoomey/vim-sort-motion'

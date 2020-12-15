@@ -8,9 +8,10 @@ let g:airline_right_alt_sep                  = ""
 let g:airline_section_error                  = ""
 let g:airline_skip_empty_sections            = 1
 let g:airline_skip_empty_sections            = 1
-let g:airline_theme                          = "gruvbox"
+let g:airline_theme                          = "base16_gruvbox_dark_hard"
 let g:gruvbox_contrast_dark = "hard"
 let g:gruvbox_sign_column = "dark0_hard"
+let g:gruvbox_invert_selection = 0
 
 if !exists('g:airline_symbols')
   let g:airline_symbols = {}
@@ -24,6 +25,7 @@ let g:airline_symbols.maxlinenr = ''
 
 au FileType help,qf setl nowrap nofen nospell nocul nolist
 au FileType help,qf setl stl=\ %n\ \ %f%=%L\ lines
+au FileType * if &buftype == 'nofile' | setlocal syntax=off | endif
 
 " autocmd FileType * unlet! g:airline#extensions#whitespace#checks
 " autocmd FileType taskedit let g:airline#extensions#whitespace#checks = [ 'indent' ]
@@ -37,7 +39,10 @@ else
     set mouse=nv
     set bg=dark
     set termguicolors
-    colo gruvbox
+    colo base16-gruvbox-dark-hard
+    highlight clear SignColumn
+    highlight link mkdLineBreak NONE
+    highlight Normal ctermfg=7 ctermbg=NONE guifg=#d5c4a1 guibg=NONE
 endif
 
 augroup quickfix

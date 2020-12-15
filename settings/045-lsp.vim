@@ -2,11 +2,13 @@ if has('nvim')
   nnoremap <silent> K     <cmd>lua vim.lsp.buf.hover()<CR>
   nnoremap <silent> <c-k> <cmd>lua vim.lsp.buf.signature_help()<CR>
 
-  nn <silent><leader>s :DocumentSymbols<CR>
-  nn <silent><leader>S :WorkspaceSymbols<CR>
-  nn <silent><leader>a :CodeActions<CR>
-  vn <silent><leader>a :RangeCodeActions<CR> 
+  nn <silent>xs :DocumentSymbols<CR>
+  nn <silent>xS :WorkspaceSymbols<CR>
+  nn <silent>xa :CodeActions<CR>
+  vn <silent>xa :RangeCodeActions<CR> 
 
+  " vn <silent>xf <cmd>lua vim.lsp.buf.range_formatting()<CR>
+  nn <silent> xf <cmd>lua vim.lsp.buf.formatting()<CR>
   nn <silent> xr <cmd>lua vim.lsp.buf.rename()<CR>
   nn <silent> xR :References<CR>
   nn <silent> xd :Definitions<CR>
