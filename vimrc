@@ -11,7 +11,7 @@ set fenc=utf8 enc=utf8 secure so=5 shm=atI vb t_vb= novb noeb
 set dir=~/.vim/tmp/sessions bdir=~/.vim/tmp/backup
 set nosol tf nonu noru sc sb spr nofen ve=onemore backup
 set gcr=a:blinkon0 ls=2 hi=5000
-set hls is ws ic scs so=3 sj=5 siso=7 ss=1 fo-=o sw=4 sts=4 et ai hid
+set hls is nows ic scs so=3 sj=5 siso=7 ss=1 fo-=o sw=4 sts=4 et ai hid
 set cpt+=kspell cpt-=t bs=indent,eol,start vi+=! vi='250,<0,r/tmp
 set lcs=eol:¬,trail:· shm+=filmnrxoOtT ww=<,>,h,l noswf mat=2 ar
 set ruf=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%) wmnu wim=list:longest,full

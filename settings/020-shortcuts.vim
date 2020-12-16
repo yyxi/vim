@@ -11,7 +11,9 @@ im jj <Esc>
 noremap 0 ^
 noremap ^ 0
 
-"Mnemonic: Page Scrolling: down is next, up is prev
+nnoremap <expr> n (v:searchforward ? 'n' : 'N')
+nnoremap <expr> N (v:searchforward ? 'N' : 'n')
+
 nnoremap <Up> n
 nnoremap <Down> N
 

@@ -2,7 +2,6 @@ local config = require'lspconfig'
 
 config.tsserver.setup{}
 config.rust_analyzer.setup{}
--- config.sumneko_lua.setup{}
 config.terraformls.setup{}
 
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
