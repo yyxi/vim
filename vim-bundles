@@ -37,7 +37,4 @@ if has('nvim')
   Plug 'gfanto/fzf-lsp.nvim'
 endif
 
-" Development
-" Plug '~/devel/l5x/monocolor'
-
 call plug#end()
