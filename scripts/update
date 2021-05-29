@@ -21,7 +21,7 @@ main () {
     if [ -d "${MANAGE_REPOSITORY}" ] || [ -L "${MANAGE_REPOSITORY}" ]; then
             local path
             path="${MANAGE_REPOSITORY}"
-            local OPWD=$PWD ; cd "${path}" || exit
+            local OPWD=$PWD ; cd "${path}" || _ die
 
             if [[ "${executable}" == "vim" ]]
             then
@@ -33,7 +33,7 @@ main () {
                 "${executable}" -es -u init.vim -i NONE -c "PlugUpdate!" -c "qa" || true
             fi
 
-            cd "${OPWD}" || exit
+            cd "${OPWD}" || _ die
             touch "${MANAGE_REPOSITORY}/vimrc"
             touch "${MANAGE_REPOSITORY}/.ready"
     fi

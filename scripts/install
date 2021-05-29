@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
 # @description install vim/nvim bundles
+# @import console/die
+# @import console/info
 # @import lang/exists
 
 main () {
@@ -20,11 +22,9 @@ main () {
     if [ -d "${MANAGE_REPOSITORY}" ] || [ -L "${MANAGE_REPOSITORY}" ]; then
         local path
         path="${MANAGE_REPOSITORY}"
-        local OPWD=$PWD ; cd "${path}" || exit
+        local OPWD=$PWD ; cd "${path}" || _ die
 
-        git submodule update --init --recursive
-
-        cd "${path}" || exit
+        cd "${path}" || _ die
 
         if [[ "${executable}" == "vim" ]]
         then
@@ -33,8 +33,11 @@ main () {
 
         if [[ "${executable}" == "nvim" ]]
         then
+
             "${executable}" -es -u init.vim  -c "PlugInstall!" -c "qa" || true
         fi
+
+        _ info "${executable} plugins installed"
 
         [ ! -e "${MANAGE_REPOSITORY}/.ready" ] && touch "${MANAGE_REPOSITORY}/.ready"
 
@@ -47,7 +50,7 @@ main () {
             ln -s "${MANAGE_REPOSITORY}" "${HOME}/.config/nvim"
         fi
 
-        cd "${OPWD}" || exit
+        cd "${OPWD}" || _ die
     fi
 }
 

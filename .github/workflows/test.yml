@@ -1,0 +1,36 @@
+name: Test
+on:
+  push:
+    branches:
+      - trunk
+  pull_request:
+    branches:
+      - trunk
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Dependencies
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+               sudo apt-get install zsh bc
+               curl -sLO https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
+               chmod u+x nvim.appimage
+               mkdir -p "$HOME/.neovim-dist/bin"
+               mv ./nvim.appimage "$HOME/.neovim-dist/bin/nvim"
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+               brew install bash zsh bc gnu-sed
+               mkdir -p "$HOME/.neovim-dist"
+               curl -sLO https://github.com/neovim/neovim/releases/download/nightly/nvim-macos.tar.gz
+               tar xf nvim-macos.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
+               rm -f nvim-macos.tar.gz
+          fi
+      - name: Test
+        run: |
+          ln -s $(pwd) ~/.vim
+          ln -s $(pwd)/vimrc ~/.vimrc
+          ~/.vim/manage install
