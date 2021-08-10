@@ -5,6 +5,15 @@ require'nvim-treesitter.configs'.setup{
     indent = {
       enable = true
     },
+    matchup = {
+      enable = true,
+    },
+    autotag = {
+      enable = true,
+    },
+    playground = {
+      enable = true,
+    },
     incremental_selection = {
       enable = true,
       keymaps = {
@@ -55,5 +64,8 @@ require'nvim-treesitter.configs'.setup{
         },
       },
     },
-    ensure_installed = 'maintained'
+    ensure_installed = 'maintained',
+    lsp_interop = {
+      enable = true,
+    },
   }

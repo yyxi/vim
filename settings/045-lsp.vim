@@ -5,10 +5,10 @@ if has('nvim')
   nn <silent>xs :DocumentSymbols<CR>
   nn <silent>xS :WorkspaceSymbols<CR>
   nn <silent>xa :CodeActions<CR>
-  vn <silent>xa :RangeCodeActions<CR> 
+  vn <silent>xa :RangeCodeActions<CR>
 
   " vn <silent>xf <cmd>lua vim.lsp.buf.range_formatting()<CR>
-  nn <silent> xf <cmd>lua vim.lsp.buf.formatting()<CR>
+  nn <silent> xf <cmd>lua vim.lsp.buf.formatting_sync(nil, 2000)<CR>
   nn <silent> xr <cmd>lua vim.lsp.buf.rename()<CR>
   nn <silent> xR :References<CR>
   nn <silent> xd :Definitions<CR>

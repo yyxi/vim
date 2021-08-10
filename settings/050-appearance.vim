@@ -8,6 +8,7 @@ let g:airline_right_alt_sep                  = ""
 let g:airline_section_error                  = ""
 let g:airline_skip_empty_sections            = 1
 let g:airline_skip_empty_sections            = 1
+let g:airline#extensions#searchcount#enabled = 0
 let g:airline_theme                          = "base16_gruvbox_dark_hard"
 let g:gruvbox_contrast_dark = "hard"
 let g:gruvbox_sign_column = "dark0_hard"
