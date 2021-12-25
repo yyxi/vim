@@ -1,7 +1,6 @@
 " vim: ft=vim
 call plug#begin('~/.vim/bundle')
 
-" Plug 'sheerun/vim-polyglot'
 Plug 'sgur/vim-editorconfig'
 
 Plug 'bling/vim-airline'
@@ -12,8 +11,6 @@ Plug 'chriskempson/base16-vim'
 Plug 'airblade/vim-gitgutter'
 Plug 'christoomey/vim-sort-motion'
 Plug 'jiangmiao/auto-pairs'
-Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
-Plug 'junegunn/fzf.vim'
 Plug 'junegunn/vim-easy-align'
 Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
@@ -28,8 +25,12 @@ Plug 'arthurxavierx/vim-unicoder'
 Plug 'machakann/vim-highlightedyank'
 
 if has('nvim')
+  Plug 'nvim-lua/plenary.nvim'
+  Plug 'lukas-reineke/indent-blankline.nvim'
   Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
   Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+  Plug 'nvim-telescope/telescope.nvim'
+  Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 endif
 
 Plug 'neoclide/coc.nvim', {'branch': 'release'}

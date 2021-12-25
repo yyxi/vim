@@ -9,10 +9,18 @@ let g:airline_section_error                  = ""
 let g:airline_skip_empty_sections            = 1
 let g:airline_skip_empty_sections            = 1
 let g:airline#extensions#searchcount#enabled = 0
-let g:airline_theme                          = "base16_gruvbox_dark_hard"
-let g:gruvbox_contrast_dark = "hard"
-let g:gruvbox_sign_column = "dark0_hard"
-let g:gruvbox_invert_selection = 0
+let g:airline_theme                          = "minimalist"
+let g:gruvbox_contrast_dark                  = "hard"
+let g:gruvbox_sign_column                    = "dark0_hard"
+let g:gruvbox_invert_selection               = 0
+
+if has('nvim')
+  let g:indent_blankline_char_list = ['|', '¦', '┆', '┊']
+  let g:indent_blankline_use_treesitter = v:true
+  let g:indent_blankline_show_first_indent_level = v:false
+  let g:indent_blankline_filetype_exclude = ['help']
+  highlight IndentBlanklineChar cterm=nocombine gui=nocombine ctermfg=8 guifg=#332E33
+endif
 
 if !exists('g:airline_symbols')
   let g:airline_symbols = {}
