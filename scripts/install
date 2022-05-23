@@ -5,52 +5,49 @@
 # @import console/info
 # @import lang/exists
 
-main () {
-    strict  true
-    verbose true
+main() {
+  strict true
+  verbose true
 
-    [ -d "$HOME/.vim-dist/bin/" ] && PATH="$HOME/.vim-dist/bin:$PATH"
-    [ -d "$HOME/.neovim-dist/bin/" ] && PATH="$HOME/.neovim-dist/bin:$PATH"
+  [ -d "$HOME/.vim-dist/bin/" ] && PATH="$HOME/.vim-dist/bin:$PATH"
+  [ -d "$HOME/.neovim-dist/bin/" ] && PATH="$HOME/.neovim-dist/bin:$PATH"
 
-    local executable="vim"
+  local executable="vim"
 
-    if _ exists nvim
-    then
-        executable="nvim"
+  if _ exists nvim; then
+    executable="nvim"
+  fi
+
+  if [ -d "${MANAGE_REPOSITORY}" ] || [ -L "${MANAGE_REPOSITORY}" ]; then
+    local path
+    path="${MANAGE_REPOSITORY}"
+    local OPWD=$PWD
+    cd "${path}" || _ die
+
+    if [[ "${executable}" == "vim" ]]; then
+      "${executable}" -es -u vimrc -i NONE -c "PlugInstall!" -c "qa" || true
     fi
 
-    if [ -d "${MANAGE_REPOSITORY}" ] || [ -L "${MANAGE_REPOSITORY}" ]; then
-        local path
-        path="${MANAGE_REPOSITORY}"
-        local OPWD=$PWD ; cd "${path}" || _ die
-
-        cd "${path}" || _ die
-
-        if [[ "${executable}" == "vim" ]]
-        then
-            "${executable}" -es -u vimrc -i NONE -c "PlugInstall!" -c "qa" || true
-        fi
-
-        if [[ "${executable}" == "nvim" ]]
-        then
-
-            "${executable}" -es -u init.vim  -c "PlugInstall!" -c "qa" || true
-        fi
-
-        _ info "${executable} plugins installed"
-
-        [ ! -e "${MANAGE_REPOSITORY}/.ready" ] && touch "${MANAGE_REPOSITORY}/.ready"
-
-        touch "${MANAGE_REPOSITORY}/vimrc"
-
-        mkdir -p "${HOME}/.config"
-
-        if [[ ! -e "${HOME}/.config/nvim" ]]
-        then
-            ln -s "${MANAGE_REPOSITORY}" "${HOME}/.config/nvim"
-        fi
-
-        cd "${OPWD}" || _ die
+    if [[ "${executable}" == "nvim" ]]; then
+      "${executable}" -es -u init.vim -c "PlugInstall!" -c "qa" || true
     fi
+
+    _ info "${executable} plugins installed"
+
+    [ ! -e "${MANAGE_REPOSITORY}/.ready" ] && touch "${MANAGE_REPOSITORY}/.ready"
+
+    touch "${MANAGE_REPOSITORY}/vimrc"
+
+    mkdir -p "${HOME}/.config"
+
+    if [[ ! -e "${HOME}/.config/nvim" ]]; then
+      ln -s "${MANAGE_REPOSITORY}" "${HOME}/.config/nvim"
+    fi
+
+    if [[ ! -e "${HOME}/.vimrc" ]]; then
+      ln -s "${MANAGE_REPOSITORY}/vimrc" "${HOME}/.vimrc"
+    fi
+
+    cd "${OPWD}" || _ die
+  fi
 }
-
