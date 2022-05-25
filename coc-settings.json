@@ -1,5 +1,13 @@
 {
-
+  "languageserver": {
+    "terraform": {
+      "command": "terraform-ls",
+      "args": ["serve"],
+      "filetypes": ["terraform", "tf"],
+      "initializationOptions": {},
+      "settings": {}
+    }
+  },
   "diagnostic.enableSign": false,
   "diagnostic-languageserver.filetypes": {
     // lint `sh` (includes `bash`) files
