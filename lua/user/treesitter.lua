@@ -94,7 +94,6 @@ require'nvim-treesitter.configs'.setup{
     "jsonc",
     "latex",
     "lua",
-    "lua",
     "make",
     "markdown",
     "perl",
