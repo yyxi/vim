@@ -71,6 +71,7 @@ require'nvim-treesitter.configs'.setup{
     "bash",
     "bibtex",
     "cmake",
+    "comment",
     "css",
     "dockerfile",
     "dot",
