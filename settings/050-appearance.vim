@@ -52,6 +52,7 @@ else
     highlight clear SignColumn
     highlight link mkdLineBreak NONE
     highlight Normal ctermfg=7 ctermbg=NONE guifg=#d5c4a1 guibg=NONE
+    hi! link CocMenuSel PmenuSel
 endif
 
 augroup quickfix

@@ -112,4 +112,8 @@ require'nvim-treesitter.configs'.setup{
   lsp_interop = {
     enable = true,
   },
+  context_commentstring = {
+    enable = true,
+    enable_autocmd = false,
+  }
 }

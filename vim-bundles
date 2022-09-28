@@ -15,7 +15,7 @@ Plug 'junegunn/vim-easy-align'
 Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
 Plug 't9md/vim-choosewin'
-Plug 'tomtom/tcomment_vim'
+"Plug 'tomtom/tcomment_vim'
 Plug 'tpope/vim-sensible'
 Plug 'farmergreg/vim-lastplace'
 Plug 'unblevable/quick-scope'
@@ -31,6 +31,8 @@ if has('nvim')
   Plug 'nvim-treesitter/nvim-treesitter-textobjects'
   Plug 'nvim-telescope/telescope.nvim'
   Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
+  Plug 'JoosepAlviste/nvim-ts-context-commentstring'
+  Plug 'numToStr/Comment.nvim'
 endif
 
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
