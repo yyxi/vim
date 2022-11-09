@@ -35,6 +35,6 @@ if has('nvim')
   Plug 'numToStr/Comment.nvim'
 endif
 
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'neoclide/coc.nvim', { 'branch': 'release' }
 
 call plug#end()
