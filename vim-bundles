@@ -23,6 +23,7 @@ Plug 'wincent/terminus'
 Plug 'rizzatti/dash.vim'
 Plug 'arthurxavierx/vim-unicoder'
 Plug 'machakann/vim-highlightedyank'
+Plug 'ojroques/vim-oscyank'
 
 if has('nvim')
   Plug 'nvim-lua/plenary.nvim'
