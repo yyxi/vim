@@ -5,7 +5,6 @@ Plug 'sgur/vim-editorconfig'
 
 Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
-Plug 'gruvbox-community/gruvbox'
 Plug 'chriskempson/base16-vim'
 
 Plug 'airblade/vim-gitgutter'
@@ -15,14 +14,12 @@ Plug 'junegunn/vim-easy-align'
 Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
 Plug 't9md/vim-choosewin'
-"Plug 'tomtom/tcomment_vim'
 Plug 'tpope/vim-sensible'
 Plug 'farmergreg/vim-lastplace'
 Plug 'unblevable/quick-scope'
 Plug 'wincent/terminus'
 Plug 'rizzatti/dash.vim'
 Plug 'arthurxavierx/vim-unicoder'
-Plug 'machakann/vim-highlightedyank'
 Plug 'ojroques/vim-oscyank'
 
 if has('nvim')
@@ -30,10 +27,14 @@ if has('nvim')
   Plug 'lukas-reineke/indent-blankline.nvim'
   Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
   Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+  Plug 'p00f/nvim-ts-rainbow'
   Plug 'nvim-telescope/telescope.nvim'
   Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
   Plug 'JoosepAlviste/nvim-ts-context-commentstring'
   Plug 'numToStr/Comment.nvim'
+  Plug 'echasnovski/mini.base16', { 'branch': 'stable' }
+  Plug 'gbprod/yanky.nvim'
+  " Plug 'folke/trouble.nvim'
 endif
 
 Plug 'neoclide/coc.nvim', { 'branch': 'release' }

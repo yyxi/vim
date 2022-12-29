@@ -48,7 +48,14 @@ else
     set mouse=nv
     set bg=dark
     set termguicolors
-    colo base16-gruvbox-dark-hard
+
+    if has('nvim')
+      luafile ~/.vim/lua/user/base16.lua
+
+    else
+      colo base16-gruvbox-dark-hard
+    endif
+
     highlight clear SignColumn
     highlight link mkdLineBreak NONE
     highlight Normal ctermfg=7 ctermbg=NONE guifg=#d5c4a1 guibg=NONE
