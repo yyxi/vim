@@ -10,11 +10,10 @@ let g:airline_skip_empty_sections            = 1
 let g:airline_skip_empty_sections            = 1
 let g:airline#extensions#searchcount#enabled = 0
 let g:airline_theme                          = "minimalist"
-let g:gruvbox_contrast_dark                  = "hard"
-let g:gruvbox_sign_column                    = "dark0_hard"
-let g:gruvbox_invert_selection               = 0
 
 if has('nvim')
+  set laststatus=3
+
   let g:indent_blankline_char_list = ['|', '¦', '┆', '┊']
   let g:indent_blankline_use_treesitter = v:true
   let g:indent_blankline_show_first_indent_level = v:false
@@ -33,8 +32,8 @@ let g:airline_symbols.notexists = "?"
 let g:airline_symbols.maxlinenr = ''
 
 au FileType help,qf setl nowrap nofen nospell nocul nolist
-au FileType help,qf setl stl=\ %n\ \ %f%=%L\ lines
-au FileType * if &buftype == 'nofile' | setlocal syntax=off | endif
+" au FileType help setl stl=
+" au FileType * if &buftype == 'nofile' | setlocal syntax=off | endif
 
 " autocmd FileType * unlet! g:airline#extensions#whitespace#checks
 " autocmd FileType taskedit let g:airline#extensions#whitespace#checks = [ 'indent' ]
@@ -51,18 +50,15 @@ else
 
     if has('nvim')
       luafile ~/.vim/lua/user/base16.lua
-
     else
       colo base16-gruvbox-dark-hard
     endif
 
-    highlight clear SignColumn
-    highlight link mkdLineBreak NONE
-    highlight Normal ctermfg=7 ctermbg=NONE guifg=#d5c4a1 guibg=NONE
-    hi! link CocMenuSel PmenuSel
+    hi! link NormalFloat Normal
+    hi! link FloatBorder Normal
+    hi! link DiagnosticFloatingError Normal
+    hi! link DiagnosticFloatingHint Normal
+    hi! link DiagnosticFloatingInfo Normal
+    hi! link DiagnosticFloatingWarn Normal
+    hi! link WinSeparator Normal
 endif
-
-augroup quickfix
-    autocmd!
-    autocmd FileType qf setlocal wrap
-augroup END

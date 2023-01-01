@@ -22,6 +22,7 @@ set list listchars=tab:¨¨,trail:·,eol:¬
 set noeb vb t_vb= cc=
 set bkc=yes nowrap
 set ch=2 noshowmode nolist
+set signcolumn=no
 au GUIEnter * set vb t_vb=
 set formatoptions-=t
 
