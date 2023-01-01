@@ -24,9 +24,9 @@ lsp.set_preferences({
   call_servers = 'local',
   sign_icons = {
     error = '◆',
-    warn= '◇',
+    warn = '◇',
     hint = '•',
-    info = '∙'
+    info = '∙',
   },
 })
 
@@ -36,7 +36,7 @@ vim.diagnostic.config({
   update_in_insert = false,
   underline = true,
   severity_sort = false,
-  float = true
+  float = true,
 })
 
 lsp.setup_nvim_cmp({
@@ -79,6 +79,36 @@ lsp.configure('eslint', {
   },
 })
 
+lsp.configure('jsonls', {
+  settings = {
+    json = {
+      -- Schemas https://www.schemastore.org
+      schemas = {
+        {
+          fileMatch = { 'package.json' },
+          url = 'https://json.schemastore.org/package.json',
+        },
+        {
+          fileMatch = { 'tsconfig*.json' },
+          url = 'https://json.schemastore.org/tsconfig.json',
+        },
+        {
+          fileMatch = {
+            '.prettierrc',
+            '.prettierrc.json',
+            'prettier.config.json',
+          },
+          url = 'https://json.schemastore.org/prettierrc.json',
+        },
+        {
+          fileMatch = { '.eslintrc', '.eslintrc.json' },
+          url = 'https://json.schemastore.org/eslintrc.json',
+        },
+      },
+    },
+  },
+})
+
 lsp.on_attach(function(client)
   lsp_format.on_attach(client)
 end)
@@ -93,6 +123,9 @@ formatter.setup({
   log_level = vim.log.levels.WARN,
   -- All formatter configurations are opt-in
   filetype = {
+    javascript = {
+      require('formatter.filetypes.typescript').prettier,
+    },
     typescript = {
       require('formatter.filetypes.typescript').prettier,
     },
@@ -104,6 +137,9 @@ formatter.setup({
     },
     yaml = {
       require('formatter.filetypes.lua').yaml,
+    },
+    json = {
+      require('formatter.filetypes.lua').prettier,
     },
     ['*'] = {
       require('formatter.filetypes.any').remove_trailing_whitespace,
