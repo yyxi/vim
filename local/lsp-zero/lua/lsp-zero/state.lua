@@ -21,6 +21,7 @@ local get_defaults = function()
       lspinfo = true,
       man = true,
       harpoon = true,
+      TelescopePrompt = true
     },
 
     -- cache server history

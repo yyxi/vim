@@ -45,7 +45,7 @@ M.default_mappings = function()
     ['<C-u>'] = cmp.mapping.scroll_docs(-5),
 
     -- toggle completion
-    ['<C-e>'] = cmp.mapping(function(fallback)
+    ['<C-e>'] = cmp.mapping(function(--[[ fallback ]])
       if cmp.visible() then
         cmp.abort()
       else

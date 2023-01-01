@@ -61,4 +61,13 @@ else
     hi! link DiagnosticFloatingInfo Normal
     hi! link DiagnosticFloatingWarn Normal
     hi! link WinSeparator Normal
+    hi! link TroubleCount Normal
+    hi! link TroubleIndent Normal
+    hi! link TroubleFoldIcon Comment
+    hi! link TroubleSignError Comment
+    hi! link TroubleSignWarning Comment
+    hi! link TroubleSignInformation Comment
+    hi! link TroubleSignHint Comment
+    hi! link TroubleSignOther Comment
+    hi! link TroubleLocation Comment
 endif

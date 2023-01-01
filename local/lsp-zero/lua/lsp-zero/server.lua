@@ -191,7 +191,6 @@ s.set_keymaps = function(bufnr)
   end
 
   if global_config.configure_diagnostics then
-    map('n', 'gl', diagnostic('open_float()'))
     map('n', '<C-Up>', diagnostic('goto_prev()'))
     map('n', '<C-Down>', diagnostic('goto_next()'))
   end
