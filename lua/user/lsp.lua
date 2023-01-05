@@ -1,7 +1,8 @@
 local lsp = require('lsp-zero')
-local cmp = require('cmp')
+-- local cmp = require('cmp')
 local lsp_format = require('lsp-format')
 local formatter = require('formatter')
+local copyf = require('formatter.util').copyf
 
 lsp_format.setup({
   typescript = {
@@ -40,8 +41,7 @@ vim.diagnostic.config({
 })
 
 lsp.setup_nvim_cmp({
-  documentation = false,
-  preselect = cmp.PreselectMode.None,
+  documentation = true,
 })
 
 lsp.ensure_installed({
@@ -124,10 +124,13 @@ formatter.setup({
   -- All formatter configurations are opt-in
   filetype = {
     javascript = {
-      require('formatter.filetypes.typescript').prettier,
+      require('formatter.filetypes.javascript').prettier,
     },
     typescript = {
       require('formatter.filetypes.typescript').prettier,
+    },
+    vue = {
+      copyf(require('formatter.defaults.prettier')),
     },
     sh = {
       require('formatter.filetypes.sh').shfmt,
