@@ -25,6 +25,9 @@ set ch=2 noshowmode nolist
 set signcolumn=no
 au GUIEnter * set vb t_vb=
 set formatoptions-=t
+set nohidden
+
+let loaded_netrwPlugin = 1
 
 if v:version > 703 || v:version == 703 && has('patch541')
   set formatoptions+=j

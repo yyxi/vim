@@ -139,10 +139,13 @@ formatter.setup({
       require('formatter.filetypes.lua').stylua,
     },
     yaml = {
-      require('formatter.filetypes.lua').yaml,
+      require('formatter.filetypes.yaml').yaml,
+    },
+    ["yaml.ansible"] = {
+      require('formatter.filetypes.yaml').yaml,
     },
     json = {
-      require('formatter.filetypes.lua').prettier,
+      require('formatter.filetypes.json').prettier,
     },
     ['*'] = {
       require('formatter.filetypes.any').remove_trailing_whitespace,
