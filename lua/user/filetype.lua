@@ -1,4 +1,8 @@
 vim.filetype.add({
+  extension = {
+    tfvars = 'terraform',
+    tfstate = 'json',
+  },
   filename = {
     ['go.sum'] = 'go',
     ['yarn.lock'] = 'yaml',
