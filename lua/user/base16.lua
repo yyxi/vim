@@ -21,5 +21,10 @@ require('mini.base16').setup({
   plugins = {
     default = false,
     ['echasnovski/mini.nvim'] = true,
+    ['hrsh7th/nvim-cmp'] = true,
+    ['justinmk/vim-sneak'] = true,
+    ['lukas-reineke/indent-blankline.nvim'] = true,
+    ['nvim-telescope/telescope.nvim'] = true,
+    ['williamboman/mason.nvim'] = true,
   },
 })
