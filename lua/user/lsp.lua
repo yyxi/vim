@@ -45,7 +45,7 @@ lsp.setup_nvim_cmp({
 })
 
 lsp.ensure_installed({
-  'sumneko_lua',
+  'lua_ls',
 })
 
 lsp.configure('tsserver', {

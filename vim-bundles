@@ -7,7 +7,6 @@ Plug 'bling/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
 
 Plug 'christoomey/vim-sort-motion'
-Plug 'jiangmiao/auto-pairs'
 Plug 'junegunn/vim-easy-align'
 Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
@@ -20,6 +19,7 @@ Plug 'ojroques/vim-oscyank'
 
 if has('nvim')
   Plug 'nvim-lua/plenary.nvim'
+  Plug 'windwp/nvim-autopairs'
   Plug 'lukas-reineke/indent-blankline.nvim'
   Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
   Plug 'nvim-treesitter/nvim-treesitter-textobjects'
