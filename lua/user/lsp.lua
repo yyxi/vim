@@ -1,8 +1,8 @@
 local lsp = require('lsp-zero')
--- local cmp = require('cmp')
 local lsp_format = require('lsp-format')
 local formatter = require('formatter')
 local copyf = require('formatter.util').copyf
+local cmp = require('cmp')
 
 lsp_format.setup({
   typescript = {
@@ -13,12 +13,11 @@ lsp_format.setup({
   },
 })
 
-lsp.preset('recommended')
-
-lsp.set_preferences({
+lsp.preset({
+  name = 'minimal',
   suggest_lsp_servers = true,
   setup_servers_on_start = true,
-  set_lsp_keymaps = true,
+  set_lsp_keymaps = false,
   configure_diagnostics = true,
   cmp_capabilities = true,
   manage_nvim_cmp = true,
@@ -32,6 +31,14 @@ lsp.set_preferences({
 })
 
 vim.diagnostic.config({
+  -- float = {
+  --   focusable = false,
+  --   style = 'minimal',
+  --   border = 'rounded',
+  --   source = 'always',
+  --   header = '',
+  --   prefix = '',
+  -- },
   virtual_text = true,
   signs = false,
   update_in_insert = false,
@@ -42,6 +49,53 @@ vim.diagnostic.config({
 
 lsp.setup_nvim_cmp({
   documentation = true,
+  mapping = {
+    ['<CR>'] = cmp.mapping.confirm({ select = false }),
+    ['<C-y>'] = cmp.mapping.confirm({ select = false }),
+
+    -- navigate items on the list
+    ['<Up>'] = cmp.mapping.select_prev_item({
+      behavior = cmp.SelectBehavior.Insert,
+    }),
+    ['<Down>'] = cmp.mapping.select_next_item({
+      behavior = cmp.SelectBehavior.Insert,
+    }),
+    ['<C-p>'] = cmp.mapping.select_prev_item({
+      behavior = cmp.SelectBehavior.Insert,
+    }),
+    ['<C-n>'] = cmp.mapping.select_next_item({
+      behavior = cmp.SelectBehavior.Insert,
+    }),
+
+    -- scroll up and down in the completion documentation
+    ['<C-f>'] = cmp.mapping.scroll_docs(5),
+    ['<C-u>'] = cmp.mapping.scroll_docs(-5),
+
+    -- toggle completion
+    ['<C-e>'] = cmp.mapping(function(--[[ fallback ]])
+      if cmp.visible() then
+        cmp.abort()
+      else
+        cmp.complete()
+      end
+    end),
+
+    ['<Tab>'] = cmp.mapping(function(fallback)
+      if cmp.visible() then
+        cmp.select_next_item({ behavior = cmp.SelectBehavior.Insert })
+      elseif has_words_before() then
+        cmp.complete()
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+
+    ['<S-Tab>'] = cmp.mapping(function()
+      if cmp.visible() then
+        cmp.select_prev_item({ behavior = cmp.SelectBehavior.Insert })
+      end
+    end, { 'i', 's' }),
+  },
 })
 
 lsp.ensure_installed({
@@ -109,7 +163,100 @@ lsp.configure('jsonls', {
   },
 })
 
-lsp.on_attach(function(client)
+lsp.on_attach(function(client, bufnr)
+  local opts = { noremap = true, silent = true }
+
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    '<C-k>',
+    '<cmd>lua vim.lsp.buf.signature_help()<cr>',
+    opts
+  )
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'K',
+    '<cmd>lua vim.lsp.buf.hover()<cr>',
+    opts
+  )
+  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xf', 'gf', opts)
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xd',
+    '<cmd>lua vim.lsp.buf.definition()<cr>',
+    opts
+  )
+  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xd', '<cmd>Telescope lsp_definitions<cr>', opts)
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xD',
+    '<cmd>lua vim.lsp.buf.declaration()<cr>',
+    opts
+  )
+  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xi', '<cmd>lua vim.lsp.buf.implementation()<cr>', opts)
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xi',
+    '<cmd>Telescope lsp_implementations<cr><cr>',
+    opts
+  )
+  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xt', '<cmd>lua vim.lsp.buf.type_definition()<cr>', opts)
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xt',
+    '<cmd>Telescope lsp_type_definitions<cr>',
+    opts
+  )
+  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xR', '<cmd>lua vim.lsp.buf.references()<cr>', opts)
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xR',
+    '<cmd>Telescope lsp_references<cr>',
+    opts
+  )
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xr',
+    '<cmd>lua vim.lsp.buf.rename()<cr>',
+    opts
+  )
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xa',
+    '<cmd>lua vim.lsp.buf.code_action()<cr>',
+    opts
+  )
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'x',
+    'xa',
+    '<cmd>lua vim.lsp.buf.code_action()<cr>',
+    opts
+  )
+
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    '<C-Up>',
+    '<cmd>lua vim.diagnostic.goto_prev()<cr>',
+    opts
+  )
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    '<C-Down>',
+    '<cmd>lua vim.diagnostic.goto_next()<cr>',
+    opts
+  )
+
   lsp_format.on_attach(client)
 end)
 
@@ -141,7 +288,7 @@ formatter.setup({
     yaml = {
       require('formatter.filetypes.yaml').yaml,
     },
-    ["yaml.ansible"] = {
+    ['yaml.ansible'] = {
       require('formatter.filetypes.yaml').yaml,
     },
     json = {
