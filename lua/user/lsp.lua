@@ -11,6 +11,12 @@ lsp_format.setup({
       return vim.opt.shiftwidth:get()
     end,
   },
+  vue = {
+    order = { 'volar', 'eslint' },
+    tab_width = function()
+      return vim.opt.shiftwidth:get()
+    end,
+  },
 })
 
 lsp.preset({
@@ -49,6 +55,10 @@ vim.diagnostic.config({
 
 lsp.setup_nvim_cmp({
   documentation = true,
+  preselect = cmp.PreselectMode.None,
+  completion = {
+    completeopt = 'menu,menuone,noinsert,noselect',
+  },
   mapping = {
     ['<CR>'] = cmp.mapping.confirm({ select = false }),
     ['<C-y>'] = cmp.mapping.confirm({ select = false }),
@@ -136,29 +146,16 @@ lsp.configure('eslint', {
 lsp.configure('jsonls', {
   settings = {
     json = {
-      -- Schemas https://www.schemastore.org
-      schemas = {
-        {
-          fileMatch = { 'package.json' },
-          url = 'https://json.schemastore.org/package.json',
-        },
-        {
-          fileMatch = { 'tsconfig*.json' },
-          url = 'https://json.schemastore.org/tsconfig.json',
-        },
-        {
-          fileMatch = {
-            '.prettierrc',
-            '.prettierrc.json',
-            'prettier.config.json',
-          },
-          url = 'https://json.schemastore.org/prettierrc.json',
-        },
-        {
-          fileMatch = { '.eslintrc', '.eslintrc.json' },
-          url = 'https://json.schemastore.org/eslintrc.json',
-        },
-      },
+      schemas = require('schemastore').json.schemas(),
+      validate = { enable = true },
+    },
+  },
+})
+
+lsp.configure('yamlls', {
+  settings = {
+    yaml = {
+      schemas = require('schemastore').yaml.schemas(),
     },
   },
 })

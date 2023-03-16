@@ -6,7 +6,6 @@ cm WQ wq
 cm wQ wq
 cm Tabe tabe
 cm w!! w !sudo tee % >/dev/null
-im jj <Esc>
 
 noremap 0 ^
 noremap ^ 0
@@ -16,4 +15,3 @@ nnoremap <expr> N (v:searchforward ? 'N' : 'n')
 
 nnoremap <Up> n
 nnoremap <Down> N
-

@@ -31,6 +31,7 @@ if has('nvim')
   Plug 'echasnovski/mini.base16', { 'branch': 'stable' }
   Plug 'gbprod/yanky.nvim'
   Plug 'folke/trouble.nvim'
+  Plug 'max397574/better-escape.nvim'
 
   " LSP Support
   Plug 'neovim/nvim-lspconfig'
@@ -45,6 +46,7 @@ if has('nvim')
   Plug 'L3MON4D3/LuaSnip'
   Plug 'williamboman/mason.nvim'
   Plug 'mhartington/formatter.nvim'
+  Plug 'b0o/schemastore.nvim'
 
   Plug 'VonHeikemen/lsp-zero.nvim'
   Plug '~/.vim/local/lsp-format'
