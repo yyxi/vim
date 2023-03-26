@@ -53,6 +53,19 @@ vim.diagnostic.config({
   float = true,
 })
 
+local has_words_before = function()
+  if vim.api.nvim_buf_get_option(0, 'buftype') == 'prompt' then
+    return false
+  end
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  return col ~= 0
+    and vim.api
+        .nvim_buf_get_lines(0, line - 1, line, true)[1]
+        :sub(col, col)
+        :match('%s')
+      == nil
+end
+
 lsp.setup_nvim_cmp({
   documentation = true,
   preselect = cmp.PreselectMode.None,
@@ -62,7 +75,6 @@ lsp.setup_nvim_cmp({
   mapping = {
     ['<CR>'] = cmp.mapping.confirm({ select = false }),
     ['<C-y>'] = cmp.mapping.confirm({ select = false }),
-
     -- navigate items on the list
     ['<Up>'] = cmp.mapping.select_prev_item({
       behavior = cmp.SelectBehavior.Insert,
@@ -76,20 +88,17 @@ lsp.setup_nvim_cmp({
     ['<C-n>'] = cmp.mapping.select_next_item({
       behavior = cmp.SelectBehavior.Insert,
     }),
-
     -- scroll up and down in the completion documentation
     ['<C-f>'] = cmp.mapping.scroll_docs(5),
     ['<C-u>'] = cmp.mapping.scroll_docs(-5),
-
     -- toggle completion
-    ['<C-e>'] = cmp.mapping(function(--[[ fallback ]])
+    ['<C-e>'] = cmp.mapping(function( --[[ fallback ]])
       if cmp.visible() then
         cmp.abort()
       else
         cmp.complete()
       end
     end),
-
     ['<Tab>'] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_next_item({ behavior = cmp.SelectBehavior.Insert })
@@ -99,10 +108,11 @@ lsp.setup_nvim_cmp({
         fallback()
       end
     end, { 'i', 's' }),
-
-    ['<S-Tab>'] = cmp.mapping(function()
+    ['<S-Tab>'] = cmp.mapping(function(fallback)
       if cmp.visible() then
         cmp.select_prev_item({ behavior = cmp.SelectBehavior.Insert })
+      else
+        fallback()
       end
     end, { 'i', 's' }),
   },
@@ -177,15 +187,7 @@ lsp.on_attach(function(client, bufnr)
     '<cmd>lua vim.lsp.buf.hover()<cr>',
     opts
   )
-  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xf', 'gf', opts)
-  vim.api.nvim_buf_set_keymap(
-    bufnr,
-    'n',
-    'xd',
-    '<cmd>lua vim.lsp.buf.definition()<cr>',
-    opts
-  )
-  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xd', '<cmd>Telescope lsp_definitions<cr>', opts)
+
   vim.api.nvim_buf_set_keymap(
     bufnr,
     'n',
@@ -193,30 +195,39 @@ lsp.on_attach(function(client, bufnr)
     '<cmd>lua vim.lsp.buf.declaration()<cr>',
     opts
   )
-  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xi', '<cmd>lua vim.lsp.buf.implementation()<cr>', opts)
+
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'n',
+    'xd',
+    '<cmd>Telescope lsp_definitions<cr>', --[[ '<cmd>lua vim.lsp.buf.definition()<cr>' ]]
+    opts
+  )
+
   vim.api.nvim_buf_set_keymap(
     bufnr,
     'n',
     'xi',
-    '<cmd>Telescope lsp_implementations<cr><cr>',
+    '<cmd>Telescope lsp_implementations<cr><cr>', --[[ '<cmd>lua vim.lsp.buf.implementation()<cr>' ]]
     opts
   )
-  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xt', '<cmd>lua vim.lsp.buf.type_definition()<cr>', opts)
+
   vim.api.nvim_buf_set_keymap(
     bufnr,
     'n',
     'xt',
-    '<cmd>Telescope lsp_type_definitions<cr>',
+    '<cmd>Telescope lsp_type_definitions<cr>', --[[ '<cmd>lua vim.lsp.buf.type_definition()<cr>' ]]
     opts
   )
-  -- vim.api.nvim_buf_set_keymap(bufnr, 'n', 'xR', '<cmd>lua vim.lsp.buf.references()<cr>', opts)
+
   vim.api.nvim_buf_set_keymap(
     bufnr,
     'n',
     'xR',
-    '<cmd>Telescope lsp_references<cr>',
+    '<cmd>Telescope lsp_references<cr>', --[[ '<cmd>lua vim.lsp.buf.references()<cr>' ]]
     opts
   )
+
   vim.api.nvim_buf_set_keymap(
     bufnr,
     'n',
@@ -224,6 +235,7 @@ lsp.on_attach(function(client, bufnr)
     '<cmd>lua vim.lsp.buf.rename()<cr>',
     opts
   )
+
   vim.api.nvim_buf_set_keymap(
     bufnr,
     'n',
@@ -231,13 +243,8 @@ lsp.on_attach(function(client, bufnr)
     '<cmd>lua vim.lsp.buf.code_action()<cr>',
     opts
   )
-  vim.api.nvim_buf_set_keymap(
-    bufnr,
-    'x',
-    'xa',
-    '<cmd>lua vim.lsp.buf.code_action()<cr>',
-    opts
-  )
+
+  vim.api.nvim_buf_set_keymap(bufnr, 'x', 'xa', '<cmd>lua vim.lsp.buf.code_action()<cr>', opts)
 
   vim.api.nvim_buf_set_keymap(
     bufnr,
@@ -246,6 +253,7 @@ lsp.on_attach(function(client, bufnr)
     '<cmd>lua vim.diagnostic.goto_prev()<cr>',
     opts
   )
+
   vim.api.nvim_buf_set_keymap(
     bufnr,
     'n',
