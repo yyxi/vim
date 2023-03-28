@@ -1,4 +1,20 @@
-local lsp = require('lsp-zero')
+local lsp = require('lsp-zero').preset({
+  name = 'minimal',
+  suggest_lsp_servers = true,
+  setup_servers_on_start = true,
+  set_lsp_keymaps = false,
+  configure_diagnostics = true,
+  cmp_capabilities = true,
+  manage_nvim_cmp = true,
+  call_servers = 'local',
+  sign_icons = {
+    error = '◆',
+    warn = '◇',
+    hint = '•',
+    info = '∙',
+  },
+})
+
 local lsp_format = require('lsp-format')
 local formatter = require('formatter')
 local copyf = require('formatter.util').copyf
@@ -16,23 +32,6 @@ lsp_format.setup({
     tab_width = function()
       return vim.opt.shiftwidth:get()
     end,
-  },
-})
-
-lsp.preset({
-  name = 'minimal',
-  suggest_lsp_servers = true,
-  setup_servers_on_start = true,
-  set_lsp_keymaps = false,
-  configure_diagnostics = true,
-  cmp_capabilities = true,
-  manage_nvim_cmp = true,
-  call_servers = 'local',
-  sign_icons = {
-    error = '◆',
-    warn = '◇',
-    hint = '•',
-    info = '∙',
   },
 })
 
@@ -118,10 +117,6 @@ lsp.setup_nvim_cmp({
   },
 })
 
-lsp.ensure_installed({
-  'lua_ls',
-})
-
 lsp.configure('tsserver', {
   format = {
     function(bufnr, client)
@@ -153,19 +148,29 @@ lsp.configure('eslint', {
   },
 })
 
-lsp.configure('jsonls', {
+lsp.configure('yamlls', {
   settings = {
-    json = {
-      schemas = require('schemastore').json.schemas(),
+    yaml = {
+      schemas = vim.list_extend(
+        {
+          [vim.fn.expand('~/.vim/lua/user/empty_schema.json')] = 'contents.yaml',
+        },
+        require('schemastore').yaml.schemas({
+          ignore = {
+            'IMG Catapult PSP',
+          },
+        })
+      ),
       validate = { enable = true },
     },
   },
 })
 
-lsp.configure('yamlls', {
+lsp.configure('jsonls', {
   settings = {
-    yaml = {
-      schemas = require('schemastore').yaml.schemas(),
+    json = {
+      schemas = require('schemastore').json.schemas(),
+      validate = { enable = true },
     },
   },
 })
@@ -244,7 +249,13 @@ lsp.on_attach(function(client, bufnr)
     opts
   )
 
-  vim.api.nvim_buf_set_keymap(bufnr, 'x', 'xa', '<cmd>lua vim.lsp.buf.code_action()<cr>', opts)
+  vim.api.nvim_buf_set_keymap(
+    bufnr,
+    'x',
+    'xa',
+    '<cmd>lua vim.lsp.buf.code_action()<cr>',
+    opts
+  )
 
   vim.api.nvim_buf_set_keymap(
     bufnr,
@@ -265,9 +276,6 @@ lsp.on_attach(function(client, bufnr)
   lsp_format.on_attach(client)
 end)
 
-lsp.nvim_workspace()
-lsp.setup()
-
 formatter.setup({
   -- Enable or disable logging
   logging = true,
@@ -280,6 +288,9 @@ formatter.setup({
     },
     typescript = {
       require('formatter.filetypes.typescript').prettier,
+    },
+    css = {
+      require('formatter.filetypes.css').prettier,
     },
     vue = {
       copyf(require('formatter.defaults.prettier')),
@@ -315,3 +326,9 @@ vim.api.nvim_set_keymap(
 -- map('n', 'xf', 'gf')
 -- vim.bind('x', 'f', '<cmd>lua LspFormat<cr>')
 -- bind('n', 'Q', function() print('Hello') end, {buffer = bufnr, desc = 'Say hello'})
+
+lsp.ensure_installed({
+  'lua_ls',
+})
+lsp.nvim_workspace()
+lsp.setup()
