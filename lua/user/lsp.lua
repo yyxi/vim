@@ -1,18 +1,24 @@
 local lsp = require('lsp-zero').preset({
-  name = 'minimal',
-  suggest_lsp_servers = true,
+  float_border = 'rounded',
+  call_servers = 'local',
+  configure_diagnostics = false,
   setup_servers_on_start = true,
   set_lsp_keymaps = false,
-  configure_diagnostics = true,
-  cmp_capabilities = true,
-  manage_nvim_cmp = true,
-  call_servers = 'local',
-  sign_icons = {
-    error = '◆',
-    warn = '◇',
-    hint = '•',
-    info = '∙',
+  manage_nvim_cmp = {
+    set_sources = 'lsp',
+    set_basic_mappings = false,
+    set_extra_mappings = false,
+    use_luasnip = true,
+    set_format = true,
+    documentation_window = true,
   },
+})
+
+lsp.set_sign_icons({
+  error = '◆',
+  warn = '◇',
+  hint = '•',
+  info = '∙',
 })
 
 local lsp_format = require('lsp-format')
@@ -35,23 +41,6 @@ lsp_format.setup({
   },
 })
 
-vim.diagnostic.config({
-  -- float = {
-  --   focusable = false,
-  --   style = 'minimal',
-  --   border = 'rounded',
-  --   source = 'always',
-  --   header = '',
-  --   prefix = '',
-  -- },
-  virtual_text = true,
-  signs = false,
-  update_in_insert = false,
-  underline = true,
-  severity_sort = false,
-  float = true,
-})
-
 local has_words_before = function()
   if vim.api.nvim_buf_get_option(0, 'buftype') == 'prompt' then
     return false
@@ -70,6 +59,10 @@ lsp.setup_nvim_cmp({
   preselect = cmp.PreselectMode.None,
   completion = {
     completeopt = 'menu,menuone,noinsert,noselect',
+  },
+  window = {
+    completion = cmp.config.window.bordered(),
+    documentation = cmp.config.window.bordered(),
   },
   mapping = {
     ['<CR>'] = cmp.mapping.confirm({ select = false }),
@@ -332,3 +325,25 @@ lsp.ensure_installed({
 })
 lsp.nvim_workspace()
 lsp.setup()
+
+vim.diagnostic.config({
+  float = {
+    focusable = true,
+    -- style = 'minimal',
+    border = 'rounded',
+    source = 'always',
+    header = '',
+    prefix = '',
+    -- format = function(diagnostic)
+    --   return string.format('%s: %s', diagnostic.source, diagnostic.message)
+    -- end,
+  },
+  underline = {
+    -- Do not underline text when severity is low (INFO or HINT).
+    severity = { min = vim.diagnostic.severity.WARN },
+  },
+  virtual_text = false,
+  signs = false,
+  update_in_insert = false,
+  severity_sort = false,
+})

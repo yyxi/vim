@@ -46,12 +46,8 @@ if has('nvim')
   Plug 'L3MON4D3/LuaSnip'
   Plug 'mhartington/formatter.nvim'
   Plug 'b0o/schemastore.nvim'
-  Plug 'VonHeikemen/lsp-zero.nvim'
+  Plug 'VonHeikemen/lsp-zero.nvim', {'branch': 'v2.x'}
   Plug '~/.vim/local/lsp-format'
-
-  " Copilot
-  Plug 'github/copilot.vim'
-  " Plug 'zbirenbaum/copilot.lua'
 else
   Plug 'chriskempson/base16-vim'
 endif
