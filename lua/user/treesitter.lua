@@ -84,7 +84,6 @@ require('nvim-treesitter.configs').setup({
     'graphql',
     'hcl',
     'heex',
-    'help',
     'html',
     'http',
     'javascript',
