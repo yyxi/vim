@@ -1,6 +1,7 @@
 require('nvim-treesitter.configs').setup({
   highlight = {
     enable = true,
+    additional_vim_regex_highlighting = false,
   },
   indent = {
     enable = true,
@@ -79,6 +80,11 @@ require('nvim-treesitter.configs').setup({
     'elixir',
     'erlang',
     'fish',
+    'git_config',
+    'git_rebase',
+    'gitattributes',
+    'gitcommit',
+    'gitignore',
     'glsl',
     'go',
     'graphql',
@@ -86,17 +92,21 @@ require('nvim-treesitter.configs').setup({
     'heex',
     'html',
     'http',
+    'jq',
     'javascript',
     'jsdoc',
+    'sql',
     'json',
     'json5',
     'jsonc',
     'latex',
     'lua',
     'make',
+    'mermaid',
     'markdown',
     'perl',
     'proto',
+    'prisma',
     'python',
     'r',
     'rust',
@@ -115,5 +125,5 @@ require('nvim-treesitter.configs').setup({
   context_commentstring = {
     enable = true,
     enable_autocmd = false,
-  }
+  },
 })

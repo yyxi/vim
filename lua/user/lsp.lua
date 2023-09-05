@@ -39,6 +39,12 @@ lsp_format.setup({
       return vim.opt.shiftwidth:get()
     end,
   },
+  -- css = {
+  --   order = { 'stylelint_lsp' },
+  --   tab_width = function()
+  --     return vim.opt.shiftwidth:get()
+  --   end,
+  -- }
 })
 
 local has_words_before = function()
@@ -59,6 +65,18 @@ lsp.setup_nvim_cmp({
   preselect = cmp.PreselectMode.None,
   completion = {
     completeopt = 'menu,menuone,noinsert,noselect',
+  },
+  sorting = {
+    comparators = {
+      cmp.config.compare.offset,
+      cmp.config.compare.exact,
+      cmp.config.compare.score,
+      cmp.config.compare.recently_used,
+      cmp.config.compare.kind,
+      cmp.config.compare.sort_text,
+      -- cmp.config.compare.length,
+      -- cmp.config.compare.order,
+    },
   },
   window = {
     completion = cmp.config.window.bordered(),
@@ -116,6 +134,32 @@ lsp.configure('tsserver', {
       local params = {
         command = '_typescript.organizeImports',
         arguments = { vim.api.nvim_buf_get_name(bufnr) },
+      }
+
+      client.request_sync('workspace/executeCommand', params, 3000, bufnr)
+    end,
+  },
+})
+
+lsp.configure('stylelint_lsp', {
+  filetypes = {
+    'css',
+    'less',
+    'scss',
+    'sugarss',
+    'vue',
+    'wxss',
+  },
+  format = {
+    function(bufnr, client)
+      local params = {
+        command = 'stylelint.applyAutoFixes',
+        arguments = {
+          {
+            uri = vim.uri_from_bufnr(bufnr),
+            version = vim.lsp.util.buf_versions[bufnr],
+          },
+        },
       }
 
       client.request_sync('workspace/executeCommand', params, 3000, bufnr)
@@ -295,9 +339,11 @@ formatter.setup({
       require('formatter.filetypes.lua').stylua,
     },
     yaml = {
+      require('formatter.filetypes.yaml').prettier,
       require('formatter.filetypes.yaml').yaml,
     },
     ['yaml.ansible'] = {
+      require('formatter.filetypes.yaml').prettier,
       require('formatter.filetypes.yaml').yaml,
     },
     json = {
@@ -347,3 +393,39 @@ vim.diagnostic.config({
   update_in_insert = false,
   severity_sort = false,
 })
+
+vim.lsp.set_log_level("WARN")
+
+-- local lsp_conficts, _ = pcall(vim.api.nvim_get_autocmds, { group = "LspAttach_conflicts" })
+-- if not lsp_conficts then
+-- 	vim.api.nvim_create_augroup("LspAttach_conflicts", {})
+-- end
+-- vim.api.nvim_create_autocmd("LspAttach", {
+-- 	group = "LspAttach_conflicts",
+-- 	desc = "prevent tsserver and volar competing",
+-- 	callback = function(args)
+-- 		if not (args.data and args.data.client_id) then
+-- 			return
+-- 		end
+-- 		local active_clients = vim.lsp.get_active_clients()
+-- 		local client = vim.lsp.get_client_by_id(args.data.client_id)
+-- 		-- prevent tsserver and volar competing
+--                 -- if client.name == "volar" or require("lspconfig").util.root_pattern("nuxt.config.ts")(vim.fn.getcwd()) then
+--                 -- OR
+-- 		if client.name == "volar" then
+-- 			for _, client_ in pairs(active_clients) do
+-- 				-- stop tsserver if volar is already active
+-- 				if client_.name == "tsserver" then
+-- 					client_.stop()
+-- 				end
+-- 			end
+-- 		elseif client.name == "tsserver" then
+-- 			for _, client_ in pairs(active_clients) do
+-- 				-- prevent tsserver from starting if volar is already active
+-- 				if client_.name == "volar" then
+-- 					client.stop()
+-- 				end
+-- 			end
+-- 		end
+-- 	end,
+-- })

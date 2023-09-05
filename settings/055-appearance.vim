@@ -54,6 +54,7 @@ else
       colo base16-gruvbox-dark-hard
     endif
 
+    hi! link @text.todo MiniHipatternsTodo
     hi! link NormalFloat Normal
     hi! link FloatBorder Normal
     hi! link DiagnosticFloatingError Normal

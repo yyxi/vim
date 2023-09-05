@@ -1,4 +1,18 @@
 require('telescope').setup({
+  pickers = {
+    find_files = {
+      find_command = {
+        'rg',
+        '--files',
+        '--color',
+        'never',
+        '--hidden',
+        '--glob',
+        '!.git',
+      },
+    },
+  },
+  -- file_ignore_patterns = { '.git' },
   extensions = {
     fzf = {
       fuzzy = true, -- false will only do exact matching

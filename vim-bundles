@@ -29,6 +29,7 @@ if has('nvim')
   Plug 'JoosepAlviste/nvim-ts-context-commentstring'
   Plug 'numToStr/Comment.nvim'
   Plug 'echasnovski/mini.base16', { 'branch': 'stable' }
+  Plug 'echasnovski/mini.hipatterns'
   Plug 'gbprod/yanky.nvim'
   Plug 'folke/trouble.nvim'
   Plug 'max397574/better-escape.nvim'
