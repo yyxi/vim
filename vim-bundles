@@ -12,7 +12,6 @@ Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
 Plug 'tpope/vim-sensible'
 Plug 'farmergreg/vim-lastplace'
-Plug 'unblevable/quick-scope'
 Plug 'wincent/terminus'
 Plug 'arthurxavierx/vim-unicoder'
 Plug 'ojroques/vim-oscyank'
@@ -33,6 +32,7 @@ if has('nvim')
   Plug 'gbprod/yanky.nvim'
   Plug 'folke/trouble.nvim'
   Plug 'max397574/better-escape.nvim'
+  Plug 'jinh0/eyeliner.nvim'
 
   " LSP Support
   Plug 'neovim/nvim-lspconfig'

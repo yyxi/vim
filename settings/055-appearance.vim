@@ -31,6 +31,12 @@ let g:airline_symbols.linenr    = ''
 let g:airline_symbols.notexists = "?"
 let g:airline_symbols.maxlinenr = ''
 
+" function! AirlineInit()
+"   let g:airline_section_a = airline#section#create(['mode', ' ', 'foo'])
+" endfunction
+"
+" autocmd User AirlineAfterInit call AirlineInit()
+
 au FileType help,qf setl nowrap nofen nospell nocul nolist
 " au FileType help setl stl=
 " au FileType * if &buftype == 'nofile' | setlocal syntax=off | endif
@@ -49,7 +55,7 @@ else
     set termguicolors
 
     if has('nvim')
-      luafile ~/.vim/lua/user/base16.lua
+      luafile ~/.vim/lua/user/colorscheme.lua
     else
       colo base16-gruvbox-dark-hard
     endif
