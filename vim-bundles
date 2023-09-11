@@ -8,7 +8,6 @@ Plug 'vim-airline/vim-airline-themes'
 
 Plug 'christoomey/vim-sort-motion'
 Plug 'junegunn/vim-easy-align'
-Plug 'justinmk/vim-sneak'
 Plug 'mildred/vim-bufmru'
 Plug 'tpope/vim-sensible'
 Plug 'farmergreg/vim-lastplace'
@@ -33,6 +32,7 @@ if has('nvim')
   Plug 'folke/trouble.nvim'
   Plug 'max397574/better-escape.nvim'
   Plug 'jinh0/eyeliner.nvim'
+  Plug 'echasnovski/mini.jump2d'
 
   " LSP Support
   Plug 'neovim/nvim-lspconfig'
