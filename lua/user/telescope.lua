@@ -3,6 +3,7 @@ require('telescope').setup({
     find_files = {
       find_command = {
         'rg',
+        '-L',
         '--files',
         '--color',
         'never',
