@@ -1,3 +1,5 @@
+local util = require('formatter.util')
+
 local lsp = require('lsp-zero').preset({
   float_border = 'rounded',
   call_servers = 'local',
@@ -349,6 +351,21 @@ formatter.setup({
     json = {
       require('formatter.filetypes.json').prettier,
     },
+    caddyfile = {
+      function()
+        return {
+          exe = 'caddy',
+          args = {
+            'fmt',
+            -- '--overwrite',
+            -- util.escape_path(util.get_current_buffer_file_path()),
+          },
+          stdin = true,
+          no_append = true,
+          ignore_exitcode = true,
+        }
+      end,
+    },
     ['*'] = {
       require('formatter.filetypes.any').remove_trailing_whitespace,
     },
@@ -394,7 +411,7 @@ vim.diagnostic.config({
   severity_sort = false,
 })
 
-vim.lsp.set_log_level("WARN")
+vim.lsp.set_log_level('WARN')
 
 -- local lsp_conficts, _ = pcall(vim.api.nvim_get_autocmds, { group = "LspAttach_conflicts" })
 -- if not lsp_conficts then
