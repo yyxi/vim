@@ -211,7 +211,11 @@ require('lazy').setup({
       vim.g.TerminusBracketedPaste = 1
     end,
   },
-  { 'farmergreg/vim-lastplace', lazy = false, priority = 1000 },
+  {
+    'farmergreg/vim-lastplace',
+    lazy = false,
+    priority = 1000,
+  },
   {
     'echasnovski/mini.base16',
     lazy = false, -- make sure we load this during startup if it is your main colorscheme
@@ -267,6 +271,7 @@ hi! link WinSeparator Normal
 hi! link WhichKeySeparator String
 hi! link WhichKeyFloat Normal
 hi! link WhichKeyBorder Normal
+hi! link ZenBg Normal
 ]])
     end,
   },
@@ -384,46 +389,6 @@ hi! link WhichKeyBorder Normal
       },
     },
   },
-  -- {
-  --   'stevearc/conform.nvim',
-  --   event = { 'BufWritePre' },
-  --   cmd = { 'ConformInfo' },
-  --   keys = {
-  --     {
-  --       -- Customize or remove this keymap to your liking
-  --       'xf',
-  --       function()
-  --         require('conform').format({ async = true, lsp_fallback = 'always' })
-  --       end,
-  --       desc = 'Format buffer',
-  --     },
-  --   },
-  --   opts = {
-  --     formatters_by_ft = {
-  --       lua = { 'stylua' },
-  --       -- python = { 'isort', 'black' },
-  --       -- javascript = { { 'prettierd', 'prettier' } },
-  --     },
-  --     formatters = {
-  --       my_formatter = {
-  --         command = function ()
-  --
-  --         end,
-  --         condition = function(ctx)
-  --           return vim.fs.basename(ctx.filename) ~= 'README.md'
-  --         end,
-  --         inherit = false
-  --       },
-  --       shfmt = {
-  --         prepend_args = { '-i', '2' },
-  --       },
-  --     },
-  --   },
-  --   init = function()
-  --     -- If you want the formatexpr, here is the place to set it
-  --     vim.o.formatexpr = "v:lua.require'conform'.formatexpr()"
-  --   end,
-  -- },
   {
     'VonHeikemen/lsp-zero.nvim',
     branch = 'v3.x',
@@ -441,7 +406,13 @@ hi! link WhichKeyBorder Normal
     lazy = false,
     config = true,
   },
-  { dir = '~/.vim/local/lsp-format' },
+  {
+    'smjonas/inc-rename.nvim',
+    cmd = 'Rename',
+    opts = {
+      cmd_name = 'Rename',
+    },
+  },
   {
     'neovim/nvim-lspconfig',
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
@@ -453,6 +424,7 @@ hi! link WhichKeyBorder Normal
       { 'williamboman/mason-lspconfig.nvim' },
       { 'folke/neodev.nvim' },
       { 'b0o/schemastore.nvim' },
+      { 'smjonas/inc-rename.nvim' },
     },
     config = function()
       require('neodev').setup({})
@@ -530,7 +502,8 @@ hi! link WhichKeyBorder Normal
           bufnr,
           'n',
           'xr',
-          '<cmd>lua vim.lsp.buf.rename()<cr>',
+          ':Rename ',
+          -- '<cmd>lua vim.lsp.buf.rename()<cr>',
           keymap_options
         )
 
@@ -566,7 +539,7 @@ hi! link WhichKeyBorder Normal
           keymap_options
         )
 
-        require('lsp-format').on_attach(client, bufnr)
+        require('lsp-fix').on_attach(client, bufnr)
       end)
 
       require('mason-lspconfig').setup({
@@ -581,7 +554,7 @@ hi! link WhichKeyBorder Normal
           tsserver = function()
             require('lspconfig').tsserver.setup({
               capabilities = capabilities,
-              format = {
+              fix = {
                 function(bufnr, client)
                   local params = {
                     command = '_typescript.organizeImports',
@@ -600,7 +573,7 @@ hi! link WhichKeyBorder Normal
           end,
           eslint = function()
             require('lspconfig').eslint.setup({
-              format = {
+              fix = {
                 function(bufnr, client)
                   local params = {
                     command = 'eslint.applyAllFixes',
@@ -659,34 +632,29 @@ hi! link WhichKeyBorder Normal
     end,
   },
   {
-    'mhartington/formatter.nvim',
+    dir = '~/.vim/local/lsp-fix',
     dependencies = { 'neovim/nvim-lspconfig' },
     keys = {
       {
-        'xf',
-        '<cmd>lua require("lsp-format").format()<cr><cmd>FormatLock<cr>',
-        desc = 'Format',
+        'xF',
+        function()
+          require('lsp-fix').fix()
+        end,
+        desc = 'Fix',
       },
     },
     config = function()
-      local copyf = require('formatter.util').copyf
-      local lsp_format = require('lsp-format')
+      local fix = require('lsp-fix')
 
-      lsp_format.setup({
+      fix.setup({
         typescript = {
           order = {
             'tsserver',
             'eslint',
           },
-          tab_width = function()
-            return vim.opt.shiftwidth:get()
-          end,
         },
         vue = {
           order = { 'volar', 'eslint' },
-          tab_width = function()
-            return vim.opt.shiftwidth:get()
-          end,
         },
         -- css = {
         --   order = { 'stylelint_lsp' },
@@ -695,63 +663,41 @@ hi! link WhichKeyBorder Normal
         --   end,
         -- }
       })
-
-      require('formatter').setup({
-        -- Enable or disable logging
-        logging = true,
-        -- Set the log level
-        log_level = vim.log.levels.WARN,
-        -- All formatter configurations are opt-in
-        filetype = {
-          javascript = {
-            require('formatter.filetypes.javascript').prettier,
-          },
-          typescript = {
-            require('formatter.filetypes.typescript').prettier,
-          },
-          css = {
-            require('formatter.filetypes.css').prettier,
-          },
-          vue = {
-            copyf(require('formatter.defaults.prettier')),
-          },
-          sh = {
-            require('formatter.filetypes.sh').shfmt,
-          },
-          lua = {
-            require('formatter.filetypes.lua').stylua,
-          },
-          yaml = {
-            require('formatter.filetypes.yaml').prettier,
-            require('formatter.filetypes.yaml').yaml,
-          },
-          ['yaml.ansible'] = {
-            require('formatter.filetypes.yaml').prettier,
-            require('formatter.filetypes.yaml').yaml,
-          },
-          json = {
-            require('formatter.filetypes.json').prettier,
-          },
-          caddyfile = {
-            function()
-              return {
-                exe = 'caddy',
-                args = {
-                  'fmt',
-                  -- '--overwrite',
-                  -- util.escape_path(util.get_current_buffer_file_path()),
-                },
-                stdin = true,
-                no_append = true,
-                ignore_exitcode = true,
-              }
-            end,
-          },
-          ['*'] = {
-            require('formatter.filetypes.any').remove_trailing_whitespace,
+    end,
+  },
+  {
+    'stevearc/conform.nvim',
+    event = { 'BufWritePre' },
+    cmd = { 'ConformInfo' },
+    dependencies = { 'neovim/nvim-lspconfig' },
+    keys = {
+      {
+        'xf',
+        function()
+          require('conform').format({ async = true, lsp_fallback = true })
+        end,
+        desc = 'Format',
+      },
+    },
+    config = function()
+      require('conform').setup({
+        formatters_by_ft = {
+          typescript = { { 'prettier' } },
+          javascript = { { 'prettier' } },
+          markdown = { { 'prettier' } },
+          sh = { { 'shfmt' } },
+          lua = { { 'stylua' } },
+        },
+        formatters = {
+          shfmt = {
+            prepend_args = { '-i', '2' },
           },
         },
       })
+    end,
+    init = function()
+      -- If you want the formatexpr, here is the place to set it
+      vim.o.formatexpr = "v:lua.require'conform'.formatexpr()"
     end,
   },
   {
@@ -869,6 +815,14 @@ hi! link WhichKeyBorder Normal
       --   }),
       -- })
     end,
+  },
+  {
+    'Wansmer/treesj',
+    keys = {
+      { 'J', '<cmd>TSJToggle<cr>', desc = 'Join Toggle' },
+    },
+    opts = { use_default_keymaps = false, max_join_length = 150 },
+    dependencies = { 'nvim-treesitter/nvim-treesitter' },
   },
   {
     'nvim-treesitter/nvim-treesitter',
@@ -1076,6 +1030,10 @@ hi! link WhichKeyBorder Normal
       local telescope = require('telescope')
 
       telescope.setup({
+        defaults = {
+          mappings = {},
+          winblend = 10,
+        },
         pickers = {
           find_files = {
             find_command = {
@@ -1151,6 +1109,58 @@ hi! link WhichKeyBorder Normal
     end,
   },
   {
+    'folke/flash.nvim',
+    event = 'VeryLazy',
+    opts = {
+      labels = 'abcdefghijklmnopqrstuvwxyz',
+      search = {
+        multi_window = true,
+        forward = true,
+        wrap = true,
+        mode = 'exact',
+        -- behave like `incsearch`
+        incremental = false,
+      },
+      jump = {
+        jumplist = false,
+        history = false,
+        register = false,
+        nohlsearch = false,
+        autojump = false,
+      },
+      label = {
+        uppercase = true,
+        reuse = 'lowercase', ---@type "lowercase" | "all" | "none"
+        rainbow = {
+          enabled = true,
+          shade = 5,
+        },
+      },
+      highlight = {
+        backdrop = true,
+        matches = true,
+      },
+      modes = {
+        char = {
+          enabled = false,
+        },
+      },
+      prompt = {
+        enabled = false,
+      },
+    },
+    keys = {
+      {
+        '<c-s>',
+        mode = { 'c' },
+        function()
+          require('flash').toggle()
+        end,
+        desc = 'Toggle Flash Search',
+      },
+    },
+  },
+  {
     'jinh0/eyeliner.nvim',
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
@@ -1163,17 +1173,17 @@ hi! link WhichKeyBorder Normal
         'EyelinerPrimary',
         { bold = true, underline = true }
       )
-      vim.api.nvim_set_hl(0, 'EyelinerSecondary', { underline = true })
+      vim.api.nvim_set_hl(0, 'EyelinerSecondary', { bold = true })
     end,
   },
-  {
-    'echasnovski/mini.jump2d',
-    dependencies = { 'echasnovski/mini.base16' },
-    keys = { '<CR>' },
-    config = function()
-      require('mini.jump2d').setup()
-    end,
-  },
+  -- {
+  --   'echasnovski/mini.jump2d',
+  --   dependencies = { 'echasnovski/mini.base16' },
+  --   keys = { '<CR>' },
+  --   config = function()
+  --     require('mini.jump2d').setup()
+  --   end,
+  -- },
   {
     'max397574/better-escape.nvim',
     event = 'InsertEnter',
@@ -1374,6 +1384,45 @@ hi! link WhichKeyBorder Normal
         {}
       )
     end,
+  },
+  {
+    'folke/zen-mode.nvim',
+    cmd = 'ZenMode',
+    opts = {
+      window = {
+        backdrop = 1,
+        width = 1,
+        height = 1,
+        options = {
+          signcolumn = 'no', -- disable signcolumn
+          number = false, -- disable number column
+          relativenumber = false, -- disable relative numbers
+          cursorline = false, -- disable cursorline
+          cursorcolumn = false, -- disable cursor column
+          foldcolumn = '0', -- disable fold column
+          list = false, -- disable whitespace characters
+        },
+      },
+      plugins = {
+        options = {
+          enabled = true,
+          ruler = false, -- disables the ruler text in the cmd line area
+          showcmd = false, -- disables the command in the last line of the screen
+          laststatus = 0, -- turn off the statusline in zen mode
+        },
+        -- gitsigns = true,
+        -- tmux = true,
+        kitty = { enabled = false, font = '+2' },
+      },
+      on_open = function()
+        require('ibl').update({ enabled = false })
+      end,
+      -- callback where you can add custom code when the Zen window closes
+      on_close = function()
+        require('ibl').update({ enabled = true })
+      end,
+    },
+    keys = { { '<leader>z', '<cmd>ZenMode<cr>', desc = 'Zen Mode' } },
   },
   -- {
   --   'folke/trouble.nvim',
