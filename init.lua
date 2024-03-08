@@ -439,6 +439,7 @@ hi! link ZenBg Normal
       { 'smjonas/inc-rename.nvim' },
     },
     config = function()
+      require('lspconfig.ui.windows').default_options.border = 'rounded'
       require('neodev').setup({})
       -- This is where all the LSP shenanigans will live
       local lsp_zero = require('lsp-zero')
@@ -1121,58 +1122,6 @@ hi! link ZenBg Normal
     end,
   },
   {
-    'folke/flash.nvim',
-    event = 'VeryLazy',
-    opts = {
-      labels = 'abcdefghijklmnopqrstuvwxyz',
-      search = {
-        multi_window = true,
-        forward = true,
-        wrap = true,
-        mode = 'exact',
-        -- behave like `incsearch`
-        incremental = false,
-      },
-      jump = {
-        jumplist = false,
-        history = false,
-        register = false,
-        nohlsearch = false,
-        autojump = false,
-      },
-      label = {
-        uppercase = true,
-        reuse = 'lowercase', ---@type "lowercase" | "all" | "none"
-        rainbow = {
-          enabled = true,
-          shade = 5,
-        },
-      },
-      highlight = {
-        backdrop = true,
-        matches = true,
-      },
-      modes = {
-        char = {
-          enabled = false,
-        },
-      },
-      prompt = {
-        enabled = false,
-      },
-    },
-    keys = {
-      {
-        '<c-s>',
-        mode = { 'c' },
-        function()
-          require('flash').toggle()
-        end,
-        desc = 'Toggle Flash Search',
-      },
-    },
-  },
-  {
     'jinh0/eyeliner.nvim',
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
@@ -1188,14 +1137,14 @@ hi! link ZenBg Normal
       vim.api.nvim_set_hl(0, 'EyelinerSecondary', { bold = true })
     end,
   },
-  -- {
-  --   'echasnovski/mini.jump2d',
-  --   dependencies = { 'echasnovski/mini.base16' },
-  --   keys = { '<CR>' },
-  --   config = function()
-  --     require('mini.jump2d').setup()
-  --   end,
-  -- },
+  {
+    'echasnovski/mini.jump2d',
+    dependencies = { 'echasnovski/mini.base16' },
+    keys = { '<CR>' },
+    config = function()
+      require('mini.jump2d').setup()
+    end,
+  },
   {
     'max397574/better-escape.nvim',
     event = 'InsertEnter',
@@ -1436,20 +1385,6 @@ hi! link ZenBg Normal
     },
     keys = { { '<leader>z', '<cmd>ZenMode<cr>', desc = 'Zen Mode' } },
   },
-  -- {
-  --   'folke/trouble.nvim',
-  --   dependencies = { 'echasnovski/mini.base16' },
-  --   cmd = { 'Trouble', 'TroubleClose', 'TroubleToggle', 'TroubleRefresh' },
-  --   config = function()
-  --     require('trouble').setup({
-  --       icons = false,
-  --       indent_lines = false,
-  --       use_diagnostic_signs = true,
-  --       fold_open = 'v',
-  --       fold_closed = '>',
-  --     })
-  --   end,
-  -- },
 }, {
   defaults = {
     lazy = true, -- should plugins be lazy-loaded?
