@@ -25,18 +25,9 @@ main() {
     cd "${path}" || _ die
 
     if [[ "${executable}" == "vim" ]]; then
-      "${executable}" -es -u vimrc -i NONE -c "PlugInstall!" -c "qa" || true
+      _ info "${executable} not supported"
+      exit 0
     fi
-
-    if [[ "${executable}" == "nvim" ]]; then
-      "${executable}" -es -u init.vim -c "PlugInstall!" -c "qa" || true
-    fi
-
-    _ info "${executable} plugins installed"
-
-    [ ! -e "${MANAGE_REPOSITORY}/.ready" ] && touch "${MANAGE_REPOSITORY}/.ready"
-
-    touch "${MANAGE_REPOSITORY}/vimrc"
 
     mkdir -p "${HOME}/.config"
 
@@ -44,9 +35,9 @@ main() {
       ln -s "${MANAGE_REPOSITORY}" "${HOME}/.config/nvim"
     fi
 
-    if [[ ! -e "${HOME}/.vimrc" ]]; then
-      ln -s "${MANAGE_REPOSITORY}/vimrc" "${HOME}/.vimrc"
-    fi
+    "${executable}" --headless "+Lazy! sync" +qa || true
+
+    _ info "${executable} plugins installed"
 
     cd "${OPWD}" || _ die
   fi
