@@ -630,7 +630,7 @@ hi! link WhichKeyBorder Normal
                   schemas = vim.list_extend(
                     {
                       -- TODO: move this
-                      [vim.fn.expand('~/.vim/empty_schema.json')] = 'contents.yaml',
+                      [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
                     },
                     require('schemastore').yaml.schemas({
                       ignore = {
