@@ -1177,7 +1177,7 @@ hi! link WhichKeyBorder Normal
   {
     'max397574/better-escape.nvim',
     event = 'InsertEnter',
-    lazy= false,
+    lazy = false,
     keys = { 'jj' },
     config = function()
       require('better_escape').setup({
@@ -1351,6 +1351,28 @@ hi! link WhichKeyBorder Normal
       })
       -- vim.keymap.set('n', 'K', '<Plug>(CybuPrev)')
       -- vim.keymap.set('n', 'J', '<Plug>(CybuNext)')
+    end,
+  },
+  {
+    'rest-nvim/rest.nvim',
+    dependencies = { { 'nvim-lua/plenary.nvim' } },
+    ft = 'http',
+    cmd = { 'Rest', 'RestPreview' },
+    config = function()
+      require('rest-nvim').setup({
+        stay_in_current_window_after_split = true,
+      })
+
+      vim.api.nvim_create_user_command(
+        'Rest',
+        "lua require('rest-nvim').run()<CR>",
+        {}
+      )
+      vim.api.nvim_create_user_command(
+        'RestPreview',
+        "lua require('rest-nvim').run(true)<CR>",
+        {}
+      )
     end,
   },
   -- {
