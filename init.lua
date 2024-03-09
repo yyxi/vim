@@ -47,6 +47,7 @@ end
 -- vim.o.mouse = 'nvi'
 -- vim.o.complete = ''
 
+vim.g.have_nerd_font = false
 vim.g.loaded_netrw = true
 vim.g.loaded_netrwPlugin = true
 vim.o.autoindent = true
@@ -92,12 +93,13 @@ vim.o.pumheight = 20
 vim.o.relativenumber = false
 vim.o.ruler = false
 vim.o.scrolljump = 5
-vim.o.scrolloff = 1
 vim.o.scrolloff = 5
 vim.o.secure = true
+vim.o.shada = "'100,<50,s10,:1000,/100,@100,h"
 vim.o.shiftwidth = 2
 vim.o.shortmess = 'AIOTWacfilmnortx'
 vim.o.showbreak = '↳ '
+vim.o.showmode = false
 vim.o.showmode = false
 vim.o.sidescroll = 1
 vim.o.sidescrolloff = 2
@@ -108,6 +110,7 @@ vim.o.smarttab = true
 vim.o.softtabstop = 2
 vim.o.spell = false
 vim.o.splitbelow = true
+vim.o.splitkeep = 'screen'
 vim.o.splitright = true
 vim.o.startofline = false
 vim.o.swapfile = false
@@ -118,6 +121,8 @@ vim.o.timeout = true
 vim.o.timeoutlen = 300
 vim.o.undodir = vim.fn.expand('~/.vim/tmp/undo')
 vim.o.undofile = true
+vim.o.updatetime = 250
+vim.o.virtualedit = 'block'
 vim.o.virtualedit = 'block'
 vim.o.virtualedit = 'onemore'
 vim.o.visualbell = false
@@ -129,8 +134,11 @@ vim.o.wildmode = 'longest:full,full'
 vim.o.winblend = 10
 vim.o.wrap = false
 vim.o.wrapscan = false
+vim.opt.iskeyword:append('-')
 
 vim.lsp.set_log_level('WARN')
+
+local noop = function() end
 
 vim.diagnostic.config({
   float = {
@@ -276,6 +284,27 @@ hi! link ZenBg Normal
     end,
   },
   {
+    'nvim-lualine/lualine.nvim',
+    dependencies = { 'echasnovski/mini.base16' },
+    event = 'VimEnter',
+    priority = 800,
+    opts = {
+      options = {
+        always_divide_middle = true,
+        component_separators = '',
+        globalstatus = true,
+        icons_enabled = false,
+        section_separators = '',
+        -- theme = 'gruvbox',
+        disabled_filetypes = {
+          statusline = {},
+          winbar = {},
+          help = {},
+        },
+      },
+    },
+  },
+  {
     'lukas-reineke/indent-blankline.nvim',
     event = 'VeryLazy',
     dependencies = { 'echasnovski/mini.base16' },
@@ -369,41 +398,21 @@ hi! link ZenBg Normal
     end,
   },
   {
-    'nvim-lualine/lualine.nvim',
-    dependencies = { 'echasnovski/mini.base16' },
-    lazy = false,
-    priority = 1000, -- make sure to load this before all the other start plugins
-    opts = {
-      options = {
-        always_divide_middle = true,
-        component_separators = '',
-        globalstatus = true,
-        icons_enabled = false,
-        section_separators = '',
-        -- theme = 'gruvbox',
-        disabled_filetypes = {
-          statusline = {},
-          winbar = {},
-          help = {},
-        },
-      },
-    },
-  },
-  {
-    'VonHeikemen/lsp-zero.nvim',
-    branch = 'v3.x',
-    lazy = true,
-    init = function()
-      -- Disable automatic setup, we are doing it manually
-      vim.g.lsp_zero_ui_float_border = 0
-      vim.g.lsp_zero_ui_signcolumn = 0
-      vim.g.lsp_zero_extend_cmp = 0
-      vim.g.lsp_zero_extend_lspconfig = 0
-    end,
-  },
-  {
     'williamboman/mason.nvim',
-    lazy = false,
+    dependencies = { 'echasnovski/mini.base16' },
+    -- lazy = false,
+    cmd = {
+      'Mason',
+      'MasonInstall',
+      'MasonUninstall',
+      'MasonUninstallAll',
+      'MasonLog',
+    },
+    build = function()
+      pcall(function()
+        require('mason-registry').refresh()
+      end)
+    end,
     opts = {
       log_level = vim.log.levels.WARN,
       ui = {
@@ -419,24 +428,37 @@ hi! link ZenBg Normal
     },
   },
   {
-    'smjonas/inc-rename.nvim',
-    cmd = 'Rename',
-    opts = {
-      cmd_name = 'Rename',
-    },
-  },
-  {
     'neovim/nvim-lspconfig',
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
-      { 'hrsh7th/cmp-nvim-lsp' },
-      { 'hrsh7th/cmp-nvim-lua' },
-      { 'williamboman/mason.nvim' },
-      { 'williamboman/mason-lspconfig.nvim' },
-      { 'folke/neodev.nvim' },
-      { 'b0o/schemastore.nvim' },
-      { 'smjonas/inc-rename.nvim' },
+      {
+        'VonHeikemen/lsp-zero.nvim',
+        branch = 'v3.x',
+        init = function()
+          -- Disable automatic setup, we are doing it manually
+          vim.g.lsp_zero_ui_float_border = 0
+          vim.g.lsp_zero_ui_signcolumn = 0
+          vim.g.lsp_zero_extend_cmp = 0
+          vim.g.lsp_zero_extend_lspconfig = 0
+        end,
+        config = noop,
+      },
+      {
+        'williamboman/mason-lspconfig.nvim',
+        dependencies = { 'williamboman/mason.nvim' },
+        config = noop,
+      },
+      {
+        'folke/neodev.nvim',
+        dependencies = { 'williamboman/mason-lspconfig.nvim' },
+        config = noop,
+      },
+      {
+        'b0o/schemastore.nvim',
+        dependencies = { 'williamboman/mason-lspconfig.nvim' },
+        config = noop,
+      },
     },
     config = function()
       require('lspconfig.ui.windows').default_options.border = 'rounded'
@@ -452,6 +474,10 @@ hi! link ZenBg Normal
         hint = '•',
         info = '∙',
       })
+
+      -- require('inc_rename').setup({
+      --   cmd_name = 'Rename'
+      -- })
 
       lsp_zero.on_attach(function(client, bufnr)
         local keymap_options = { noremap = true, silent = true }
@@ -515,8 +541,8 @@ hi! link ZenBg Normal
           bufnr,
           'n',
           'xr',
-          ':Rename ',
-          -- '<cmd>lua vim.lsp.buf.rename()<cr>',
+          -- ':Rename ',
+          '<cmd>lua vim.lsp.buf.rename()<cr>',
           keymap_options
         )
 
@@ -581,6 +607,11 @@ hi! link ZenBg Normal
                     bufnr
                   )
                 end,
+              },
+              settings = {
+                completions = {
+                  completeFunctionCalls = true,
+                },
               },
             })
           end,
@@ -680,9 +711,8 @@ hi! link ZenBg Normal
   },
   {
     'stevearc/conform.nvim',
-    event = { 'BufWritePre' },
     cmd = { 'ConformInfo' },
-    dependencies = { 'neovim/nvim-lspconfig' },
+    dependencies = { 'neovim/nvim-lspconfig', 'williamboman/mason.nvim' },
     keys = {
       {
         'xf',
@@ -714,24 +744,26 @@ hi! link ZenBg Normal
     end,
   },
   {
-    'L3MON4D3/LuaSnip',
-    dependencies = { 'rafamadriz/friendly-snippets' },
-  },
-  {
-    'saadparwaiz1/cmp_luasnip',
-    dependencies = { 'L3MON4D3/LuaSnip' },
-  },
-  {
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
     dependencies = {
       { 'neovim/nvim-lspconfig' },
+      { 'hrsh7th/cmp-nvim-lsp' },
+      { 'hrsh7th/cmp-nvim-lua' },
       { 'hrsh7th/cmp-buffer' },
       { 'hrsh7th/cmp-path' },
-      -- { 'hrsh7th/cmp-cmdline' },
-      { 'hrsh7th/cmp-nvim-lsp-document-symbol' },
-      { 'L3MON4D3/LuaSnip' },
-      { 'saadparwaiz1/cmp_luasnip' },
+      {
+        'saadparwaiz1/cmp_luasnip',
+        config = noop,
+        dependencies = {
+          {
+            'L3MON4D3/LuaSnip',
+            dependencies = { 'rafamadriz/friendly-snippets' },
+            build = 'make install_jsregexp',
+            config = noop,
+          },
+        },
+      },
     },
     config = function()
       -- Here is where you configure the autocompletion settings.
@@ -742,21 +774,29 @@ hi! link ZenBg Normal
       local cmp = require('cmp')
       local cmp_action = lsp_zero.cmp_action()
 
-      require('luasnip.loaders.from_vscode').lazy_load()
+      local luasnip = require('luasnip')
+      luasnip.config.setup()
+
+      require('luasnip.loaders.from_vscode').lazy_load({
+        exclude = { 'html', 'all' },
+      })
 
       cmp.setup({
         preselect = cmp.PreselectMode.None,
         completion = {
           completeopt = 'menu,menuone,noinsert,noselect',
         },
+        snippet = {
+          expand = function(args)
+            require('luasnip').lsp_expand(args.body, {})
+          end,
+        },
         sources = cmp.config.sources({
-          { name = 'nvim_lsp', priority = 16 },
-          { name = 'luasnip', priority = 8 },
-          { name = 'buffer', priority = 2 },
-        }, {
-          { name = 'buffer', priority = 2 },
-          { name = 'luasnip', priority = 2 },
-        }),
+          { priority = 16, name = 'nvim_lsp' },
+          { priority = 2, name = 'buffer' },
+          { priority = 8, name = 'luasnip' },
+          { priority = 8, name = 'path' },
+        }, {}),
         sorting = {
           priority_weight = 10,
           comparators = {
@@ -774,32 +814,20 @@ hi! link ZenBg Normal
         },
         formatting = lsp_zero.cmp_format({ details = true }),
         mapping = cmp.mapping.preset.insert({
+          -- ['<C-e>'] = cmp.mapping(function( --[[ fallback ]]) if cmp.visible() then cmp.abort() else cmp.complete() end end),
+          -- ['<C-f>'] = cmp.mapping.scroll_docs(5),
+          -- ['<C-n>'] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Insert }),
+          -- ['<C-p>'] = cmp.mapping.select_prev_item({ behavior = cmp.SelectBehavior.Insert }),
+          -- ['<C-u>'] = cmp.mapping.scroll_docs(-5),
+          -- ['<C-y>'] = cmp.mapping.confirm({ select = false }),
+          ['<C-Space>'] = cmp.mapping.complete(),
           ['<CR>'] = cmp.mapping.confirm({ select = false }),
-          ['<C-y>'] = cmp.mapping.confirm({ select = false }),
-          -- navigate items on the list
           ['<Up>'] = cmp.mapping.select_prev_item({
             behavior = cmp.SelectBehavior.Insert,
           }),
           ['<Down>'] = cmp.mapping.select_next_item({
             behavior = cmp.SelectBehavior.Insert,
           }),
-          ['<C-p>'] = cmp.mapping.select_prev_item({
-            behavior = cmp.SelectBehavior.Insert,
-          }),
-          ['<C-n>'] = cmp.mapping.select_next_item({
-            behavior = cmp.SelectBehavior.Insert,
-          }),
-          -- scroll up and down in the completion documentation
-          ['<C-f>'] = cmp.mapping.scroll_docs(5),
-          ['<C-u>'] = cmp.mapping.scroll_docs(-5),
-          -- toggle completion
-          ['<C-e>'] = cmp.mapping(function( --[[ fallback ]])
-            if cmp.visible() then
-              cmp.abort()
-            else
-              cmp.complete()
-            end
-          end),
           ['<Tab>'] = cmp_action.luasnip_supertab(),
           ['<S-Tab>'] = cmp_action.luasnip_shift_supertab(),
         }),
@@ -840,6 +868,20 @@ hi! link ZenBg Normal
   {
     'nvim-treesitter/nvim-treesitter',
     event = { 'BufReadPre', 'BufNewFile' },
+    cmd = {
+      'TSInstall',
+      'TSUninstall',
+      'TSUpdate',
+      'TSUpdateSync',
+      'TSInstallInfo',
+      'TSInstallSync',
+      'TSInstallFromGrammar',
+    },
+    -- init = function(plugin)
+    --   require('lazy.core.loader').add_to_rtp(plugin)
+    --   require('nvim-treesitter.query_predicates')
+    -- end,
+    -- lazy = false,
     build = ':TSUpdate',
     config = function()
       require('nvim-treesitter.configs').setup({
@@ -869,47 +911,14 @@ hi! link ZenBg Normal
           },
         },
         textobjects = {
+          swap = {
+            enable = false,
+          },
           move = {
-            enable = true,
-            set_jumps = true,
-            goto_next_start = {
-              [']m'] = '@function.outer',
-              [']]'] = '@class.outer',
-            },
-            goto_next_end = {
-              [']M'] = '@function.outer',
-              [']['] = '@class.outer',
-            },
-            goto_previous_start = {
-              ['[m'] = '@function.outer',
-              ['[['] = '@class.outer',
-            },
-            goto_previous_end = {
-              ['[M'] = '@function.outer',
-              ['[]'] = '@class.outer',
-            },
+            enable = false,
           },
           select = {
-            enable = true,
-            lookahead = true,
-
-            keymaps = {
-              ['af'] = '@function.outer',
-              ['if'] = '@function.inner',
-              ['aC'] = '@class.outer',
-              ['iC'] = '@class.inner',
-              ['ac'] = '@conditional.outer',
-              ['ic'] = '@conditional.inner',
-              ['ae'] = '@block.outer',
-              ['ie'] = '@block.inner',
-              ['al'] = '@loop.outer',
-              ['il'] = '@loop.inner',
-              ['is'] = '@statement.inner',
-              ['as'] = '@statement.outer',
-              ['ad'] = '@comment.outer',
-              ['am'] = '@call.outer',
-              ['im'] = '@call.inner',
-            },
+            enable = false,
           },
         },
         ensure_installed = {
@@ -975,14 +984,21 @@ hi! link ZenBg Normal
   },
   {
     'nvim-treesitter/nvim-treesitter-textobjects',
-    event = { 'BufReadPre', 'BufNewFile' },
+    -- init = function(plugin)
+    --   require('lazy.core.loader').add_to_rtp(plugin)
+    -- end,
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
+  },
+  {
+    'windwp/nvim-ts-autotag',
+    dependencies = { 'nvim-treesitter/nvim-treesitter' },
+    event = { 'BufReadPre', 'BufNewFile' },
   },
   {
     'numToStr/Comment.nvim',
     event = { 'BufReadPre', 'BufNewFile' },
+    -- keys = { { "gc", mode = { "n", "v" } }, { "gb", mode = { "n", "v" } } },
     dependencies = {
-      'nvim-treesitter/nvim-treesitter-textobjects',
       'JoosepAlviste/nvim-ts-context-commentstring',
     },
     config = function()
@@ -1012,21 +1028,14 @@ hi! link ZenBg Normal
     end,
   },
   {
-    'kylechui/nvim-surround',
-    -- TODO: insert enter?
-    event = { 'BufReadPre', 'BufNewFile' },
-    version = '*', -- Use for stability; omit to use `main` branch for the latest features
-    config = function()
-      require('nvim-surround').setup()
-    end,
-  },
-  { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
-  {
     'nvim-telescope/telescope.nvim',
     tag = '0.1.5',
     dependencies = {
       'nvim-lua/plenary.nvim',
-      'nvim-telescope/telescope-fzf-native.nvim',
+      {
+        'nvim-telescope/telescope-fzf-native.nvim',
+        build = 'make',
+      },
       'nvim-treesitter/nvim-treesitter',
     },
     cmd = { 'Telescope' },
@@ -1081,6 +1090,91 @@ hi! link ZenBg Normal
     dependencies = { 'nvim-telescope/telescope.nvim' },
     keys = {
       { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
+      { 'y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
+      {
+        'p',
+        '<Plug>(YankyPutAfter)',
+        mode = { 'n', 'x' },
+        desc = 'Put yanked text after cursor',
+      },
+      {
+        'P',
+        '<Plug>(YankyPutBefore)',
+        mode = { 'n', 'x' },
+        desc = 'Put yanked text before cursor',
+      },
+      {
+        'gp',
+        '<Plug>(YankyGPutAfter)',
+        mode = { 'n', 'x' },
+        desc = 'Put yanked text after selection',
+      },
+      {
+        'gP',
+        '<Plug>(YankyGPutBefore)',
+        mode = { 'n', 'x' },
+        desc = 'Put yanked text before selection',
+      },
+      {
+        '[y',
+        '<Plug>(YankyCycleForward)',
+        desc = 'Cycle forward through yank history',
+      },
+      {
+        ']y',
+        '<Plug>(YankyCycleBackward)',
+        desc = 'Cycle backward through yank history',
+      },
+      {
+        ']p',
+        '<Plug>(YankyPutIndentAfterLinewise)',
+        desc = 'Put indented after cursor (linewise)',
+      },
+      {
+        '[p',
+        '<Plug>(YankyPutIndentBeforeLinewise)',
+        desc = 'Put indented before cursor (linewise)',
+      },
+      {
+        ']P',
+        '<Plug>(YankyPutIndentAfterLinewise)',
+        desc = 'Put indented after cursor (linewise)',
+      },
+      {
+        '[P',
+        '<Plug>(YankyPutIndentBeforeLinewise)',
+        desc = 'Put indented before cursor (linewise)',
+      },
+      {
+        '>p',
+        '<Plug>(YankyPutIndentAfterShiftRight)',
+        desc = 'Put and indent right',
+      },
+      {
+        '<p',
+        '<Plug>(YankyPutIndentAfterShiftLeft)',
+        desc = 'Put and indent left',
+      },
+      {
+        '>P',
+        '<Plug>(YankyPutIndentBeforeShiftRight)',
+        desc = 'Put before and indent right',
+      },
+      {
+        '<P',
+        '<Plug>(YankyPutIndentBeforeShiftLeft)',
+        desc = 'Put before and indent left',
+      },
+      {
+        '=p',
+        '<Plug>(YankyPutAfterFilter)',
+        desc = 'Put after applying a filter',
+      },
+      {
+        '=P',
+        '<Plug>(YankyPutBeforeFilter)',
+        desc = 'Put before applying a filter',
+      },
     },
     config = function()
       require('yanky').setup({
@@ -1110,14 +1204,6 @@ hi! link ZenBg Normal
         },
       })
 
-      -- vim.keymap.set({ 'n', 'x' }, 'p', '<Plug>(YankyPutAfter)')
-      -- vim.keymap.set({ 'n', 'x' }, 'P', '<Plug>(YankyPutBefore)')
-      -- vim.keymap.set({ 'n', 'x' }, 'gp', '<Plug>(YankyGPutAfter)')
-      -- vim.keymap.set({ 'n', 'x' }, 'gP', '<Plug>(YankyGPutBefore)')
-      -- vim.keymap.set('n', '<c-n>', '<Plug>(YankyCycleForward)')
-      -- vim.keymap.set('n', '<c-p>', '<Plug>(YankyCycleBackward)')
-      -- vim.keymap.set({ 'n', 'x' }, 'y', '<Plug>(YankyYank)')
-
       require('telescope').load_extension('yank_history')
     end,
   },
@@ -1138,6 +1224,158 @@ hi! link ZenBg Normal
     end,
   },
   {
+    'echasnovski/mini.ai',
+    version = '*',
+    -- event = { 'BufReadPre', 'BufNewFile' },
+    event = 'VeryLazy',
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter-textobjects',
+      'folke/which-key.nvim',
+    },
+    config = function()
+      local gen_spec = require('mini.ai').gen_spec
+
+      require('mini.ai').setup({
+        custom_textobjects = {
+          -- F = gen_spec.treesitter({
+          --   a = '@function.outer',
+          --   i = '@function.inner',
+          -- }),
+          o = gen_spec.treesitter({
+            a = { '@block.outer', '@conditional.outer', '@loop.outer' },
+            i = { '@block.inner', '@conditional.inner', '@loop.inner' },
+          }, {}),
+          f = gen_spec.treesitter(
+            { a = '@function.outer', i = '@function.inner' },
+            {}
+          ),
+          c = gen_spec.treesitter(
+            { a = '@class.outer', i = '@class.inner' },
+            {}
+          ),
+          t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' },
+        },
+        -- Module mappings. Use `''` (empty string) to disable one.
+        mappings = {
+          -- Main textobject prefixes
+          around = 'a',
+          inside = 'i',
+
+          -- Next/last variants
+          around_next = 'an',
+          inside_next = 'in',
+          around_last = 'al',
+          inside_last = 'il',
+
+          -- Move cursor to corresponding edge of `a` textobject
+          goto_left = 'g[',
+          goto_right = 'g]',
+        },
+
+        -- Number of lines within which textobject is searched
+        n_lines = 500,
+      })
+
+      ---@type table<string, string|table>
+      local i = {
+        [' '] = 'Whitespace',
+        ['"'] = 'Balanced "',
+        ["'"] = "Balanced '",
+        ['`'] = 'Balanced `',
+        ['('] = 'Balanced (',
+        [')'] = 'Balanced ) including white-space',
+        ['>'] = 'Balanced > including white-space',
+        ['<lt>'] = 'Balanced <',
+        [']'] = 'Balanced ] including white-space',
+        ['['] = 'Balanced [',
+        ['}'] = 'Balanced } including white-space',
+        ['{'] = 'Balanced {',
+        ['?'] = 'User Prompt',
+        _ = 'Underscore',
+        a = 'Argument',
+        b = 'Balanced ), ], }',
+        c = 'Class',
+        f = 'Function',
+        o = 'Block, conditional, loop',
+        q = 'Quote `, ", \'',
+        t = 'Tag',
+      }
+      local a = vim.deepcopy(i)
+      for k, v in pairs(a) do
+        ---@diagnostic disable-next-line: param-type-mismatch
+        a[k] = v:gsub(' including.*', '')
+      end
+
+      local ic = vim.deepcopy(i)
+      local ac = vim.deepcopy(a)
+      for key, name in pairs({ n = 'Next', l = 'Last' }) do
+        i[key] = vim.tbl_extend(
+          'force',
+          { name = 'Inside ' .. name .. ' textobject' },
+          ic
+        )
+        a[key] = vim.tbl_extend(
+          'force',
+          { name = 'Around ' .. name .. ' textobject' },
+          ac
+        )
+      end
+      require('which-key').register({
+        mode = { 'o', 'x' },
+        i = i,
+        a = a,
+      })
+    end,
+  },
+  {
+    'echasnovski/mini.surround',
+    event = 'InsertEnter',
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter-textobjects',
+    },
+    opts = {
+      mappings = {
+        add = 'gsa', -- Add surrounding in Normal and Visual modes
+        delete = 'gsd', -- Delete surrounding
+        find = 'gsf', -- Find surrounding (to the right)
+        find_left = 'gsF', -- Find surrounding (to the left)
+        highlight = '', -- Highlight surrounding
+        replace = 'gsr', -- Replace surrounding
+        update_n_lines = 'gsn', -- Update `n_lines`
+        suffix_last = 'l', -- Suffix to search with "prev" method
+        suffix_next = 'n', -- Suffix to search with "next" method
+      },
+      n_lines = 500,
+    },
+    config = function(_, opts)
+      opts.custom_surroundings = nil
+
+      require('mini.surround').setup(opts)
+    end,
+    keys = function(_, keys)
+      -- Populate the keys based on the user's options
+      local plugin = require('lazy.core.config').spec.plugins['mini.surround']
+      local opts = require('lazy.core.plugin').values(plugin, 'opts', false)
+      local mappings = {
+        { opts.mappings.add, desc = 'Add surrounding', mode = { 'n', 'v' } },
+        { opts.mappings.delete, desc = 'Delete surrounding' },
+        { opts.mappings.find, desc = 'Find right surrounding' },
+        { opts.mappings.find_left, desc = 'Find left surrounding' },
+        -- { opts.mappings.highlight, desc = 'Highlight surrounding' },
+        { opts.mappings.replace, desc = 'Replace surrounding' },
+        {
+          opts.mappings.update_n_lines,
+          desc = 'Update `MiniSurround.config.n_lines`',
+        },
+      }
+
+      mappings = vim.tbl_filter(function(m)
+        return m[1] and #m[1] > 0
+      end, mappings)
+      return vim.list_extend(mappings, keys)
+    end,
+  },
+  {
     'echasnovski/mini.jump2d',
     dependencies = { 'echasnovski/mini.base16' },
     keys = { '<CR>' },
@@ -1148,8 +1386,7 @@ hi! link ZenBg Normal
   {
     'max397574/better-escape.nvim',
     event = 'InsertEnter',
-    lazy = false,
-    keys = { 'jj' },
+    keys = { 'jj', mode = 'i' },
     config = function()
       require('better_escape').setup({
         -- timeout = 300,
@@ -1159,7 +1396,15 @@ hi! link ZenBg Normal
       })
     end,
   },
-  { 'christoomey/vim-sort-motion', event = 'InsertEnter' },
+  {
+    'christoomey/vim-sort-motion',
+    event = 'InsertEnter',
+    keys = {
+      { 'gS', '<Plug>SortMotion', desc = 'Sort' },
+      { 'gS', '<Plug>SortMotionVisual', desc = 'Sort', mode = 'x' },
+      { 'gSs', '<Plug>SortLines', desc = 'Sort Lines' },
+    },
+  },
   {
     'junegunn/vim-easy-align',
     event = 'InsertEnter',
@@ -1180,6 +1425,7 @@ hi! link ZenBg Normal
   },
   {
     'folke/which-key.nvim',
+    cmd = 'WhichKey',
     event = 'VeryLazy',
     -- init = function()
     --   vim.o.timeout = true
@@ -1204,7 +1450,12 @@ hi! link ZenBg Normal
       },
       -- add operators that will trigger motion and text object completion
       -- to enable all native operators, set the preset / operators plugin above
-      operators = { gc = 'Comments' },
+      operators = {
+        gc = 'Comment',
+        gb = 'Comment',
+        gS = 'Sort',
+        gsa = 'Surround',
+      },
       key_labels = {
         -- override the label used to display some keys. It doesn't effect WK in any other way.
         -- For example:
@@ -1387,9 +1638,10 @@ hi! link ZenBg Normal
   },
 }, {
   defaults = {
-    lazy = true, -- should plugins be lazy-loaded?
+    lazy = true,
   },
   ui = {
+    border = 'rounded',
     icons = {
       cmd = '',
       config = '',
