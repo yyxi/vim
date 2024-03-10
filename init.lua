@@ -11,43 +11,53 @@ filetype plugin indent on
 syntax off
 au FileType help,qf setl nowrap nofen nospell nocul nolist
 
-map <c-j> <c-w>j
-map <c-k> <c-w>k
-map <c-l> <c-w>l
-map <c-h> <c-w>h
-" nn ; :
-cm WQ wq
-cm wQ wq
-cm Tabe tabe
-cm w!! w !sudo tee % >/dev/null
+cmap WQ wq
+cmap wQ wq
+cmap w!! w !sudo tee % >/dev/null
 
-" noremap 0 ^
-" noremap ^ 0
-
-nnoremap <Down> n
-nnoremap <expr> n (v:searchforward ? 'n' : 'N')
-
-nnoremap <Up> N
-nnoremap <expr> N (v:searchforward ? 'N' : 'n')
-
-" autocmd VimEnter *
-"   \   delc Format
-"   \ | delc FormatWrite
-"   \ | delc FormatWriteLock
-"   \ | delc LspZeroFormat
+nnoremap <silent><Down> n
+nnoremap <silent><expr> n (v:searchforward ? 'n' : 'N')
+nnoremap <silent><Up> N
+nnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
 ]])
 
 if vim.loader then
   vim.loader.enable()
 end
 
+vim.api.nvim_set_keymap(
+  'n',
+  '<c-j>',
+  '<c-w>j',
+  { noremap = true, silent = true, desc = 'Go to the down window' }
+)
+vim.api.nvim_set_keymap(
+  'n',
+  '<c-k>',
+  '<c-w>k',
+  { noremap = true, silent = true, desc = 'Go to the up window' }
+)
+vim.api.nvim_set_keymap(
+  'n',
+  '<c-l>',
+  '<c-w>l',
+  { noremap = true, silent = true, desc = 'Go to the right window' }
+)
+vim.api.nvim_set_keymap(
+  'n',
+  '<c-h>',
+  '<c-w>h',
+  { noremap = true, silent = true, desc = 'Go to the left window' }
+)
+
+-- Using expression mappings for conditional behavior
+
 -- vim.o.wildmode = 'list:longest,full'
 -- vim.o.guicursor = 'a:blinkon0'
 -- vim.o.mouse = 'nvi'
 -- vim.o.complete = ''
 
---[[ TODO: https://github.com/andymass/vim-matchup ]]
-
+vim.g.loaded_matchit = 1
 vim.g.have_nerd_font = false
 vim.g.loaded_netrw = true
 vim.g.loaded_netrwPlugin = true
@@ -119,7 +129,7 @@ vim.o.tabpagemax = 50
 vim.o.tabstop = 2
 vim.o.termguicolors = true
 vim.o.timeout = true
-vim.o.timeoutlen = 300
+vim.o.timeoutlen = 400
 vim.o.undodir = vim.fn.expand('~/.vim/tmp/undo')
 vim.o.undofile = true
 vim.o.updatetime = 250
@@ -490,7 +500,7 @@ hi! link LazyH1 Normal
           'n',
           '<C-k>',
           '<cmd>lua vim.lsp.buf.signature_help()<cr>',
-          { noremap = true, silent = true }
+          { noremap = true, silent = true, desc = 'Signature Help' }
         )
 
         vim.api.nvim_buf_set_keymap(
@@ -498,17 +508,8 @@ hi! link LazyH1 Normal
           'n',
           'K',
           '<cmd>lua vim.lsp.buf.hover()<cr>',
-          { noremap = true, silent = true }
+          { noremap = true, silent = true, desc = 'Hover' }
         )
-
-        -- vim.api.nvim_buf_set_keymap(
-        --   bufnr,
-        --   'n',
-        --   'xD',
-        --   '<cmd>lua vim.lsp.buf.declaration()<cr>',
-        --   keymap_options
-        -- )
-
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
@@ -539,7 +540,7 @@ hi! link LazyH1 Normal
           'n',
           '<C-Up>',
           '<cmd>lua vim.diagnostic.goto_prev()<cr>',
-          { noremap = true, silent = true }
+          { noremap = true, silent = true, desc = 'Previous Diagnostic' }
         )
 
         vim.api.nvim_buf_set_keymap(
@@ -547,7 +548,7 @@ hi! link LazyH1 Normal
           'n',
           '<C-Down>',
           '<cmd>lua vim.diagnostic.goto_next()<cr>',
-          { noremap = true, silent = true }
+          { noremap = true, silent = true, desc = 'Next Diagnostic' }
         )
 
         require('lsp-fix').on_attach(client, bufnr)
@@ -840,9 +841,6 @@ hi! link LazyH1 Normal
         indent = {
           enable = true,
         },
-        matchup = {
-          enable = true,
-        },
         autotag = {
           enable = true,
         },
@@ -850,12 +848,12 @@ hi! link LazyH1 Normal
           enable = true,
         },
         incremental_selection = {
-          enable = false,
+          enable = true,
           keymaps = {
-            init_selection = 'gnn',
-            node_incremental = 'grn',
-            scope_incremental = 'grc',
-            node_decremental = 'grm',
+            init_selection = 'vv',
+            node_incremental = '<Right>',
+            scope_incremental = '<Up>',
+            node_decremental = '<Left>',
           },
         },
         textobjects = {
@@ -984,7 +982,7 @@ hi! link LazyH1 Normal
         enable_afterquote = true,
         enable_moveright = true,
         enable_check_bracket_line = true,
-        disable_filetype = { 'TelescopePrompt', 'vim' },
+        disable_filetype = { 'TelescopePrompt', 'mason', 'lazy', 'vim' },
       })
 
       local cmp_autopairs = require('nvim-autopairs.completion.cmp')
@@ -996,91 +994,8 @@ hi! link LazyH1 Normal
     'gbprod/yanky.nvim',
     event = 'InsertEnter',
     keys = {
+      { 'Y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
       { 'y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
-      {
-        'p',
-        '<Plug>(YankyPutAfter)',
-        mode = { 'n', 'x' },
-        desc = 'Put yanked text after cursor',
-      },
-      {
-        'P',
-        '<Plug>(YankyPutBefore)',
-        mode = { 'n', 'x' },
-        desc = 'Put yanked text before cursor',
-      },
-      {
-        'gp',
-        '<Plug>(YankyGPutAfter)',
-        mode = { 'n', 'x' },
-        desc = 'Put yanked text after selection',
-      },
-      {
-        'gP',
-        '<Plug>(YankyGPutBefore)',
-        mode = { 'n', 'x' },
-        desc = 'Put yanked text before selection',
-      },
-      {
-        '[y',
-        '<Plug>(YankyCycleForward)',
-        desc = 'Cycle forward through yank history',
-      },
-      {
-        ']y',
-        '<Plug>(YankyCycleBackward)',
-        desc = 'Cycle backward through yank history',
-      },
-      {
-        ']p',
-        '<Plug>(YankyPutIndentAfterLinewise)',
-        desc = 'Put indented after cursor (linewise)',
-      },
-      {
-        '[p',
-        '<Plug>(YankyPutIndentBeforeLinewise)',
-        desc = 'Put indented before cursor (linewise)',
-      },
-      {
-        ']P',
-        '<Plug>(YankyPutIndentAfterLinewise)',
-        desc = 'Put indented after cursor (linewise)',
-      },
-      {
-        '[P',
-        '<Plug>(YankyPutIndentBeforeLinewise)',
-        desc = 'Put indented before cursor (linewise)',
-      },
-      {
-        '>p',
-        '<Plug>(YankyPutIndentAfterShiftRight)',
-        desc = 'Put and indent right',
-      },
-      {
-        '<p',
-        '<Plug>(YankyPutIndentAfterShiftLeft)',
-        desc = 'Put and indent left',
-      },
-      {
-        '>P',
-        '<Plug>(YankyPutIndentBeforeShiftRight)',
-        desc = 'Put before and indent right',
-      },
-      {
-        '<P',
-        '<Plug>(YankyPutIndentBeforeShiftLeft)',
-        desc = 'Put before and indent left',
-      },
-      {
-        '=p',
-        '<Plug>(YankyPutAfterFilter)',
-        desc = 'Put after applying a filter',
-      },
-      {
-        '=P',
-        '<Plug>(YankyPutBeforeFilter)',
-        desc = 'Put before applying a filter',
-      },
     },
     config = function()
       require('yanky').setup({
@@ -1102,7 +1017,7 @@ hi! link LazyH1 Normal
           sync_with_ring = true,
         },
         highlight = {
-          on_put = true,
+          on_put = false,
           on_yank = true,
           timer = 300,
         },
@@ -1239,8 +1154,8 @@ hi! link LazyH1 Normal
   {
     'echasnovski/mini.ai',
     version = '*',
-    -- event = { 'BufReadPre', 'BufNewFile' },
-    event = 'VeryLazy',
+    event = { 'BufReadPre', 'BufNewFile' },
+    -- event = 'VeryLazy',
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
@@ -1274,14 +1189,14 @@ hi! link LazyH1 Normal
           inside = 'i',
 
           -- Next/last variants
-          around_next = 'an',
-          inside_next = 'in',
-          around_last = 'al',
-          inside_last = 'il',
+          around_next = '',
+          inside_next = '',
+          around_last = '',
+          inside_last = '',
 
           -- Move cursor to corresponding edge of `a` textobject
-          goto_left = 'g[',
-          goto_right = 'g]',
+          goto_left = '',
+          goto_right = '',
         },
 
         -- Number of lines within which textobject is searched
@@ -1291,7 +1206,8 @@ hi! link LazyH1 Normal
   },
   {
     'echasnovski/mini.surround',
-    event = 'InsertEnter',
+    -- event = 'InsertEnter',
+    event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
@@ -1304,8 +1220,8 @@ hi! link LazyH1 Normal
         highlight = '', -- Highlight surrounding
         replace = '<leader>sr', -- Replace surrounding
         update_n_lines = '<leader>sn', -- Update `n_lines`
-        suffix_last = 'l', -- Suffix to search with "prev" method
-        suffix_next = 'n', -- Suffix to search with "next" method
+        suffix_last = '', -- Suffix to search with "prev" method
+        suffix_next = '', -- Suffix to search with "next" method
       },
       n_lines = 500,
     },
@@ -1313,28 +1229,6 @@ hi! link LazyH1 Normal
       opts.custom_surroundings = nil
 
       require('mini.surround').setup(opts)
-    end,
-    keys = function(_, keys)
-      -- Populate the keys based on the user's options
-      local plugin = require('lazy.core.config').spec.plugins['mini.surround']
-      local opts = require('lazy.core.plugin').values(plugin, 'opts', false)
-      local mappings = {
-        { opts.mappings.add, desc = 'Add surrounding', mode = { 'n', 'v' } },
-        { opts.mappings.delete, desc = 'Delete surrounding' },
-        { opts.mappings.find, desc = 'Find right surrounding' },
-        { opts.mappings.find_left, desc = 'Find left surrounding' },
-        -- { opts.mappings.highlight, desc = 'Highlight surrounding' },
-        { opts.mappings.replace, desc = 'Replace surrounding' },
-        {
-          opts.mappings.update_n_lines,
-          desc = 'Update number of lines',
-        },
-      }
-
-      mappings = vim.tbl_filter(function(m)
-        return m[1] and #m[1] > 0
-      end, mappings)
-      return vim.list_extend(mappings, keys)
     end,
   },
   {
@@ -1370,7 +1264,6 @@ hi! link LazyH1 Normal
   {
     'echasnovski/mini.align',
     version = '*',
-    -- event = 'InsertEnter',
     keys = { { '<leader>a', mode = { 'n', 'x' } } },
     config = function()
       require('mini.align').setup({
@@ -1398,56 +1291,31 @@ hi! link LazyH1 Normal
       })
     end,
   },
-  -- {
-  --   'junegunn/vim-easy-align',
-  --   event = 'InsertEnter',
-  --   init = function()
-  --     vim.g.easy_align_interactive_modes = { 'l', 'r', 'c' }
-  --     vim.g.easy_align_interactive_modes = { 'r', 'c', 'l' }
-  --   end,
-  --   keys = {
-  --     {
-  --       '<leader>a',
-  --       '<Plug>(EasyAlign)<cr>',
-  --       desc = 'Align',
-  --       mode = 'x',
-  --     },
-  --     {
-  --       '<leader>a',
-  --       '<Plug>(EasyAlign)<cr>',
-  --       desc = 'Align',
-  --       mode = 'n',
-  --     },
-  --   },
-  -- },
   {
     'folke/which-key.nvim',
     cmd = 'WhichKey',
     event = 'VeryLazy',
     config = function(_, opts)
+      local presets = require("which-key.plugins.presets")
+      presets.motions["ge"] = nil
+      presets.motions["gg"] = nil
+      presets.operators["g~"] = nil
+      presets.operators["gu"] = nil
+      presets.operators["gU"] = nil
+      presets.operators["!"] = nil
+      presets.operators["zf"] = nil
+
       ---@type table<string, string|table>
       local i = {
-        [' '] = 'Whitespace',
-        ['"'] = 'Balanced "',
-        ["'"] = "Balanced '",
-        ['`'] = 'Balanced `',
-        ['('] = 'Balanced (',
-        [')'] = 'Balanced ) including white-space',
-        ['>'] = 'Balanced > including white-space',
-        ['<lt>'] = 'Balanced <',
-        [']'] = 'Balanced ] including white-space',
-        ['['] = 'Balanced [',
-        ['}'] = 'Balanced } including white-space',
-        ['{'] = 'Balanced {',
         ['?'] = 'User Prompt',
         _ = 'Underscore',
         a = 'Argument',
         b = 'Balanced ), ], }',
+        q = 'Quote `, ", \'',
+        t = 'Tag',
         c = 'Class',
         f = 'Function',
         o = 'Block, conditional, loop',
-        q = 'Quote `, ", \'',
-        t = 'Tag',
       }
       local a = vim.deepcopy(i)
       for k, v in pairs(a) do
@@ -1457,48 +1325,29 @@ hi! link LazyH1 Normal
 
       local ic = vim.deepcopy(i)
       local ac = vim.deepcopy(a)
-      for key, name in pairs({ n = 'Next', l = 'Last' }) do
-        i[key] = vim.tbl_extend(
-          'force',
-          { name = 'Inside ' .. name .. ' textobject' },
-          ic
-        )
-        a[key] = vim.tbl_extend(
-          'force',
-          { name = 'Around ' .. name .. ' textobject' },
-          ac
-        )
-      end
+
 
       local wk = require('which-key')
       wk.setup(opts)
 
-      wk.register({
-        mode = { 'o', 'x' },
-        i = i,
-        a = a,
-      })
-
-      wk.register({
-        s = 'Surround',
-      }, { prefix = '<leader>', mode = { 'n', 'x' } })
-
-      wk.register({
-        T = 'Tags',
-      }, { prefix = '<leader>' })
-
-      wk.register({
-        a = 'Align',
-      }, { prefix = '<leader>', mode = { 'n', 'x' } })
+      wk.register({ mode = { 'o', 'x' }, i = i, a = a })
+      wk.register(
+        { s = 'Surround' },
+        { prefix = '<leader>', mode = { 'n', 'x' } }
+      )
+      wk.register({ T = 'Tags' }, { prefix = '<leader>' })
+      wk.register({ a = 'Align' }, { prefix = '<leader>', mode = { 'n', 'x' } })
+      wk.register({ n = 'Next' })
+      wk.register({ N = 'Previous' })
+      wk.register({ ['<Down>'] = 'Next' })
+      wk.register({ ['<Up>'] = 'Previous' })
+      wk.register({ ['<CR>'] = 'Jump' })
+      wk.register({ ['<CR>'] = 'Jump' })
     end,
-    -- init = function()
-    --   vim.o.timeout = true
-    --   vim.o.timeoutlen = 300
-    -- end,
     opts = {
       plugins = {
-        marks = true,
-        registers = true,
+        marks = false,
+        registers = false,
         spelling = {
           enabled = false,
         },
@@ -1512,19 +1361,11 @@ hi! link LazyH1 Normal
           g = false, -- bindings for prefixed with g
         },
       },
-      -- add operators that will trigger motion and text object completion
-      -- to enable all native operators, set the preset / operators plugin above
       operators = {
         ['<leader>c'] = 'Comment',
         ['<leader>C'] = 'Comment',
         ['<leader>S'] = 'Sort',
         ['<leader>sa'] = 'Surround',
-      },
-      key_labels = {
-        -- override the label used to display some keys. It doesn't effect WK in any other way.
-        -- For example:
-        -- ["<space>"] = "SPC",
-        -- ["<cr>"] = "RET",
       },
       motions = {
         count = true,
@@ -1554,48 +1395,45 @@ hi! link LazyH1 Normal
       },
       ignore_missing = false, -- enable this to hide mappings for which you didn't specify a label
       hidden = {
-        '<silent>',
-        '<cmd>',
-        '<Cmd>',
         '<CR>',
-        '^:',
+        '<Cmd>',
+        '<cmd>',
+        '<silent>',
         '^ ',
+        '^:',
         '^call ',
         '^lua ',
       }, -- hide mapping boilerplate
       show_help = true, -- show a help message in the command line for using WhichKey
       show_keys = true, -- show the currently pressed key and its label as a message in the command line
-      triggers = 'auto', -- automatically setup triggers
-      -- triggers = {"<leader>"} -- or specifiy a list manually
-      -- list of triggers, where WhichKey should not wait for timeoutlen and show immediately
-      triggers_nowait = {
-        -- marks
-        '`',
-        "'",
-        'g`',
-        "g'",
-        -- registers
-        '"',
-        '<c-r>',
-        -- spelling
-        'z=',
+      triggers = {
+        '<',
+        '<c-w>',
+        '<leader>',
+        '>',
+        'c',
+        'd',
+        'v',
+        'y',
       },
+      triggers_nowait = {},
       triggers_blacklist = {
-        -- list of mode / prefixes that should never be hooked by WhichKey
-        -- this is mostly relevant for keymaps that start with a native binding
         i = { 'j', 'k', 'z' },
         v = { 'j', 'k', 'z' },
-        n = { 'z' }
+        n = { 'z' },
+        c = { 'W', 'w' },
       },
-      -- disable the WhichKey popup for certain buf types and file types.
-      -- Disabled by default for Telescope
       disable = {
-        buftypes = {},
-        filetypes = {},
+        buftypes = {
+          'help',
+          'nofile',
+          'nowrite',
+          'quickfix',
+          'terminal',
+          'prompt',
+        },
+        filetypes = { 'mason', 'lazy', 'TelescopePrompt' },
       },
-      -- your configuration comes here
-      -- or leave it empty to use the default settings
-      -- refer to the configuration section below
     },
   },
   {
@@ -1660,67 +1498,6 @@ hi! link LazyH1 Normal
       -- vim.keymap.set('n', 'K', '<Plug>(CybuPrev)')
       -- vim.keymap.set('n', 'J', '<Plug>(CybuNext)')
     end,
-  },
-  {
-    'rest-nvim/rest.nvim',
-    dependencies = { { 'nvim-lua/plenary.nvim' } },
-    ft = 'http',
-    cmd = { 'Rest', 'RestPreview' },
-    config = function()
-      require('rest-nvim').setup({
-        stay_in_current_window_after_split = true,
-      })
-
-      vim.api.nvim_create_user_command(
-        'Rest',
-        "lua require('rest-nvim').run()<CR>",
-        {}
-      )
-      vim.api.nvim_create_user_command(
-        'RestPreview',
-        "lua require('rest-nvim').run(true)<CR>",
-        {}
-      )
-    end,
-  },
-  {
-    'folke/zen-mode.nvim',
-    cmd = 'ZenMode',
-    opts = {
-      window = {
-        backdrop = 1,
-        width = 1,
-        height = 1,
-        options = {
-          signcolumn = 'no', -- disable signcolumn
-          number = false, -- disable number column
-          relativenumber = false, -- disable relative numbers
-          cursorline = false, -- disable cursorline
-          cursorcolumn = false, -- disable cursor column
-          foldcolumn = '0', -- disable fold column
-          list = false, -- disable whitespace characters
-        },
-      },
-      plugins = {
-        options = {
-          enabled = true,
-          ruler = false, -- disables the ruler text in the cmd line area
-          showcmd = false, -- disables the command in the last line of the screen
-          laststatus = 0, -- turn off the statusline in zen mode
-        },
-        -- gitsigns = true,
-        -- tmux = true,
-        kitty = { enabled = false, font = '+2' },
-      },
-      on_open = function()
-        require('ibl').update({ enabled = false })
-      end,
-      -- callback where you can add custom code when the Zen window closes
-      on_close = function()
-        require('ibl').update({ enabled = true })
-      end,
-    },
-    keys = { { '<leader>z', '<cmd>ZenMode<cr>', desc = 'Zen Mode' } },
   },
 }, {
   defaults = {
