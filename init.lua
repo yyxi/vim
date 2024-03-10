@@ -24,12 +24,11 @@ cm w!! w !sudo tee % >/dev/null
 " noremap 0 ^
 " noremap ^ 0
 
+nnoremap <Down> n
 nnoremap <expr> n (v:searchforward ? 'n' : 'N')
-nnoremap <expr> N (v:searchforward ? 'N' : 'n')
 
-nnoremap <Up> n
-nnoremap <Down> N
-nnoremap <leader><leader> :b#<CR>
+nnoremap <Up> N
+nnoremap <expr> N (v:searchforward ? 'N' : 'n')
 
 " autocmd VimEnter *
 "   \   delc Format
@@ -46,6 +45,8 @@ end
 -- vim.o.guicursor = 'a:blinkon0'
 -- vim.o.mouse = 'nvi'
 -- vim.o.complete = ''
+
+--[[ TODO: https://github.com/andymass/vim-matchup ]]
 
 vim.g.have_nerd_font = false
 vim.g.loaded_netrw = true
@@ -174,7 +175,8 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-vim.g.mapleader = '\\'
+vim.keymap.set('n', ' ', '<Nop>', { silent = true, remap = false })
+vim.g.mapleader = ' '
 vim.opt.rtp:prepend(lazypath)
 vim.g.editorconfig = true
 
@@ -216,7 +218,7 @@ require('lazy').setup({
       vim.g.TerminusReplaceCursorShape = 1
       vim.g.TerminusMouse = 1
       vim.g.TerminusFocusReporting = 1
-      vim.g.TerminusBracketedPaste = 1
+      vim.g.TerminusBracketedPaste = 0
     end,
   },
   {
@@ -280,6 +282,9 @@ hi! link WhichKeySeparator String
 hi! link WhichKeyFloat Normal
 hi! link WhichKeyBorder Normal
 hi! link ZenBg Normal
+hi! link LazyButton Comment
+hi! link LazyButtonActive Normal
+hi! link LazyH1 Normal
 ]])
     end,
   },
@@ -480,86 +485,53 @@ hi! link ZenBg Normal
       -- })
 
       lsp_zero.on_attach(function(client, bufnr)
-        local keymap_options = { noremap = true, silent = true }
-
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
           '<C-k>',
           '<cmd>lua vim.lsp.buf.signature_help()<cr>',
-          keymap_options
+          { noremap = true, silent = true }
         )
+
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
           'K',
           '<cmd>lua vim.lsp.buf.hover()<cr>',
-          keymap_options
+          { noremap = true, silent = true }
         )
+
+        -- vim.api.nvim_buf_set_keymap(
+        --   bufnr,
+        --   'n',
+        --   'xD',
+        --   '<cmd>lua vim.lsp.buf.declaration()<cr>',
+        --   keymap_options
+        -- )
 
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
-          'xD',
-          '<cmd>lua vim.lsp.buf.declaration()<cr>',
-          keymap_options
-        )
-
-        vim.api.nvim_buf_set_keymap(
-          bufnr,
-          'n',
-          'xd',
-          '<cmd>Telescope lsp_definitions<cr>', --[[ '<cmd>lua vim.lsp.buf.definition()<cr>' ]]
-          keymap_options
-        )
-
-        vim.api.nvim_buf_set_keymap(
-          bufnr,
-          'n',
-          'xi',
-          '<cmd>Telescope lsp_implementations<cr><cr>', --[[ '<cmd>lua vim.lsp.buf.implementation()<cr>' ]]
-          keymap_options
-        )
-
-        vim.api.nvim_buf_set_keymap(
-          bufnr,
-          'n',
-          'xt',
-          '<cmd>Telescope lsp_type_definitions<cr>', --[[ '<cmd>lua vim.lsp.buf.type_definition()<cr>' ]]
-          keymap_options
-        )
-
-        vim.api.nvim_buf_set_keymap(
-          bufnr,
-          'n',
-          'xR',
-          '<cmd>Telescope lsp_references<cr>', --[[ '<cmd>lua vim.lsp.buf.references()<cr>' ]]
-          keymap_options
-        )
-
-        vim.api.nvim_buf_set_keymap(
-          bufnr,
-          'n',
-          'xr',
+          '<leader>r',
           -- ':Rename ',
           '<cmd>lua vim.lsp.buf.rename()<cr>',
-          keymap_options
+          { noremap = true, silent = true, desc = 'Rename' }
         )
 
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
-          'xa',
+          '<leader>A',
           '<cmd>lua vim.lsp.buf.code_action()<cr>',
-          keymap_options
+          { noremap = true, silent = true, desc = 'Code Action' }
         )
 
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'x',
-          'xa',
+          '<leader>A',
           '<cmd>lua vim.lsp.buf.code_action()<cr>',
-          keymap_options
+          { noremap = true, silent = true, desc = 'Code Action' }
         )
 
         vim.api.nvim_buf_set_keymap(
@@ -567,7 +539,7 @@ hi! link ZenBg Normal
           'n',
           '<C-Up>',
           '<cmd>lua vim.diagnostic.goto_prev()<cr>',
-          keymap_options
+          { noremap = true, silent = true }
         )
 
         vim.api.nvim_buf_set_keymap(
@@ -575,7 +547,7 @@ hi! link ZenBg Normal
           'n',
           '<C-Down>',
           '<cmd>lua vim.diagnostic.goto_next()<cr>',
-          keymap_options
+          { noremap = true, silent = true }
         )
 
         require('lsp-fix').on_attach(client, bufnr)
@@ -646,7 +618,6 @@ hi! link ZenBg Normal
                 yaml = {
                   schemas = vim.list_extend(
                     {
-                      -- TODO: move this
                       [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
                     },
                     require('schemastore').yaml.schemas({
@@ -680,7 +651,7 @@ hi! link ZenBg Normal
     dependencies = { 'neovim/nvim-lspconfig' },
     keys = {
       {
-        'xF',
+        '<leader>F',
         function()
           require('lsp-fix').fix()
         end,
@@ -715,7 +686,7 @@ hi! link ZenBg Normal
     dependencies = { 'neovim/nvim-lspconfig', 'williamboman/mason.nvim' },
     keys = {
       {
-        'xf',
+        '<leader>f',
         function()
           require('conform').format({ async = true, lsp_fallback = true })
         end,
@@ -832,35 +803,12 @@ hi! link ZenBg Normal
           ['<S-Tab>'] = cmp_action.luasnip_shift_supertab(),
         }),
       })
-
-      -- cmp.setup.cmdline({ '/', '?' }, {
-      --   mapping = cmp.mapping.preset.cmdline(),
-      --   sources = cmp.config.sources({
-      --     { name = 'nvim_lsp_document_symbol' },
-      --   }, {
-      --     { name = 'buffer' },
-      --   }),
-      -- })
-      --
-      -- cmp.setup.cmdline(':', {
-      --   mapping = cmp.mapping.preset.cmdline(),
-      --   sources = cmp.config.sources({
-      --     { name = 'path' },
-      --   }, {
-      --     {
-      --       name = 'cmdline',
-      --       option = {
-      --         ignore_cmds = { 'Man', '!' },
-      --       },
-      --     },
-      --   }),
-      -- })
     end,
   },
   {
     'Wansmer/treesj',
     keys = {
-      { 'J', '<cmd>TSJToggle<cr>', desc = 'Join Toggle' },
+      { '<leader>j', '<cmd>TSJToggle<cr>', desc = 'Join Toggle' },
     },
     opts = { use_default_keymaps = false, max_join_length = 150 },
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
@@ -1003,6 +951,23 @@ hi! link ZenBg Normal
     },
     config = function()
       require('Comment').setup({
+        toggler = {
+          line = '<leader>cc',
+          block = '<leader>Cc',
+        },
+        opleader = {
+          line = '<leader>c',
+          block = '<leader>C',
+        },
+        extra = {
+          above = '<leader>cO',
+          below = '<leader>co',
+          eol = '<leader>cA',
+        },
+        mappings = {
+          basic = true,
+          extra = true,
+        },
         pre_hook = require(
           'ts_context_commentstring.integrations.comment_nvim'
         ).create_pre_hook(),
@@ -1028,68 +993,9 @@ hi! link ZenBg Normal
     end,
   },
   {
-    'nvim-telescope/telescope.nvim',
-    tag = '0.1.5',
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-      {
-        'nvim-telescope/telescope-fzf-native.nvim',
-        build = 'make',
-      },
-      'nvim-treesitter/nvim-treesitter',
-    },
-    cmd = { 'Telescope' },
-    keys = {
-      { '<leader>f', '<cmd>Telescope find_files<cr>', desc = 'Files' },
-      { '<leader>b', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
-      {
-        '<leader>s',
-        '<cmd>Telescope lsp_document_symbols<cr>',
-        desc = 'Symbols',
-      },
-    },
-    config = function()
-      local telescope = require('telescope')
-
-      telescope.setup({
-        defaults = {
-          mappings = {},
-          winblend = 10,
-        },
-        pickers = {
-          find_files = {
-            find_command = {
-              'rg',
-              '-L',
-              '--files',
-              '--color',
-              'never',
-              '--hidden',
-              '--glob',
-              '!.git',
-            },
-          },
-        },
-        -- file_ignore_patterns = { '.git' },
-        extensions = {
-          fzf = {
-            fuzzy = true, -- false will only do exact matching
-            override_generic_sorter = true, -- override the generic sorter
-            override_file_sorter = true, -- override the file sorter
-            case_mode = 'smart_case', -- or "ignore_case" or "respect_case"
-          },
-        },
-      })
-
-      telescope.load_extension('fzf')
-    end,
-  },
-  {
     'gbprod/yanky.nvim',
     event = 'InsertEnter',
-    dependencies = { 'nvim-telescope/telescope.nvim' },
     keys = {
-      { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
       { 'y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
       {
         'p',
@@ -1196,15 +1102,122 @@ hi! link ZenBg Normal
           sync_with_ring = true,
         },
         highlight = {
-          on_put = false,
-          on_yank = false,
+          on_put = true,
+          on_yank = true,
+          timer = 300,
         },
         preserve_cursor_position = {
           enabled = true,
         },
       })
+    end,
+  },
+  {
+    'nvim-telescope/telescope.nvim',
+    tag = '0.1.5',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      {
+        'nvim-telescope/telescope-fzf-native.nvim',
+        build = 'make',
+      },
+      'nvim-treesitter/nvim-treesitter',
+      'neovim/nvim-lspconfig',
+      'gbprod/yanky.nvim',
+    },
+    cmd = { 'Telescope' },
+    keys = {
+      {
+        '<leader>Tt',
+        '<cmd>Telescope treesitter<cr>',
+        desc = 'Treesitter Symbols',
+      },
+      {
+        '<leader>Td',
+        '<cmd>Telescope lsp_document_symbols<cr>',
+        desc = 'Document Symbols',
+      },
+      {
+        '<leader>Tw',
+        '<cmd>Telescope lsp_workspace_symbols<cr>',
+        desc = 'Workspace Symbols',
+      },
+      { '<leader>g', '<cmd>Telescope live_grep<cr>', desc = 'Grep' },
+      { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
+      { '<leader>e', '<cmd>Telescope find_files<cr>', desc = 'Edit' },
+      { '<leader>b', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
+      {
+        '<leader>d',
+        '<cmd>Telescope lsp_definitions<cr>',
+        desc = 'Definition',
+      },
+      {
+        '<leader>i',
+        '<cmd>Telescope lsp_implementations<cr>',
+        desc = 'Implementations',
+      },
+      {
+        '<leader>t',
+        '<cmd>Telescope lsp_type_definitions<cr>',
+        desc = 'Type Definitions',
+      },
+      { '<leader>R', '<cmd>Telescope lsp_references<cr>', desc = 'References' },
+    },
+    config = function()
+      local telescope = require('telescope')
 
-      require('telescope').load_extension('yank_history')
+      require('telescope.pickers.layout_strategies').horizontal_untitled = function(
+        picker,
+        max_columns,
+        max_lines,
+        layout_config
+      )
+        local layout =
+          require('telescope.pickers.layout_strategies').horizontal(
+            picker,
+            max_columns,
+            max_lines,
+            layout_config
+          )
+
+        layout.results.title = ''
+        layout.prompt.title = ''
+        layout.preview.title = ''
+        return layout
+      end
+
+      telescope.setup({
+        defaults = {
+          layout_strategy = 'horizontal_untitled',
+          mappings = {},
+          winblend = 10,
+        },
+        pickers = {
+          find_files = {
+            find_command = {
+              'rg',
+              '-L',
+              '--files',
+              '--color',
+              'never',
+              '--hidden',
+              '--glob',
+              '!.git',
+            },
+          },
+        },
+        extensions = {
+          fzf = {
+            fuzzy = true, -- false will only do exact matching
+            override_generic_sorter = true, -- override the generic sorter
+            override_file_sorter = true, -- override the file sorter
+            case_mode = 'smart_case', -- or "ignore_case" or "respect_case"
+          },
+        },
+      })
+
+      telescope.load_extension('fzf')
+      telescope.load_extension('yank_history')
     end,
   },
   {
@@ -1230,7 +1243,6 @@ hi! link ZenBg Normal
     event = 'VeryLazy',
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
-      'folke/which-key.nvim',
     },
     config = function()
       local gen_spec = require('mini.ai').gen_spec
@@ -1275,7 +1287,144 @@ hi! link ZenBg Normal
         -- Number of lines within which textobject is searched
         n_lines = 500,
       })
+    end,
+  },
+  {
+    'echasnovski/mini.surround',
+    event = 'InsertEnter',
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter-textobjects',
+    },
+    opts = {
+      mappings = {
+        add = '<leader>sa', -- Add surrounding in Normal and Visual modes
+        delete = '<leader>sd', -- Delete surrounding
+        find = '<leader>sf', -- Find surrounding (to the right)
+        find_left = '<leader>sF', -- Find surrounding (to the left)
+        highlight = '', -- Highlight surrounding
+        replace = '<leader>sr', -- Replace surrounding
+        update_n_lines = '<leader>sn', -- Update `n_lines`
+        suffix_last = 'l', -- Suffix to search with "prev" method
+        suffix_next = 'n', -- Suffix to search with "next" method
+      },
+      n_lines = 500,
+    },
+    config = function(_, opts)
+      opts.custom_surroundings = nil
 
+      require('mini.surround').setup(opts)
+    end,
+    keys = function(_, keys)
+      -- Populate the keys based on the user's options
+      local plugin = require('lazy.core.config').spec.plugins['mini.surround']
+      local opts = require('lazy.core.plugin').values(plugin, 'opts', false)
+      local mappings = {
+        { opts.mappings.add, desc = 'Add surrounding', mode = { 'n', 'v' } },
+        { opts.mappings.delete, desc = 'Delete surrounding' },
+        { opts.mappings.find, desc = 'Find right surrounding' },
+        { opts.mappings.find_left, desc = 'Find left surrounding' },
+        -- { opts.mappings.highlight, desc = 'Highlight surrounding' },
+        { opts.mappings.replace, desc = 'Replace surrounding' },
+        {
+          opts.mappings.update_n_lines,
+          desc = 'Update number of lines',
+        },
+      }
+
+      mappings = vim.tbl_filter(function(m)
+        return m[1] and #m[1] > 0
+      end, mappings)
+      return vim.list_extend(mappings, keys)
+    end,
+  },
+  {
+    'echasnovski/mini.jump2d',
+    dependencies = { 'echasnovski/mini.base16' },
+    keys = { '<CR>' },
+    config = function()
+      require('mini.jump2d').setup()
+    end,
+  },
+  {
+    'max397574/better-escape.nvim',
+    event = 'InsertEnter',
+    keys = { 'jj', mode = 'i' },
+    config = function()
+      require('better_escape').setup({
+        -- timeout = 300,
+        mapping = { 'jj' },
+        clear_empty_lines = false,
+        keys = '<Esc>',
+      })
+    end,
+  },
+  {
+    'christoomey/vim-sort-motion',
+    event = 'InsertEnter',
+    keys = {
+      { '<leader>S', '<Plug>SortMotion', desc = 'Sort' },
+      { '<leader>S', '<Plug>SortMotionVisual', desc = 'Sort', mode = 'x' },
+      { '<leader>Ss', '<Plug>SortLines', desc = 'Sort Lines' },
+    },
+  },
+  {
+    'echasnovski/mini.align',
+    version = '*',
+    -- event = 'InsertEnter',
+    keys = { { '<leader>a', mode = { 'n', 'x' } } },
+    config = function()
+      require('mini.align').setup({
+        mappings = {
+          start = '',
+          start_with_preview = '<leader>a',
+        },
+        --  ['s'] = --<function: enter split pattern>,
+        --  ['j'] = --<function: choose justify side>,
+        --  ['m'] = --<function: enter merge delimiter>,
+        --
+        --  -- Modifiers adding pre-steps
+        --  ['f'] = --<function: filter parts by entering Lua expression>,
+        --  ['i'] = --<function: ignore some split matches>,
+        --  ['p'] = --<function: pair parts>,
+        --  ['t'] = --<function: trim parts>,
+        --
+        --  -- Delete some last pre-step
+        --  ['<BS>'] = --<function: delete some last pre-step>,
+        --
+        --  -- Special configurations for common splits
+        --  ['='] = --<function: enhanced setup for '='>,
+        --  [','] = --<function: enhanced setup for ','>,
+        --  [' '] = --<function: enhanced setup for ' '>,
+      })
+    end,
+  },
+  -- {
+  --   'junegunn/vim-easy-align',
+  --   event = 'InsertEnter',
+  --   init = function()
+  --     vim.g.easy_align_interactive_modes = { 'l', 'r', 'c' }
+  --     vim.g.easy_align_interactive_modes = { 'r', 'c', 'l' }
+  --   end,
+  --   keys = {
+  --     {
+  --       '<leader>a',
+  --       '<Plug>(EasyAlign)<cr>',
+  --       desc = 'Align',
+  --       mode = 'x',
+  --     },
+  --     {
+  --       '<leader>a',
+  --       '<Plug>(EasyAlign)<cr>',
+  --       desc = 'Align',
+  --       mode = 'n',
+  --     },
+  --   },
+  -- },
+  {
+    'folke/which-key.nvim',
+    cmd = 'WhichKey',
+    event = 'VeryLazy',
+    config = function(_, opts)
       ---@type table<string, string|table>
       local i = {
         [' '] = 'Whitespace',
@@ -1320,121 +1469,36 @@ hi! link ZenBg Normal
           ac
         )
       end
-      require('which-key').register({
+
+      local wk = require('which-key')
+      wk.setup(opts)
+
+      wk.register({
         mode = { 'o', 'x' },
         i = i,
         a = a,
       })
-    end,
-  },
-  {
-    'echasnovski/mini.surround',
-    event = 'InsertEnter',
-    dependencies = {
-      'nvim-treesitter/nvim-treesitter-textobjects',
-    },
-    opts = {
-      mappings = {
-        add = 'gsa', -- Add surrounding in Normal and Visual modes
-        delete = 'gsd', -- Delete surrounding
-        find = 'gsf', -- Find surrounding (to the right)
-        find_left = 'gsF', -- Find surrounding (to the left)
-        highlight = '', -- Highlight surrounding
-        replace = 'gsr', -- Replace surrounding
-        update_n_lines = 'gsn', -- Update `n_lines`
-        suffix_last = 'l', -- Suffix to search with "prev" method
-        suffix_next = 'n', -- Suffix to search with "next" method
-      },
-      n_lines = 500,
-    },
-    config = function(_, opts)
-      opts.custom_surroundings = nil
 
-      require('mini.surround').setup(opts)
-    end,
-    keys = function(_, keys)
-      -- Populate the keys based on the user's options
-      local plugin = require('lazy.core.config').spec.plugins['mini.surround']
-      local opts = require('lazy.core.plugin').values(plugin, 'opts', false)
-      local mappings = {
-        { opts.mappings.add, desc = 'Add surrounding', mode = { 'n', 'v' } },
-        { opts.mappings.delete, desc = 'Delete surrounding' },
-        { opts.mappings.find, desc = 'Find right surrounding' },
-        { opts.mappings.find_left, desc = 'Find left surrounding' },
-        -- { opts.mappings.highlight, desc = 'Highlight surrounding' },
-        { opts.mappings.replace, desc = 'Replace surrounding' },
-        {
-          opts.mappings.update_n_lines,
-          desc = 'Update `MiniSurround.config.n_lines`',
-        },
-      }
+      wk.register({
+        s = 'Surround',
+      }, { prefix = '<leader>', mode = { 'n', 'x' } })
 
-      mappings = vim.tbl_filter(function(m)
-        return m[1] and #m[1] > 0
-      end, mappings)
-      return vim.list_extend(mappings, keys)
+      wk.register({
+        T = 'Tags',
+      }, { prefix = '<leader>' })
+
+      wk.register({
+        a = 'Align',
+      }, { prefix = '<leader>', mode = { 'n', 'x' } })
     end,
-  },
-  {
-    'echasnovski/mini.jump2d',
-    dependencies = { 'echasnovski/mini.base16' },
-    keys = { '<CR>' },
-    config = function()
-      require('mini.jump2d').setup()
-    end,
-  },
-  {
-    'max397574/better-escape.nvim',
-    event = 'InsertEnter',
-    keys = { 'jj', mode = 'i' },
-    config = function()
-      require('better_escape').setup({
-        -- timeout = 300,
-        mapping = { 'jj' },
-        clear_empty_lines = false,
-        keys = '<Esc>',
-      })
-    end,
-  },
-  {
-    'christoomey/vim-sort-motion',
-    event = 'InsertEnter',
-    keys = {
-      { 'gS', '<Plug>SortMotion', desc = 'Sort' },
-      { 'gS', '<Plug>SortMotionVisual', desc = 'Sort', mode = 'x' },
-      { 'gSs', '<Plug>SortLines', desc = 'Sort Lines' },
-    },
-  },
-  {
-    'junegunn/vim-easy-align',
-    event = 'InsertEnter',
-    keys = {
-      {
-        'ga',
-        '<Plug>(EasyAlign)<cr>',
-        desc = 'EasyAlign in visual mode',
-        mode = 'x',
-      },
-      {
-        'ga',
-        '<Plug>(EasyAlign)<cr>',
-        desc = 'EasyAlign in visual mode',
-        mode = 'n',
-      },
-    },
-  },
-  {
-    'folke/which-key.nvim',
-    cmd = 'WhichKey',
-    event = 'VeryLazy',
     -- init = function()
     --   vim.o.timeout = true
     --   vim.o.timeoutlen = 300
     -- end,
     opts = {
       plugins = {
-        marks = false,
-        registers = false,
+        marks = true,
+        registers = true,
         spelling = {
           enabled = false,
         },
@@ -1443,25 +1507,24 @@ hi! link ZenBg Normal
           motions = true, -- adds help for motions
           text_objects = true, -- help for text objects triggered after entering an operator
           windows = true, -- default bindings on <c-w>
-          nav = true, -- misc bindings to work with windows
+          nav = false, -- misc bindings to work with windows
           z = false, -- bindings for folds, spelling and others prefixed with z
-          g = true, -- bindings for prefixed with g
+          g = false, -- bindings for prefixed with g
         },
       },
       -- add operators that will trigger motion and text object completion
       -- to enable all native operators, set the preset / operators plugin above
       operators = {
-        gc = 'Comment',
-        gb = 'Comment',
-        gS = 'Sort',
-        gsa = 'Surround',
+        ['<leader>c'] = 'Comment',
+        ['<leader>C'] = 'Comment',
+        ['<leader>S'] = 'Sort',
+        ['<leader>sa'] = 'Surround',
       },
       key_labels = {
         -- override the label used to display some keys. It doesn't effect WK in any other way.
         -- For example:
         -- ["<space>"] = "SPC",
         -- ["<cr>"] = "RET",
-        -- ["<tab>"] = "TAB",
       },
       motions = {
         count = true,
@@ -1520,8 +1583,9 @@ hi! link ZenBg Normal
       triggers_blacklist = {
         -- list of mode / prefixes that should never be hooked by WhichKey
         -- this is mostly relevant for keymaps that start with a native binding
-        i = { 'j', 'k' },
-        v = { 'j', 'k' },
+        i = { 'j', 'k', 'z' },
+        v = { 'j', 'k', 'z' },
+        n = { 'z' }
       },
       -- disable the WhichKey popup for certain buf types and file types.
       -- Disabled by default for Telescope
@@ -1539,8 +1603,14 @@ hi! link ZenBg Normal
     keys = {
       { '<Left>', '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
       { '<Right>', '<Plug>(CybuNext)', desc = 'Next Buffer' },
-      { '<C-Left>', '<Plug>(CybuLastusedPrev)', desc = 'Previous Buffer' },
-      { '<C-Right>', '<Plug>(CybuLastusedNext)', desc = 'Next Buffer' },
+      -- { '<C-Left>', '<Plug>(CybuLastusedPrev)', desc = 'Previous Buffer' },
+      -- { '<C-Right>', '<Plug>(CybuLastusedNext)', desc = 'Next Buffer' },
+      -- vim.cmd [[nnoremap <leader><leader> :]]
+      {
+        '<leader><leader>',
+        '<Plug>(CybuLastusedNext)',
+        desc = 'Switch Buffer',
+      },
     },
     config = function()
       require('cybu').setup({
@@ -1561,7 +1631,23 @@ hi! link ZenBg Normal
             colored = false, -- enable color for web dev icons
           },
         },
-        display_time = 750, -- time the cybu window is displayed
+        behavior = { -- set behavior for different modes
+          mode = {
+            default = {
+              switch = 'immediate', -- immediate, on_close
+              view = 'rolling', -- paging, rolling
+            },
+            last_used = {
+              switch = 'immediate', -- immediate, on_close
+              view = 'rolling', -- paging, rolling
+            },
+            auto = {
+              view = 'rolling',
+            },
+          },
+          show_on_autocmd = false, -- event to trigger cybu (eg. "BufEnter")
+        },
+        display_time = 500, -- time the cybu window is displayed
         exclude = { -- filetypes, cybu will not be active
           'neo-tree',
           'fugitive',
@@ -1641,6 +1727,7 @@ hi! link ZenBg Normal
     lazy = true,
   },
   ui = {
+    title = '',
     border = 'rounded',
     icons = {
       cmd = '',
