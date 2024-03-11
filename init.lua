@@ -61,11 +61,13 @@ vim.g.loaded_matchit = 1
 vim.g.have_nerd_font = false
 vim.g.loaded_netrw = true
 vim.g.loaded_netrwPlugin = true
+vim.o.mousemoveevent = true
 vim.o.autoindent = true
 vim.o.autoread = true
 vim.o.background = 'dark'
 vim.o.backspace = 'indent,eol,start'
 vim.o.backup = true
+vim.o.showmatch = false
 vim.o.backupcopy = 'yes'
 vim.o.backupdir = vim.fn.expand('~/.vim/tmp/backup')
 vim.o.clipboard = 'unnamedplus'
@@ -90,8 +92,9 @@ vim.o.incsearch = true
 vim.o.joinspaces = false
 vim.o.langremap = false
 vim.o.laststatus = 3
-vim.o.lazyredraw = true
+vim.o.lazyredraw = false
 vim.o.linebreak = true
+vim.o.ttyfast = true
 vim.o.list = false
 vim.o.listchars = 'tab:¨¨,eol:¬,trail:·'
 vim.o.matchtime = 2
@@ -103,8 +106,8 @@ vim.o.pumblend = 10
 vim.o.pumheight = 20
 vim.o.relativenumber = false
 vim.o.ruler = false
-vim.o.scrolljump = 5
-vim.o.scrolloff = 5
+vim.o.scrolljump = 1
+vim.o.scrolloff = 0
 vim.o.secure = true
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h"
 vim.o.shiftwidth = 2
@@ -113,7 +116,7 @@ vim.o.showbreak = '↳ '
 vim.o.showmode = false
 vim.o.showmode = false
 vim.o.sidescroll = 1
-vim.o.sidescrolloff = 2
+vim.o.sidescrolloff = 4
 vim.o.signcolumn = 'no'
 vim.o.smartcase = true
 vim.o.smartindent = true
@@ -1155,19 +1158,16 @@ hi! link LazyH1 Normal
     'echasnovski/mini.ai',
     version = '*',
     event = { 'BufReadPre', 'BufNewFile' },
-    -- event = 'VeryLazy',
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
     config = function()
       local gen_spec = require('mini.ai').gen_spec
 
+      -- TODO: add more queries
       require('mini.ai').setup({
+        n_lines = 1024,
         custom_textobjects = {
-          -- F = gen_spec.treesitter({
-          --   a = '@function.outer',
-          --   i = '@function.inner',
-          -- }),
           o = gen_spec.treesitter({
             a = { '@block.outer', '@conditional.outer', '@loop.outer' },
             i = { '@block.inner', '@conditional.inner', '@loop.inner' },
@@ -1182,30 +1182,22 @@ hi! link LazyH1 Normal
           ),
           t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' },
         },
-        -- Module mappings. Use `''` (empty string) to disable one.
         mappings = {
-          -- Main textobject prefixes
-          around = 'a',
-          inside = 'i',
-
-          -- Next/last variants
-          around_next = '',
-          inside_next = '',
-          around_last = '',
-          inside_last = '',
-
-          -- Move cursor to corresponding edge of `a` textobject
+          around = '',
+          inside = '',
+          around_next = 'an',
+          around_last = 'aN',
+          inside_next = 'in',
+          inside_last = 'iN',
           goto_left = '',
           goto_right = '',
         },
-
-        -- Number of lines within which textobject is searched
-        n_lines = 500,
       })
     end,
   },
   {
     'echasnovski/mini.surround',
+    enabled = false,
     -- event = 'InsertEnter',
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
@@ -1296,41 +1288,51 @@ hi! link LazyH1 Normal
     cmd = 'WhichKey',
     event = 'VeryLazy',
     config = function(_, opts)
-      local presets = require("which-key.plugins.presets")
-      presets.motions["ge"] = nil
-      presets.motions["gg"] = nil
-      presets.operators["g~"] = nil
-      presets.operators["gu"] = nil
-      presets.operators["gU"] = nil
-      presets.operators["!"] = nil
-      presets.operators["zf"] = nil
+      local presets = require('which-key.plugins.presets')
+
+      presets.motions['ge'] = nil
+      presets.motions['gg'] = nil
+      presets.operators['g~'] = nil
+      presets.operators['gu'] = nil
+      presets.operators['gU'] = nil
+      presets.operators['!'] = nil
+      presets.operators['zf'] = nil
 
       ---@type table<string, string|table>
-      local i = {
+      local miniAI = {
+        [' '] = 'Whitespace',
+        ['"'] = 'Balanced "',
+        ["'"] = "Balanced '",
+        ['`'] = 'Balanced `',
+        ['('] = 'Balanced (',
+        [')'] = 'Balanced ) including white-space',
+        ['>'] = 'Balanced > including white-space',
+        ['<lt>'] = 'Balanced <',
+        [']'] = 'Balanced ] including white-space',
+        ['['] = 'Balanced [',
+        ['}'] = 'Balanced } including white-space',
+        ['{'] = 'Balanced {',
         ['?'] = 'User Prompt',
         _ = 'Underscore',
         a = 'Argument',
         b = 'Balanced ), ], }',
-        q = 'Quote `, ", \'',
-        t = 'Tag',
         c = 'Class',
         f = 'Function',
         o = 'Block, conditional, loop',
+        q = 'Quote `, ", \'',
+        t = 'Tag',
       }
-      local a = vim.deepcopy(i)
-      for k, v in pairs(a) do
-        ---@diagnostic disable-next-line: param-type-mismatch
-        a[k] = v:gsub(' including.*', '')
-      end
 
-      local ic = vim.deepcopy(i)
-      local ac = vim.deepcopy(a)
+      local objects = vim.deepcopy(presets.objects)
 
+      presets.objects = vim.tbl_deep_extend('force', {}, objects, {
+        ['a'] = { n = miniAI, N = miniAI },
+        ['i'] = { n = miniAI, N = miniAI },
+      })
 
       local wk = require('which-key')
       wk.setup(opts)
 
-      wk.register({ mode = { 'o', 'x' }, i = i, a = a })
       wk.register(
         { s = 'Surround' },
         { prefix = '<leader>', mode = { 'n', 'x' } }
