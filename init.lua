@@ -244,39 +244,50 @@ require('lazy').setup({
     lazy = false, -- make sure we load this during startup if it is your main colorscheme
     branch = 'stable',
     priority = 1000, -- make sure to load this before all the other start plugins
-    config = function()
-      require('mini.base16').setup({
-        palette = {
-          base00 = '#1d2021',
-          base01 = '#3c3836',
-          base02 = '#504945',
-          base03 = '#665c54',
-          base04 = '#bdae93',
-          base05 = '#d5c4a1',
-          base06 = '#ebdbb2',
-          base07 = '#fbf1c7',
-          base08 = '#fb4934',
-          base09 = '#fe8019',
-          base0A = '#fabd2f',
-          base0B = '#b8bb26',
-          base0C = '#8ec07c',
-          base0D = '#83a598',
-          base0E = '#d3869b',
-          base0F = '#d65d0e',
-        },
-        use_cterm = not vim.o.termguicolors,
-        plugins = {
-          default = false,
-          ['echasnovski/mini.nvim'] = true,
-          ['folke/lazy.nvim'] = true,
-          ['folke/which-key.nvim'] = true,
-          ['hrsh7th/nvim-cmp'] = true,
-          ['lukas-reineke/indent-blankline.nvim'] = true,
-          ['nvim-lualine/lualine.nvim'] = true,
-          ['nvim-telescope/telescope.nvim'] = true,
-          ['williamboman/mason.nvim'] = true,
-        },
+    config = function(_, opts)
+      require('mini.base16').setup(opts)
+
+      vim.api.nvim_set_hl(0, 'MiniJump', { link = 'SpellRare' })
+      vim.api.nvim_set_hl(
+        0,
+        'MiniJump2dSpot',
+        { reverse = true, bold = true, nocombine = true, sp = nil }
+      )
+      vim.api.nvim_set_hl(
+        0,
+        'MiniJump2dSpotUnique',
+        { link = 'MiniJump2dSpot' }
+      )
+      vim.api.nvim_set_hl(
+        0,
+        'Comment',
+        { italic = true, fg = opts.palette.base03, nocombine = true }
+      )
+      vim.api.nvim_set_hl(0, 'IndentBlanklineChar', {
+        nocombine = true,
+        ctermbg = nil,
+        ctermfg = 8,
+        bg = nil,
+        fg = '#332E33',
       })
+      vim.api.nvim_set_hl(0, 'IndentBlanklineCharScope', {
+        nocombine = true,
+        ctermbg = nil,
+        ctermfg = 8,
+        bold = false,
+        bg = nil,
+        fg = '#474247',
+      })
+      vim.api.nvim_set_hl(
+        0,
+        'EyelinerPrimary',
+        { underline = true, bold = true }
+      )
+      vim.api.nvim_set_hl(
+        0,
+        'EyelinerSecondary',
+        { bold = false, underline = true }
+      )
 
       vim.cmd([[
 hi! link @text.todo MiniHipatternsTodo
@@ -300,6 +311,38 @@ hi! link LazyButtonActive Normal
 hi! link LazyH1 Normal
 ]])
     end,
+    opts = {
+      palette = {
+        base00 = '#1d2021',
+        base01 = '#3c3836',
+        base02 = '#504945',
+        base03 = '#665c54',
+        base04 = '#bdae93',
+        base05 = '#d5c4a1',
+        base06 = '#ebdbb2',
+        base07 = '#fbf1c7',
+        base08 = '#fb4934',
+        base09 = '#fe8019',
+        base0A = '#fabd2f',
+        base0B = '#b8bb26',
+        base0C = '#8ec07c',
+        base0D = '#83a598',
+        base0E = '#d3869b',
+        base0F = '#d65d0e',
+      },
+      use_cterm = not vim.o.termguicolors,
+      plugins = {
+        default = false,
+        ['echasnovski/mini.nvim'] = true,
+        ['folke/lazy.nvim'] = true,
+        ['folke/which-key.nvim'] = true,
+        ['hrsh7th/nvim-cmp'] = true,
+        ['lukas-reineke/indent-blankline.nvim'] = true,
+        ['nvim-lualine/lualine.nvim'] = true,
+        ['nvim-telescope/telescope.nvim'] = true,
+        ['williamboman/mason.nvim'] = true,
+      },
+    },
   },
   {
     'nvim-lualine/lualine.nvim',
@@ -307,6 +350,7 @@ hi! link LazyH1 Normal
     event = 'VimEnter',
     priority = 800,
     opts = {
+      extensions = { 'mason', 'lazy', 'man' },
       options = {
         always_divide_middle = true,
         component_separators = '',
@@ -315,10 +359,30 @@ hi! link LazyH1 Normal
         section_separators = '',
         -- theme = 'gruvbox',
         disabled_filetypes = {
+          -- TelescopePrompt = {},
+          -- mason = {},
+          -- lazy = {},
           statusline = {},
           winbar = {},
           help = {},
         },
+      },
+
+      sections = {
+        lualine_a = { 'mode' },
+        lualine_b = { 'branch' },
+        lualine_c = { { 'filename', path = 1 } },
+        lualine_x = { 'encoding', 'fileformat', 'filetype' },
+        lualine_y = { 'progress' },
+        lualine_z = { 'location' },
+      },
+      inactive_sections = {
+        lualine_a = {},
+        lualine_b = {},
+        lualine_c = { 'filename' },
+        lualine_x = { 'location' },
+        lualine_y = {},
+        lualine_z = {},
       },
     },
   },
@@ -327,23 +391,6 @@ hi! link LazyH1 Normal
     event = 'VeryLazy',
     dependencies = { 'echasnovski/mini.base16' },
     config = function()
-      vim.api.nvim_set_hl(0, 'IndentBlanklineChar', {
-        nocombine = true,
-        ctermbg = nil,
-        ctermfg = 8,
-        bg = nil,
-        fg = '#332E33',
-      })
-
-      vim.api.nvim_set_hl(0, 'IndentBlanklineCharScope', {
-        nocombine = true,
-        ctermbg = nil,
-        ctermfg = 8,
-        bold = false,
-        bg = nil,
-        fg = '#474247',
-      })
-
       require('ibl').setup({
         indent = {
           smart_indent_cap = true,
@@ -886,6 +933,10 @@ hi! link LazyH1 Normal
         playground = {
           enable = true,
         },
+        matchup = {
+          enable = true,
+          disable_virtual_text = true,
+        },
         incremental_selection = {
           enable = true,
           keymaps = {
@@ -968,6 +1019,24 @@ hi! link LazyH1 Normal
     end,
   },
   {
+    'andymass/vim-matchup',
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'echasnovski/mini.base16',
+    },
+    event = { 'BufReadPre', 'BufNewFile' },
+    init = function()
+      -- vim.g.matchup_matchparen_offscreen =
+      --   { method = 'popup', syntax_hl = 1, border = 'rounded', highlight = 'Normal' }
+      vim.g.matchup_matchparen_offscreen = {}
+      vim.g.matchup_matchparen_deferred = 1
+      vim.g.matchup_matchparen_hi_surround_always = 0
+      vim.g.matchup_mouse_enabled = 1
+      vim.g.matchup_motion_override_Npercent = 0
+      vim.g.matchup_matchpref = { html = { nolists = 1, tagnameonly = 1 } }
+    end,
+  },
+  {
     'nvim-treesitter/nvim-treesitter-textobjects',
     -- init = function(plugin)
     --   require('lazy.core.loader').add_to_rtp(plugin)
@@ -978,6 +1047,16 @@ hi! link LazyH1 Normal
     'windwp/nvim-ts-autotag',
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
     event = { 'BufReadPre', 'BufNewFile' },
+  },
+  {
+    'jinh0/eyeliner.nvim',
+    event = { 'BufReadPre', 'BufNewFile' },
+    config = function()
+      require('eyeliner').setup({
+        highlight_on_key = false, -- this must be set to true for dimming to work!
+        dim = false,
+      })
+    end,
   },
   {
     'numToStr/Comment.nvim',
@@ -1175,22 +1254,6 @@ hi! link LazyH1 Normal
     end,
   },
   {
-    'jinh0/eyeliner.nvim',
-    event = { 'BufReadPre', 'BufNewFile' },
-    config = function()
-      require('eyeliner').setup({
-        highlight_on_key = false, -- this must be set to true for dimming to work!
-        dim = false,
-      })
-      vim.api.nvim_set_hl(
-        0,
-        'EyelinerPrimary',
-        { bold = true, underline = true }
-      )
-      vim.api.nvim_set_hl(0, 'EyelinerSecondary', { bold = true })
-    end,
-  },
-  {
     'echasnovski/mini.ai',
     version = '*',
     event = { 'BufReadPre', 'BufNewFile' },
@@ -1254,8 +1317,7 @@ hi! link LazyH1 Normal
     },
     config = function(_, opts)
       opts.custom_surroundings = nil
-
-      require('mini.surround').setup(opts)
+      require('mini.surround').setup()
     end,
   },
   {
@@ -1263,7 +1325,12 @@ hi! link LazyH1 Normal
     dependencies = { 'echasnovski/mini.base16' },
     keys = { '<CR>' },
     config = function()
-      require('mini.jump2d').setup()
+      require('mini.jump2d').setup({
+        view = {
+          dim = false,
+          n_steps_ahead = 0,
+        },
+      })
     end,
   },
   {
