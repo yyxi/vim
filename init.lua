@@ -623,6 +623,41 @@ hi! link LazyH1 Normal
                   schemas = vim.list_extend(
                     {
                       [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
+                      -- ['https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks'] = 'tasks/*.yml',
+                      -- ['https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/handlers'] = {
+                      --   'handlers/*.yml',
+                      --   'handlers/*.yaml',
+                      -- },
+                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/requirements.json'] = {
+                      --   'requirements.yml',
+                      -- },
+                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/meta.json'] = {
+                      --   'meta/main.yml',
+                      --   'meta/main.yaml',
+                      -- },
+                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/vars.json'] = {
+                      --   'playbooks/vars/*.yml',
+                      --   'playbooks/vars/*.yaml',
+                      --   'vars/*.yml',
+                      --   'vars/*.yaml',
+                      --   'defaults/*.yml',
+                      --   'defaults/*.yaml',
+                      --   'host_vars/*.yml',
+                      --   'host_vars/*.yaml',
+                      --   'group_vars/*.yml',
+                      --   'group_vars/*.yaml',
+                      -- },
+                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/ansible-lint-config.json'] = {
+                      --   '.ansible-lint',
+                      --   '.config/ansible-lint.yml',
+                      --   '.config/ansible-lint.yaml',
+                      -- },
+                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/molecule.json'] = {
+                      --   'molecule/*/molecule.yml',
+                      -- },
+                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/galaxy.json'] = {
+                      --   'galaxy.yml',
+                      -- },
                     },
                     require('schemastore').yaml.schemas({
                       ignore = {
@@ -705,6 +740,7 @@ hi! link LazyH1 Normal
           markdown = { { 'prettier' } },
           sh = { { 'shfmt' } },
           lua = { { 'stylua' } },
+          yaml = { { 'prettier' } },
         },
         formatters = {
           shfmt = {
@@ -1197,7 +1233,6 @@ hi! link LazyH1 Normal
   },
   {
     'echasnovski/mini.surround',
-    enabled = false,
     -- event = 'InsertEnter',
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
