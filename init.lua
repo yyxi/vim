@@ -21,6 +21,33 @@ nnoremap <silent><Up> N
 nnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
 ]])
 
+local function python3_path()
+  -- Check if PYENV_ROOT environment variable exists
+  local pyenv_root = vim.fn.getenv('PYENV_ROOT')
+  if pyenv_root == vim.NIL or pyenv_root == '' then
+    return nil
+  end
+
+  -- Construct the path to the version file
+  local version_file_path = pyenv_root .. '/version'
+
+  -- Check if the version file exists
+  local stat = vim.loop.fs_stat(version_file_path)
+  if not stat then
+    return nil
+  end
+
+  -- Read the file content
+  local content = vim.fn.readfile(version_file_path)
+
+  -- -- Concatenate the file content (if it's an array of lines) and trim whitespace
+  local trimmed_content = vim.trim(table.concat(content, ''))
+
+  return pyenv_root .. '/versions/' .. trimmed_content .. '/bin/python3'
+end
+
+vim.g.python3_host_prog = python3_path()
+
 if vim.loader then
   vim.loader.enable()
 end
@@ -1351,7 +1378,12 @@ hi! link LazyH1 Normal
     event = 'InsertEnter',
     keys = {
       { '<leader>S', '<Plug>SortMotion', desc = 'Sort' },
-      { '<leader>S', '<Plug>SortMotionVisual', desc = 'Sort', mode = 'x' },
+      {
+        '<leader>S',
+        '<Plug>SortMotionVisual',
+        desc = 'Sort',
+        mode = 'x',
+      },
       { '<leader>Ss', '<Plug>SortLines', desc = 'Sort Lines' },
     },
   },
