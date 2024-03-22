@@ -22,28 +22,16 @@ nnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
 ]])
 
 local function python3_path()
-  -- Check if PYENV_ROOT environment variable exists
-  local pyenv_root = vim.fn.getenv('PYENV_ROOT')
-  if pyenv_root == vim.NIL or pyenv_root == '' then
-    return nil
-  end
-
-  -- Construct the path to the version file
-  local version_file_path = pyenv_root .. '/version'
-
-  -- Check if the version file exists
-  local stat = vim.loop.fs_stat(version_file_path)
+  local stat = vim.loop.fs_stat(vim.fn.expand('~/.vim/.venv/bin'))
   if not stat then
     return nil
   end
 
-  -- Read the file content
-  local content = vim.fn.readfile(version_file_path)
+  if stat.type == 'directory' then
+    return vim.fn.expand('~/.vim/.venv/bin/python3')
+  end
 
-  -- -- Concatenate the file content (if it's an array of lines) and trim whitespace
-  local trimmed_content = vim.trim(table.concat(content, ''))
-
-  return pyenv_root .. '/versions/' .. trimmed_content .. '/bin/python3'
+  return nil
 end
 
 vim.g.python3_host_prog = python3_path()
@@ -177,8 +165,6 @@ vim.o.wrap = false
 vim.o.wrapscan = false
 vim.opt.iskeyword:append('-')
 
-vim.lsp.set_log_level('WARN')
-
 local noop = function() end
 
 vim.diagnostic.config({
@@ -219,12 +205,6 @@ vim.keymap.set('n', ' ', '<Nop>', { silent = true, remap = false })
 vim.g.mapleader = ' '
 vim.opt.rtp:prepend(lazypath)
 vim.g.editorconfig = true
-
-vim.lsp.handlers['textDocument/hover'] =
-  vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded' })
-
-vim.lsp.handlers['textDocument/signatureHelp'] =
-  vim.lsp.with(vim.lsp.handlers.signature_help, { border = 'rounded' })
 
 vim.filetype.add({
   extension = {
@@ -553,6 +533,13 @@ hi! link LazyH1 Normal
       },
     },
     config = function()
+      vim.lsp.set_log_level('ERROR')
+      vim.lsp.handlers['textDocument/hover'] =
+        vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded' })
+
+      vim.lsp.handlers['textDocument/signatureHelp'] =
+        vim.lsp.with(vim.lsp.handlers.signature_help, { border = 'rounded' })
+
       require('lspconfig.ui.windows').default_options.border = 'rounded'
       require('neodev').setup({})
       -- This is where all the LSP shenanigans will live
@@ -629,66 +616,16 @@ hi! link LazyH1 Normal
         )
 
         require('lsp-fix').on_attach(client, bufnr)
+
+        if client.name == 'ruff_lsp' then
+          client.server_capabilities.hoverProvider = false
+        end
       end)
 
       require('mason-lspconfig').setup({
         ensure_installed = {},
         handlers = {
           lsp_zero.default_setup,
-          lua_ls = function()
-            -- (Optional) Configure lua language server for neovim
-            local lua_opts = lsp_zero.nvim_lua_ls()
-            require('lspconfig').lua_ls.setup(lua_opts)
-          end,
-          tsserver = function()
-            require('lspconfig').tsserver.setup({
-              capabilities = capabilities,
-              fix = {
-                function(bufnr, client)
-                  local params = {
-                    command = '_typescript.organizeImports',
-                    arguments = { vim.api.nvim_buf_get_name(bufnr) },
-                  }
-
-                  client.request_sync(
-                    'workspace/executeCommand',
-                    params,
-                    3000,
-                    bufnr
-                  )
-                end,
-              },
-              settings = {
-                completions = {
-                  completeFunctionCalls = true,
-                },
-              },
-            })
-          end,
-          eslint = function()
-            require('lspconfig').eslint.setup({
-              fix = {
-                function(bufnr, client)
-                  local params = {
-                    command = 'eslint.applyAllFixes',
-                    arguments = {
-                      {
-                        uri = vim.uri_from_bufnr(bufnr),
-                        version = vim.lsp.util.buf_versions[bufnr],
-                      },
-                    },
-                  }
-
-                  client.request_sync(
-                    'workspace/executeCommand',
-                    params,
-                    3000,
-                    bufnr
-                  )
-                end,
-              },
-            })
-          end,
           yamlls = function()
             require('lspconfig').yamlls.setup({
               capabilities = capabilities,
@@ -757,6 +694,76 @@ hi! link LazyH1 Normal
           end,
         },
       })
+
+      require('lspconfig').lua_ls.setup(lsp_zero.nvim_lua_ls())
+
+      require('lspconfig').pyright.setup({
+        capabilities = capabilities,
+        fix = {
+          function(bufnr, client)
+            client.request_sync('workspace/executeCommand', {
+              command = 'pyright.organizeimports',
+              arguments = { vim.uri_from_bufnr(bufnr) },
+            }, 3000, bufnr)
+          end,
+        },
+      })
+
+      require('lspconfig').ruff_lsp.setup({
+        capabilities = capabilities,
+        fix = {
+          function(bufnr, client)
+            client.request_sync('workspace/executeCommand', {
+              command = 'ruff.applyOrganizeImports',
+              arguments = { { uri = vim.uri_from_bufnr(0) } },
+            }, 3000, bufnr)
+          end,
+          function(bufnr, client)
+            client.request_sync('workspace/executeCommand', {
+              command = 'ruff.applyAutofix',
+              arguments = { { uri = vim.uri_from_bufnr(0) } },
+            }, 3000, bufnr)
+          end,
+        },
+      })
+
+      require('lspconfig').tsserver.setup({
+        capabilities = capabilities,
+        fix = {
+          function(bufnr, client)
+            local params = {
+              command = '_typescript.organizeImports',
+              arguments = { vim.api.nvim_buf_get_name(bufnr) },
+            }
+
+            client.request_sync('workspace/executeCommand', params, 3000, bufnr)
+          end,
+        },
+        settings = {
+          completions = {
+            completeFunctionCalls = true,
+          },
+        },
+      })
+
+      require('lspconfig').eslint.setup({
+        capabilities = capabilities,
+        fix = {
+          function(bufnr, client)
+            local params = {
+              command = 'eslint.applyAllFixes',
+              arguments = {
+                {
+                  uri = vim.uri_from_bufnr(bufnr),
+                  version = vim.lsp.util.buf_versions[bufnr],
+                },
+              },
+            }
+
+            client.request_sync('workspace/executeCommand', params, 3000, bufnr)
+          end,
+        },
+      })
     end,
   },
   {
@@ -779,6 +786,12 @@ hi! link LazyH1 Normal
           order = {
             'tsserver',
             'eslint',
+          },
+        },
+        python = {
+          order = {
+            'pyright',
+            'ruff_lsp',
           },
         },
         vue = {
@@ -1051,7 +1064,7 @@ hi! link LazyH1 Normal
       'nvim-treesitter/nvim-treesitter',
       'echasnovski/mini.base16',
     },
-    event = { 'BufReadPre', 'BufNewFile' },
+    event = { 'VeryLazy' },
     init = function()
       -- vim.g.matchup_matchparen_offscreen =
       --   { method = 'popup', syntax_hl = 1, border = 'rounded', highlight = 'Normal' }
@@ -1073,11 +1086,11 @@ hi! link LazyH1 Normal
   {
     'windwp/nvim-ts-autotag',
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
-    event = { 'BufReadPre', 'BufNewFile' },
+    event = { 'VeryLazy' },
   },
   {
     'jinh0/eyeliner.nvim',
-    event = { 'BufReadPre', 'BufNewFile' },
+    event = { 'VeryLazy' },
     config = function()
       require('eyeliner').setup({
         highlight_on_key = false, -- this must be set to true for dimming to work!
@@ -1087,7 +1100,7 @@ hi! link LazyH1 Normal
   },
   {
     'numToStr/Comment.nvim',
-    event = { 'BufReadPre', 'BufNewFile' },
+    event = { 'VeryLazy' },
     -- keys = { { "gc", mode = { "n", "v" } }, { "gb", mode = { "n", "v" } } },
     dependencies = {
       'JoosepAlviste/nvim-ts-context-commentstring',
@@ -1283,7 +1296,7 @@ hi! link LazyH1 Normal
   {
     'echasnovski/mini.ai',
     version = '*',
-    event = { 'BufReadPre', 'BufNewFile' },
+    event = { 'BufReadPost', 'BufNewFile' },
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
@@ -1324,7 +1337,7 @@ hi! link LazyH1 Normal
   {
     'echasnovski/mini.surround',
     -- event = 'InsertEnter',
-    event = { 'BufReadPre', 'BufNewFile' },
+    event = { 'VeryLazy' },
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
