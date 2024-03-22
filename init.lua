@@ -1064,7 +1064,7 @@ hi! link LazyH1 Normal
       'nvim-treesitter/nvim-treesitter',
       'echasnovski/mini.base16',
     },
-    event = { 'VeryLazy' },
+    event = { 'BufReadPre', 'BufNewFile' },
     init = function()
       -- vim.g.matchup_matchparen_offscreen =
       --   { method = 'popup', syntax_hl = 1, border = 'rounded', highlight = 'Normal' }
@@ -1296,7 +1296,7 @@ hi! link LazyH1 Normal
   {
     'echasnovski/mini.ai',
     version = '*',
-    event = { 'BufReadPost', 'BufNewFile' },
+    event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
