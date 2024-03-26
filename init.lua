@@ -486,7 +486,9 @@ hi! link LazyH1 Normal
       end)
     end,
     opts = {
+      PATH = 'append',
       log_level = vim.log.levels.WARN,
+      max_concurrent_installers = 10,
       ui = {
         border = 'rounded',
         width = 0.8,
@@ -495,6 +497,16 @@ hi! link LazyH1 Normal
           package_installed = '●',
           package_pending = '◒',
           package_uninstalled = '·',
+        },
+        keymaps = {
+          toggle_server_expand = '<CR>',
+          install_server = 'i',
+          update_server = 'u',
+          check_server_version = 'c',
+          update_all_servers = 'U',
+          check_outdated_servers = 'C',
+          uninstall_server = 'X',
+          cancel_installation = '<C-c>',
         },
       },
     },
@@ -546,6 +558,26 @@ hi! link LazyH1 Normal
       local lsp_zero = require('lsp-zero')
       lsp_zero.extend_lspconfig()
       local capabilities = lsp_zero.get_capabilities()
+
+      if capabilities ~= nil then
+        capabilities.textDocument.completion.completionItem = {
+          documentationFormat = { 'markdown', 'plaintext' },
+          snippetSupport = true,
+          preselectSupport = true,
+          insertReplaceSupport = true,
+          labelDetailsSupport = true,
+          deprecatedSupport = true,
+          commitCharactersSupport = true,
+          tagSupport = { valueSet = { 1 } },
+          resolveSupport = {
+            properties = {
+              'documentation',
+              'detail',
+              'additionalTextEdits',
+            },
+          },
+        }
+      end
 
       lsp_zero.set_sign_icons({
         error = '◆',
@@ -875,6 +907,17 @@ hi! link LazyH1 Normal
       local luasnip = require('luasnip')
       luasnip.config.setup()
 
+      vim.api.nvim_create_autocmd('InsertLeave', {
+        callback = function()
+          if
+            require('luasnip').session.current_nodes[vim.api.nvim_get_current_buf()]
+            and not require('luasnip').session.jump_active
+          then
+            require('luasnip').unlink_current()
+          end
+        end,
+      })
+
       require('luasnip.loaders.from_vscode').lazy_load({
         exclude = { 'html', 'all' },
       })
@@ -883,6 +926,7 @@ hi! link LazyH1 Normal
         preselect = cmp.PreselectMode.None,
         completion = {
           completeopt = 'menu,menuone,noinsert,noselect',
+          -- scrollbar = false,
         },
         snippet = {
           expand = function(args)
@@ -919,7 +963,10 @@ hi! link LazyH1 Normal
           -- ['<C-u>'] = cmp.mapping.scroll_docs(-5),
           -- ['<C-y>'] = cmp.mapping.confirm({ select = false }),
           ['<C-Space>'] = cmp.mapping.complete(),
-          ['<CR>'] = cmp.mapping.confirm({ select = false }),
+          ['<CR>'] = cmp.mapping.confirm({
+            behavior = cmp.ConfirmBehavior.Insert,
+            select = true,
+          }),
           ['<Up>'] = cmp.mapping.select_prev_item({
             behavior = cmp.SelectBehavior.Insert,
           }),
@@ -928,6 +975,41 @@ hi! link LazyH1 Normal
           }),
           ['<Tab>'] = cmp_action.luasnip_supertab(),
           ['<S-Tab>'] = cmp_action.luasnip_shift_supertab(),
+          -- ['<Tab>'] = cmp.mapping(function(fallback)
+          --   if cmp.visible() then
+          --     cmp.select_next_item()
+          --   elseif require('luasnip').expand_or_jumpable() then
+          --     vim.fn.feedkeys(
+          --       vim.api.nvim_replace_termcodes(
+          --         '<Plug>luasnip-expand-or-jump',
+          --         true,
+          --         true,
+          --         true
+          --       ),
+          --       ''
+          --     )
+          --   else
+          --     fallback()
+          --   end
+          -- end, { 'i', 's' }),
+          --
+          -- ['<S-Tab>'] = cmp.mapping(function(fallback)
+          --   if cmp.visible() then
+          --     cmp.select_prev_item()
+          --   elseif require('luasnip').jumpable(-1) then
+          --     vim.fn.feedkeys(
+          --       vim.api.nvim_replace_termcodes(
+          --         '<Plug>luasnip-jump-prev',
+          --         true,
+          --         true,
+          --         true
+          --       ),
+          --       ''
+          --     )
+          --   else
+          --     fallback()
+          --   end
+          -- end, { 'i', 's' }),
         }),
       })
     end,
@@ -1264,6 +1346,12 @@ hi! link LazyH1 Normal
           layout_strategy = 'horizontal_untitled',
           mappings = {},
           winblend = 10,
+          prompt_prefix = ' ',
+          selection_caret = '  ',
+          entry_prefix = '  ',
+          initial_mode = 'insert',
+          path_display = { 'truncate' },
+          set_env = { ['COLORTERM'] = 'truecolor' },
         },
         pickers = {
           find_files = {
@@ -1674,6 +1762,34 @@ hi! link LazyH1 Normal
   profiling = {
     loader = false,
     require = false,
+  },
+  performance = {
+    rtp = {
+      disabled_plugins = {
+        '2html_plugin',
+        'tohtml',
+        'getscript',
+        'getscriptPlugin',
+        'logipat',
+        'netrw',
+        'netrwPlugin',
+        'netrwSettings',
+        'netrwFileHandlers',
+        'matchit',
+        'rrhelper',
+        'spellfile_plugin',
+        'vimball',
+        'vimballPlugin',
+        'tutor',
+        'rplugin',
+        'syntax',
+        'synmenu',
+        'optwin',
+        'compiler',
+        'bugreport',
+        'ftplugin',
+      },
+    },
   },
 })
 
