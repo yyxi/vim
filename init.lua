@@ -71,7 +71,7 @@ vim.api.nvim_set_keymap(
 -- vim.o.guicursor = 'a:blinkon0'
 -- vim.o.mouse = 'nvi'
 -- vim.o.complete = ''
-
+vim.o.guicursor = 'n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20,a:Cursor/lCursor'
 vim.g.loaded_matchit = 1
 vim.g.have_nerd_font = false
 vim.g.loaded_netrw = true
@@ -126,7 +126,7 @@ vim.o.scrolloff = 0
 vim.o.secure = true
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h"
 vim.o.shiftwidth = 2
-vim.o.shortmess = 'AIOTWacfilmnortx'
+vim.o.shortmess = 'AIOTWacfilmnortxs'
 vim.o.showbreak = '↳ '
 vim.o.showmode = false
 vim.o.showmode = false
@@ -293,6 +293,7 @@ require('lazy').setup({
       local hi = function(name, data) vim.api.nvim_set_hl(0, name, data) end
       local hm = function(name, data) local d = vim.tbl_extend('force', vim.api.nvim_get_hl(0, { name = data.link, link = false, create = false }), data) d.link = nil hi(name, d) end
 
+      hi('Cursor',                               { force = true,     nocombine = true,             fg=p.base00,      bg=p.base06 })
       hi('Identifier',                           { link = 'Normal',  force = true })
       hi('Comment',                              { italic = true,    fg = p.base03,                nocombine = true })
       hi('Delimiter',                            { fg = p.base0C,    bg = nil,                     attr = nil,       sp = nil })
@@ -301,6 +302,7 @@ require('lazy').setup({
       hi('Float',                                { fg = p.base0D,    bg = nil,                     attr = nil,       sp = nil,     italic = true })
       hi('Number',                               { fg = p.base0B,    bg = nil,                     attr = nil,       sp = nil,     italic = true })
 
+      -- FIXME https://github.com/microsoft/vscode/issues/97063
       -- TreeSitter Highlights https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md
 
       -- Identifiers
@@ -329,6 +331,7 @@ require('lazy').setup({
       hi('@string.special.path',                 { force = true,     link = 'Directory' })
       hi('@string.special.symbol',               { force = true,     link = '@constant' })
       hi('@string.special.url',                  { force = true,     link = '@markup.link.url' })
+      hm('@string.special.url.comment',          { force = true,     link = 'Comment', --[[ underline = true ]] })
 
       hi('@character',                           { force = true,     link = 'Character' })
       hm('@character.special',                   { force = true,     link = '@character',          bold = true })
@@ -530,22 +533,22 @@ require('lazy').setup({
       hi('LazyButtonActive',                     { force = true,     link ='Normal' })
       hi('LazyH1',                               { force = true,     link ='Normal' })
 
-      -- hi('@conditional',                 { force = true, link = 'Conditional' })
-      -- hi('@debug',                       { force = true, link = 'Debug' })
-      -- hi('@define',                      { force = true, link = 'Define' })
-      -- hi('@exception',                   { force = true, link = 'Exception' })
-      -- hi('@field',                       { force = true, link = 'Identifier' })
-      -- hi('@float',                       { force = true, link = 'Float' })
-      -- hi('@include',                     { force = true, link = 'Include' })
-      -- hi('@macro',                       { force = true, link = 'Macro' })
-      -- hi('@method',                      { force = true, link = 'Function' })
-      -- hi('@method.call',                 { force = true, link = 'Function' })
-      -- hi('@namespace',                   { force = true, link = 'Identifier' })
-      -- hi('@none',                        { force = true, link = 'Normal' })
-      -- hi('@preproc',                     { force = true, link = 'PreProc' })
-      -- hi('@repeat',                      { force = true, link = 'Repeat' })
-      -- hi('@storageclass',                { force = true, link = 'StorageClass' })
-      -- hi('@structure',                   { force = true, link = 'Structure' })
+      -- hi('@conditional',                      { force = true,     link = 'Conditional' })
+      -- hi('@debug',                            { force = true,     link = 'Debug' })
+      -- hi('@define',                           { force = true,     link = 'Define' })
+      -- hi('@exception',                        { force = true,     link = 'Exception' })
+      -- hi('@field',                            { force = true,     link = 'Identifier' })
+      -- hi('@float',                            { force = true,     link = 'Float' })
+      -- hi('@include',                          { force = true,     link = 'Include' })
+      -- hi('@macro',                            { force = true,     link = 'Macro' })
+      -- hi('@method',                           { force = true,     link = 'Function' })
+      -- hi('@method.call',                      { force = true,     link = 'Function' })
+      -- hi('@namespace',                        { force = true,     link = 'Identifier' })
+      -- hi('@none',                             { force = true,     link = 'Normal' })
+      -- hi('@preproc',                          { force = true,     link = 'PreProc' })
+      -- hi('@repeat',                           { force = true,     link = 'Repeat' })
+      -- hi('@storageclass',                     { force = true,     link = 'StorageClass' })
+      -- hi('@structure',                        { force = true,     link = 'Structure' })
 
       -- stylua: ignore end
     end,
@@ -594,6 +597,7 @@ require('lazy').setup({
   },
   {
     'lukas-reineke/indent-blankline.nvim',
+    name = 'ibl',
     event = 'VeryLazy',
     dependencies = { 'echasnovski/mini.base16' },
     config = function()
@@ -1956,6 +1960,64 @@ require('lazy').setup({
       -- vim.keymap.set('n', 'K', '<Plug>(CybuPrev)')
       -- vim.keymap.set('n', 'J', '<Plug>(CybuNext)')
     end,
+  },
+  {
+    'folke/zen-mode.nvim',
+    keys = {
+      {
+        '<leader>z',
+        function()
+          require('zen-mode').toggle({})
+        end,
+        desc = 'Zen Mode',
+      },
+    },
+    opts = {
+      window = {
+        backdrop = 1,
+        width = 1,
+        height = 1,
+      },
+      options = {
+        signcolumn = 'no',
+        number = false,
+        relativenumber = false,
+        cursorline = false,
+        cursorcolumn = false,
+        foldcolumn = '0',
+        list = false,
+      },
+      plugins = {
+        options = {
+          enabled = true,
+          ruler = false,
+          showcmd = false,
+          laststatus = 0,
+          cmdheight = 0,
+        },
+        twilight = { enabled = false },
+        gitsigns = { enabled = false },
+        tmux = { enabled = false },
+        kitty = {
+          enabled = false,
+        },
+        alacritty = {
+          enabled = false,
+        },
+        wezterm = {
+          enabled = false,
+        },
+      },
+
+      on_open = function(win)
+        require('ibl').update({ enabled = false })
+        require('eyeliner').disable()
+      end,
+      on_close = function()
+        require('ibl').update({ enabled = true })
+        require('eyeliner').enable()
+      end,
+    },
   },
 }, {
   defaults = {
