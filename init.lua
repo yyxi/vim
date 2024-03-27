@@ -871,6 +871,9 @@ require('lazy').setup({
         ensure_installed = {},
         handlers = {
           lsp_zero.default_setup,
+          dockerls = function()
+            require('lspconfig').dockerls.setup({})
+          end,
           yamlls = function()
             require('lspconfig').yamlls.setup({
               capabilities = capabilities,
