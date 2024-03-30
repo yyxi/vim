@@ -167,6 +167,23 @@ vim.opt.iskeyword:append('-')
 
 local noop = function() end
 
+vim.g.clipboard = {
+  name = 'OSC 52',
+  cache_enabled = false,
+  copy = {
+    ['+'] = require('vim.ui.clipboard.osc52').copy('+'),
+    ['*'] = require('vim.ui.clipboard.osc52').copy('*'),
+  },
+  paste = {
+    ['+'] = function()
+      return 0
+    end,
+    ['*'] = function()
+      return 0
+    end,
+  },
+}
+
 vim.diagnostic.config({
   float = {
     border = 'rounded',
@@ -230,6 +247,7 @@ require('lazy').setup({
   {
     'wincent/terminus',
     lazy = false,
+    enabled = false,
     priority = 1000,
     init = function()
       vim.g.TerminusCursorShape = 1
@@ -748,7 +766,18 @@ require('lazy').setup({
       },
       {
         'stevearc/dressing.nvim',
-        opts = {},
+        opts = {
+          select = {
+            enabled = true,
+            get_config = function(opts)
+              if opts.kind == nil then
+                return { enabled = false }
+              end
+
+              return nil
+            end,
+          },
+        },
         dependencies = { 'nvim-telescope/telescope.nvim' },
       },
     },
@@ -1340,12 +1369,12 @@ require('lazy').setup({
           'latex',
           'lua',
           'make',
-          'mermaid',
           'markdown',
           'markdown_inline',
+          'mermaid',
           'perl',
-          'proto',
           'prisma',
+          'proto',
           'python',
           'r',
           'rust',
@@ -1354,6 +1383,7 @@ require('lazy').setup({
           'tsx',
           'typescript',
           'vim',
+          'vimdoc',
           'vue',
           'wgsl',
           'yaml',
@@ -1487,7 +1517,7 @@ require('lazy').setup({
         highlight = {
           on_put = false,
           on_yank = true,
-          timer = 300,
+          timer = 200,
         },
         preserve_cursor_position = {
           enabled = true,
