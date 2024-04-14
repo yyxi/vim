@@ -1013,22 +1013,70 @@ require('lazy').setup({
         },
       })
 
+      local tsserverwWrkspaceConfiguration = {
+        format = {
+          indentSize = vim.o.shiftwidth,
+          convertTabsToSpaces = vim.o.expandtab,
+          tabSize = vim.o.tabstop,
+          indentStyle = 'Smart',
+          semicolons = 'remove',
+          trimTrailingWhitespace = false,
+          insertSpaceAfterCommaDelimiter = true,
+          placeOpenBraceOnNewLineForControlBlocks = false,
+          placeOpenBraceOnNewLineForFunctions = false,
+          insertSpaceAfterConstructor = true,
+          insertSpaceAfterFunctionKeywordForAnonymousFunctions = true,
+          insertSpaceAfterKeywordsInControlFlowStatements = true,
+          insertSpaceAfterOpeningAndBeforeClosingEmptyBraces = false,
+          insertSpaceAfterOpeningAndBeforeClosingJsxExpressionBraces = false,
+          insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces = true,
+          insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets = false,
+          insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis = false,
+          insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces = false,
+          insertSpaceAfterSemicolonInForStatements = true,
+          insertSpaceAfterTypeAssertion = false,
+          insertSpaceBeforeAndAfterBinaryOperators = true,
+          insertSpaceBeforeFunctionParenthesis = false,
+          insertSpaceBeforeTypeAnnotation = false,
+        },
+      }
+
       require('lspconfig').tsserver.setup({
         capabilities = capabilities,
         on_init = on_init,
         fix = {
           function(bufnr, client)
-            local params = {
+            require('conform.lsp_format').format({
+              bufnr = bufnr,
+              filter = function(value)
+                return value == client
+              end,
+              async = false,
+            }, noop)
+            client.request_sync('workspace/executeCommand', {
               command = '_typescript.organizeImports',
               arguments = { vim.api.nvim_buf_get_name(bufnr) },
-            }
-
-            client.request_sync('workspace/executeCommand', params, 3000, bufnr)
+            }, 3000, bufnr)
           end,
         },
+        init_options = {
+          hostInfo = 'neovim',
+          quotePreference = 'single',
+          organizeImportsIgnoreCase = false,
+          organizeImportsCollation = 'unicode',
+          organizeImportsCollationLocale = 'en-US',
+          organizeImportsNumericCollation = true,
+          organizeImportsAccentCollation = true,
+          organizeImportsCaseFirst = false,
+        },
         settings = {
+          typescript = tsserverwWrkspaceConfiguration,
+          javascript = tsserverwWrkspaceConfiguration,
           completions = {
             completeFunctionCalls = true,
+          },
+          diagnostics = {
+            ignoredCodes = { 80006 },
           },
         },
       })
@@ -1036,6 +1084,13 @@ require('lazy').setup({
       require('lspconfig').eslint.setup({
         capabilities = capabilities,
         on_init = on_init,
+        settings = {
+          workingDirectories = { mode = 'location' },
+          experimental = {
+            useFlatConfig = true,
+          },
+          useFlatConfig = true,
+        },
         fix = {
           function(bufnr, client)
             local params = {
@@ -1683,7 +1738,8 @@ require('lazy').setup({
   {
     'echasnovski/mini.surround',
     -- event = 'InsertEnter',
-    event = { 'VeryLazy' },
+    -- event = { 'VeryLazy' },
+    event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
       'nvim-treesitter/nvim-treesitter-textobjects',
     },
@@ -2052,6 +2108,30 @@ require('lazy').setup({
       end,
     },
   },
+  {
+    'johmsalas/text-case.nvim',
+    dependencies = { 'nvim-telescope/telescope.nvim' },
+    event = { 'BufReadPre', 'BufNewFile' },
+    --     cmd = {
+    --   -- NOTE: The Subs command name can be customized via the option "substitude_command_name"
+    --   "Subs",
+    --   "TextCaseOpenTelescope",
+    --   "TextCaseOpenTelescopeQuickChange",
+    --   "TextCaseOpenTelescopeLSPChange",
+    --   "TextCaseStartReplacingCommand",
+    -- },
+    config = function()
+      require('textcase').setup({
+        default_keymappings_enabled = true,
+        prefix = '<leader>n',
+      })
+    end,
+  },
+  -- {
+  --   "arminfro/hand-side-fix.nvim",
+  --   event = "BufEnter",
+  --   opts = true
+  -- }
 }, {
   defaults = {
     lazy = true,
@@ -2059,6 +2139,7 @@ require('lazy').setup({
   ui = {
     title = '',
     border = 'rounded',
+    backdrop = 100,
     icons = {
       cmd = '',
       config = '',
