@@ -229,9 +229,13 @@ vim.filetype.add({
     tfstate = 'json',
   },
   filename = {
+    ['.ansible-lint'] = 'yaml',
+    ['fish_history'] = 'yaml',
     ['go.sum'] = 'go',
     ['yarn.lock'] = 'yaml',
-    ['.ansible-lint'] = 'yaml',
+    ['.prettierignore'] = 'gitignore',
+    ['.eslintignore'] = 'gitignore',
+    ['api-extractor.json'] = 'jsonc',
   },
   pattern = {
     ['.*%.js%.map'] = 'json',
@@ -284,7 +288,7 @@ require('lazy').setup({
           base09 = '#83a598',
           base0A = '#fabd2f',
           base0B = '#b8bb26',
-          base0C = '#8ec07c',
+          base0C = '#8ec07c',-- underused
           base0D = '#fe8019',
           base0E = '#d3869b',
           base0F = '#d65d0e',
@@ -311,14 +315,18 @@ require('lazy').setup({
       local hi = function(name, data) vim.api.nvim_set_hl(0, name, data) end
       local hm = function(name, data) local d = vim.tbl_extend('force', vim.api.nvim_get_hl(0, { name = data.link, link = false, create = false }), data) d.link = nil hi(name, d) end
 
-      hi('Cursor',                               { force = true,     nocombine = true,             fg=p.base00,      bg=p.base06 })
-      hi('Identifier',                           { link = 'Normal',  force = true })
-      hi('Comment',                              { italic = true,    fg = p.base03,                nocombine = true })
-      hi('Delimiter',                            { fg = p.base0C,    bg = nil,                     attr = nil,       sp = nil })
-      hi('Delimiter',                            { fg = p.base0C,    bg = nil,                     attr = nil,       sp = nil })
-      hi('Boolean',                              { fg = p.base0F,    bg = nil,                     attr = nil,       sp = nil })
-      hi('Float',                                { fg = p.base0D,    bg = nil,                     attr = nil,       sp = nil,     italic = true })
-      hi('Number',                               { fg = p.base0B,    bg = nil,                     attr = nil,       sp = nil,     italic = true })
+      hi('Cursor',     { force = true, fg = p.base00, bg = p.base06, attr = nil, sp = nil, nocombine = true, italic = true })
+      hi('Function',   { force = true, fg = p.base0D, bg = nil,      attr = nil, sp = nil, nocombine = false, })
+      hi('Comment',    { force = true, fg = p.base03, bg = nil,      attr = nil, sp = nil, nocombine = false, })
+      hi('Delimiter',  { force = true, fg = p.base09, bg = nil,      attr = nil, sp = nil, nocombine = false, })
+      hi('Delimiter',  { force = true, fg = p.base09, bg = nil,      attr = nil, sp = nil, nocombine = false, })
+      hi('Boolean',    { force = true, fg = p.base0F, bg = nil,      attr = nil, sp = nil, nocombine = false, })
+      hi('Float',      { force = true, fg = p.base0B, bg = nil,      attr = nil, sp = nil, nocombine = false, italic = true })
+      hi('Number',     { force = true, fg = p.base0B, bg = nil,      attr = nil, sp = nil, nocombine = false, italic = true })
+      hi('Constant',   { force = true, fg = p.base06, bg = nil,      attr = nil, sp = nil, nocombine = false })
+      hi('Operator',   { force = true, fg = p.base0C, bg = nil,      attr = nil, sp = nil, nocombine = false })
+      hi('Structure',  { force = true, fg = p.base05, bg = nil,      attr = nil, sp = nil, nocombine = false })
+      hi('Identifier', { force = true, link = 'Normal', })
 
       -- FIXME https://github.com/microsoft/vscode/issues/97063
       -- TreeSitter Highlights https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md
@@ -327,8 +335,8 @@ require('lazy').setup({
 
       hi('@variable',                            { force = true,     fg = p.base05,                bg = nil })
       hm('@variable.builtin',                    { force = true,     link = '@variable',           bold = true })
-      hi('@variable.member',                     { force = true,     link = 'Identifier' })
-      hi('@variable.parameter',                  { force = true,     link = 'Identifier' })
+      hi('@variable.member',                     { force = true,     link = '@variable' })
+      hi('@variable.parameter',                  { force = true,     link = '@variable' })
       hm('@variable.parameter.builtin',          { force = true,     link = '@variable.parameter', bold = true })
 
       hi('@constant',                            { force = true,     link = 'Constant' })
@@ -367,7 +375,7 @@ require('lazy').setup({
 
       hi('@attribute',                           { force = true,     link = 'Macro' })
       hm('@attribute.builtin',                   { force = true,     link = '@attribute',          bold = true })
-      hi('@property',                            { force = true,     link = 'Identifier' })
+      hi('@property',                            { force = true,     link = '@variable' })
 
       -- Functions
 
@@ -379,7 +387,7 @@ require('lazy').setup({
       hi('@function.method',                     { force = true,     link = '@function' })
       hi('@function.method.call',                { force = true,     link = '@function.call' })
 
-      hi('@constructor',                         { force = true,     link = 'Special' })
+      hi('@constructor',                         { force = true,     link = '@function.builtin' })
       hi('@operator',                            { force = true,     link = 'Operator' })
 
       -- Keywords
@@ -482,6 +490,8 @@ require('lazy').setup({
       hi('@tag.delimiter',                       { force = true,     link = '@punctuation' })
 
       -- Source: `:h lsp-semantic-highlight`
+
+      -- hi('@lsp.type.class',                      { })
       hi('@lsp.type.class',                      { force = true,     link = 'Structure' })
       hi('@lsp.type.comment',                    { force = true,     link = '@comment' })
       hi('@lsp.type.decorator',                  { force = true,     link = '@function' })
@@ -515,6 +525,32 @@ require('lazy').setup({
       hi('@lsp.mod.deprecated',                  { fg = p.base08,    bg = nil })
       hi('@lsp.mod.documentation',               { link = '@string.documentation' })
 
+      -- TODO: integrate this https://github.com/eldritch-theme/eldritch.nvim/blob/master/lua/eldritch/groups.lua
+      hi("@lsp.type.boolean", { link = "@boolean" })
+      -- hi("@lsp.type.builtinType", { link = "@type.builtin" })
+      hi("@lsp.type.deriveHelper", { link = "@attribute" })
+      hi("@lsp.type.escapeSequence", { link = "@string.escape" })
+      -- hi("@lsp.type.formatSpecifier", { link = "@markup.list" })
+      -- hi("@lsp.type.generic", { link = "@variable" })
+      hi("@lsp.type.selfKeyword", { link = "@variable.builtin" })
+      hi("@lsp.type.selfTypeKeyword", { link = "@variable.builtin" })
+      -- hi("@lsp.type.typeAlias", { link = "@type.def" })
+      -- hi("@lsp.typemod.class.defaultLibrary", { link = "@type.builtin" })
+      -- hi("@lsp.typemod.enum.defaultLibrary", { link = "@type.builtin" })
+      -- hi("@lsp.typemod.enumMember.defaultLibrary", { link = "@constant.builtin" })
+      hi("@lsp.typemod.function.defaultLibrary", { link = "@function.builtin" })
+      hi("@lsp.typemod.keyword.injected", { link = "@keyword" })
+      -- hi("@lsp.typemod.macro.defaultLibrary", { link = "@function.builtin" })
+      -- hi("@lsp.typemod.method.defaultLibrary", { link = "@function.builtin" })
+      -- hi("@lsp.typemod.operator.injected", { link = "@operator" })
+      -- hi("@lsp.typemod.string.injected", { link = "@string" })
+      -- -- hi("@lsp.typemod.struct.defaultLibrary", { link = "@type.builtin" })
+      -- hi("@lsp.typemod.variable.callable", { link = "@function" })
+      -- hi("@lsp.typemod.variable.injected", { link = "@variable" })
+      -- hi("@lsp.typemod.variable.static", { link = "@constant" })
+      -- hi("@lsp.type.namespace.python", { link = "@variable" })
+
+      -- hi('@lsp.typemod',                 {})
       -- hi('@lsp.mod.abstract',                 {})
       -- hi('@lsp.mod.async',                    {})
       -- hi('@lsp.mod.declaration',              {})
@@ -523,6 +559,9 @@ require('lazy').setup({
       -- hi('@lsp.mod.modification',             {})
       -- hi('@lsp.mod.readonly',                 {})
       -- hi('@lsp.mod.static',                   {})
+
+      -- hm('@lsp.mod.declaration',              { link = "@variable" })
+      hi('@type.typescript',                     { link = "Normal" })
 
       hi('EyelinerPrimary',                      { underline = true, bold = true })
       hi('EyelinerSecondary',                    { bold = false,     underline = true })
@@ -542,6 +581,7 @@ require('lazy').setup({
       hi('DiagnosticFloatingHint',               { force = true,     link ='Normal' })
       hi('DiagnosticFloatingInfo',               { force = true,     link ='Normal' })
       hi('DiagnosticFloatingWarn',               { force = true,     link ='Normal' })
+      hi('DiagnosticUnnecessary',                { force = true,     fg   = p.base04, bg = nil, nocombine = false })
       hi('WinSeparator',                         { force = true,     link ='Normal' })
       hi('WhichKeySeparator',                    { force = true,     link ='String' })
       hi('WhichKeyFloat',                        { force = true,     link ='Normal' })
@@ -912,6 +952,9 @@ require('lazy').setup({
                   schemas = vim.list_extend(
                     {
                       [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
+                      ['https://json.schemastore.org/lefthook.json'] = {
+                        '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
+                      },
                       -- ['https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks'] = 'tasks/*.yml',
                       -- ['https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/handlers'] = {
                       --   'handlers/*.yml',
@@ -1013,7 +1056,7 @@ require('lazy').setup({
         },
       })
 
-      local tsserverwWrkspaceConfiguration = {
+      local tsserverwWorkspaceConfiguration = {
         format = {
           indentSize = vim.o.shiftwidth,
           convertTabsToSpaces = vim.o.expandtab,
@@ -1024,7 +1067,7 @@ require('lazy').setup({
           insertSpaceAfterCommaDelimiter = true,
           placeOpenBraceOnNewLineForControlBlocks = false,
           placeOpenBraceOnNewLineForFunctions = false,
-          insertSpaceAfterConstructor = true,
+          insertSpaceAfterConstructor = false,
           insertSpaceAfterFunctionKeywordForAnonymousFunctions = true,
           insertSpaceAfterKeywordsInControlFlowStatements = true,
           insertSpaceAfterOpeningAndBeforeClosingEmptyBraces = false,
@@ -1053,6 +1096,7 @@ require('lazy').setup({
               end,
               async = false,
             }, noop)
+
             client.request_sync('workspace/executeCommand', {
               command = '_typescript.organizeImports',
               arguments = { vim.api.nvim_buf_get_name(bufnr) },
@@ -1061,17 +1105,22 @@ require('lazy').setup({
         },
         init_options = {
           hostInfo = 'neovim',
-          quotePreference = 'single',
-          organizeImportsIgnoreCase = false,
-          organizeImportsCollation = 'unicode',
-          organizeImportsCollationLocale = 'en-US',
-          organizeImportsNumericCollation = true,
-          organizeImportsAccentCollation = true,
-          organizeImportsCaseFirst = false,
+          preferences = {
+            -- Supported values 'auto', 'double', 'single'
+            quotePreference = 'auto',
+            organizeImportsIgnoreCase = false,
+            organizeImportsCollation = 'unicode',
+            organizeImportsCollationLocale = 'en',
+            organizeImportsNumericCollation = true,
+            organizeImportsAccentCollation = false,
+            organizeImportsCaseFirst = false,
+            importModuleSpecifierPreference = 'relative',
+            interactiveInlayHints = false,
+          },
         },
         settings = {
-          typescript = tsserverwWrkspaceConfiguration,
-          javascript = tsserverwWrkspaceConfiguration,
+          typescript = tsserverwWorkspaceConfiguration,
+          javascript = tsserverwWorkspaceConfiguration,
           completions = {
             completeFunctionCalls = true,
           },
@@ -1082,6 +1131,21 @@ require('lazy').setup({
       })
 
       require('lspconfig').eslint.setup({
+        filetypes = {
+          'astro',
+          'javascript',
+          'javascript.jsx',
+          'javascriptreact',
+          'json',
+          'json5',
+          'jsonc',
+          'svelte',
+          'typescript',
+          'typescript.tsx',
+          'typescriptreact',
+          'vue',
+          'yaml',
+        },
         capabilities = capabilities,
         on_init = on_init,
         settings = {
@@ -1125,6 +1189,26 @@ require('lazy').setup({
       local fix = require('lsp-fix')
 
       fix.setup({
+        json5 = {
+          order = {
+            'eslint',
+          },
+        },
+        jsonc = {
+          order = {
+            'eslint',
+          },
+        },
+        json = {
+          order = {
+            'eslint',
+          },
+        },
+        yaml = {
+          order = {
+            'eslint',
+          },
+        },
         typescript = {
           order = {
             'tsserver',
@@ -1138,7 +1222,10 @@ require('lazy').setup({
           },
         },
         vue = {
-          order = { 'volar', 'eslint' },
+          order = {
+            'volar',
+            'eslint',
+          },
         },
         -- css = {
         --   order = { 'stylelint_lsp' },
@@ -1165,11 +1252,15 @@ require('lazy').setup({
     config = function()
       require('conform').setup({
         formatters_by_ft = {
-          typescript = { { 'prettier' } },
           javascript = { { 'prettier' } },
+          json = { { 'prettier' } },
+          json5 = { { 'prettier' } },
+          jsonc = { { 'prettier' } },
+          lua = { { 'stylua' } },
           markdown = { { 'prettier' } },
           sh = { { 'shfmt' } },
-          lua = { { 'stylua' } },
+          typescript = { { 'prettier' } },
+          vue = { { 'prettier' } },
           yaml = { { 'prettier' } },
         },
         formatters = {
@@ -1665,15 +1756,27 @@ require('lazy').setup({
           initial_mode = 'insert',
           path_display = { 'truncate' },
           set_env = { ['COLORTERM'] = 'truecolor' },
+          vimgrep_arguments = {
+            'rg',
+            '--color=never',
+            '--no-heading',
+            '--with-filename',
+            '--line-number',
+            '--column',
+            '--smart-case',
+            '--hidden',
+            '--glob',
+            '!.git',
+          },
         },
         pickers = {
           find_files = {
             find_command = {
               'rg',
+              '--color=never',
+              '--no-heading',
               '-L',
               '--files',
-              '--color',
-              'never',
               '--hidden',
               '--glob',
               '!.git',
@@ -2190,7 +2293,6 @@ require('lazy').setup({
   },
 })
 
--- TODO: oscyank?
--- let g:oscyank_silent = v:true
--- let g:oscyank_term = 'default'
--- autocmd TextYankPost * if v:event.operator is 'y' && v:event.regname is '' | execute 'OSCYankRegister "' | endif
+-- TODO: {'akinsho/git-conflict.nvim', version = "*", config = true}
+-- https://github.com/akinsho/git-conflict.nvim
+-- https://github.com/nvim-neotest/neotest
