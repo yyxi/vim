@@ -21,6 +21,13 @@ nnoremap <silent><Up> N
 nnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
 ]])
 
+local function concat(t1, t2)
+  for _, v in ipairs(t2) do
+    table.insert(t1, v)
+  end
+  return t1
+end
+
 local function python3_path()
   local stat = vim.loop.fs_stat(vim.fn.expand('~/.vim/.venv/bin'))
   if not stat then
@@ -33,6 +40,20 @@ local function python3_path()
 
   return nil
 end
+
+local function mason_path()
+  local directory = vim.fn.expand(vim.fn.stdpath('data') .. 'mason/bin')
+  local stat = vim.loop.fs_stat(directory)
+  if not stat then
+    return nil
+  end
+
+  if stat.type == 'directory' then
+    vim.env.PATH = vim.env.PATH .. ':' .. vim.fn.expand(directory)
+  end
+end
+
+mason_path()
 
 vim.g.python3_host_prog = python3_path()
 
@@ -147,7 +168,7 @@ vim.o.tabpagemax = 50
 vim.o.tabstop = 2
 vim.o.termguicolors = true
 vim.o.timeout = true
-vim.o.timeoutlen = 400
+vim.o.timeoutlen = 500
 vim.o.undodir = vim.fn.expand('~/.vim/tmp/undo')
 vim.o.undofile = true
 vim.o.updatetime = 250
@@ -288,7 +309,7 @@ require('lazy').setup({
           base09 = '#83a598',
           base0A = '#fabd2f',
           base0B = '#b8bb26',
-          base0C = '#8ec07c',-- underused
+          base0C = '#8ec07c', -- underused
           base0D = '#fe8019',
           base0E = '#d3869b',
           base0F = '#d65d0e',
@@ -313,19 +334,36 @@ require('lazy').setup({
 
       local p = opts.palette
       local hi = function(name, data) vim.api.nvim_set_hl(0, name, data) end
-      local hm = function(name, data) local d = vim.tbl_extend('force', vim.api.nvim_get_hl(0, { name = data.link, link = false, create = false }), data) d.link = nil hi(name, d) end
+      local hm = function(name, data)
+        local d = vim.tbl_extend('force',
+          vim.api.nvim_get_hl(0,
+            { name = data.link, link = false, create = false }), data)
+        d.link = nil
+        hi(name, d)
+      end
 
-      hi('Cursor',     { force = true, fg = p.base00, bg = p.base06, attr = nil, sp = nil, nocombine = true, italic = true })
-      hi('Function',   { force = true, fg = p.base0D, bg = nil,      attr = nil, sp = nil, nocombine = false, })
-      hi('Comment',    { force = true, fg = p.base03, bg = nil,      attr = nil, sp = nil, nocombine = false, })
-      hi('Delimiter',  { force = true, fg = p.base09, bg = nil,      attr = nil, sp = nil, nocombine = false, })
-      hi('Delimiter',  { force = true, fg = p.base09, bg = nil,      attr = nil, sp = nil, nocombine = false, })
-      hi('Boolean',    { force = true, fg = p.base0F, bg = nil,      attr = nil, sp = nil, nocombine = false, })
-      hi('Float',      { force = true, fg = p.base0B, bg = nil,      attr = nil, sp = nil, nocombine = false, italic = true })
-      hi('Number',     { force = true, fg = p.base0B, bg = nil,      attr = nil, sp = nil, nocombine = false, italic = true })
-      hi('Constant',   { force = true, fg = p.base06, bg = nil,      attr = nil, sp = nil, nocombine = false })
-      hi('Operator',   { force = true, fg = p.base0C, bg = nil,      attr = nil, sp = nil, nocombine = false })
-      hi('Structure',  { force = true, fg = p.base05, bg = nil,      attr = nil, sp = nil, nocombine = false })
+      hi('Cursor',
+        { force = true, fg = p.base00, bg = p.base06, attr = nil, sp = nil, nocombine = true, italic = true })
+      hi('Function',
+        { force = true, fg = p.base0D, bg = nil, attr = nil, sp = nil, nocombine = false, })
+      hi('Comment',
+        { force = true, fg = p.base03, bg = nil, attr = nil, sp = nil, nocombine = false, })
+      hi('Delimiter',
+        { force = true, fg = p.base09, bg = nil, attr = nil, sp = nil, nocombine = false, })
+      hi('Delimiter',
+        { force = true, fg = p.base09, bg = nil, attr = nil, sp = nil, nocombine = false, })
+      hi('Boolean',
+        { force = true, fg = p.base0F, bg = nil, attr = nil, sp = nil, nocombine = false, })
+      hi('Float',
+        { force = true, fg = p.base0B, bg = nil, attr = nil, sp = nil, nocombine = false, italic = true })
+      hi('Number',
+        { force = true, fg = p.base0B, bg = nil, attr = nil, sp = nil, nocombine = false, italic = true })
+      hi('Constant',
+        { force = true, fg = p.base06, bg = nil, attr = nil, sp = nil, nocombine = false })
+      hi('Operator',
+        { force = true, fg = p.base0C, bg = nil, attr = nil, sp = nil, nocombine = false })
+      hi('Structure',
+        { force = true, fg = p.base05, bg = nil, attr = nil, sp = nil, nocombine = false })
       hi('Identifier', { force = true, link = 'Normal', })
 
       -- FIXME https://github.com/microsoft/vscode/issues/97063
@@ -333,197 +371,224 @@ require('lazy').setup({
 
       -- Identifiers
 
-      hi('@variable',                            { force = true,     fg = p.base05,                bg = nil })
-      hm('@variable.builtin',                    { force = true,     link = '@variable',           bold = true })
-      hi('@variable.member',                     { force = true,     link = '@variable' })
-      hi('@variable.parameter',                  { force = true,     link = '@variable' })
-      hm('@variable.parameter.builtin',          { force = true,     link = '@variable.parameter', bold = true })
+      hi('@variable',
+        { force = true, fg = p.base05, bg = nil })
+      hm('@variable.builtin',
+        { force = true, link = '@variable', bold = true })
+      hi('@variable.member', { force = true, link = '@variable' })
+      hi('@variable.parameter', { force = true, link = '@variable' })
+      hm('@variable.parameter.builtin',
+        { force = true, link = '@variable.parameter', bold = true })
 
-      hi('@constant',                            { force = true,     link = 'Constant' })
-      hm('@constant.builtin',                    { force = true,     link = '@constant',           bold = true })
-      hi('@constant.macro',                      { force = true,     link = 'Macro' })
+      hi('@constant', { force = true, link = 'Constant' })
+      hm('@constant.builtin',
+        { force = true, link = '@constant', bold = true })
+      hi('@constant.macro', { force = true, link = 'Macro' })
 
-      hi('@module',                              { force = true,     link = 'Identifier' })
-      hm('@module.builtin',                      { force = true,     link = '@module',             bold = true })
-      hi('@label',                               { force = true,     link = 'Label' })
+      hi('@module', { force = true, link = 'Identifier' })
+      hm('@module.builtin',
+        { force = true, link = '@module', bold = true })
+      hi('@label', { force = true, link = 'Label' })
 
       -- Literals
 
-      hi('@string',                              { force = true,     link = 'String' })
-      hi('@string.documentation',                { force = true,     link = '@string' })
-      hm('@string.escape',                       { force = true,     link = '@string',             bold = true })
-      hm('@string.regexp',                       { force = true,     link = '@string',             italic = true,    bold = true })
-      hm('@string.special',                      { force = true,     link = '@string',             italic = true,    bold = true })
-      hi('@string.special.path',                 { force = true,     link = 'Directory' })
-      hi('@string.special.symbol',               { force = true,     link = '@constant' })
-      hi('@string.special.url',                  { force = true,     link = '@markup.link.url' })
-      hm('@string.special.url.comment',          { force = true,     link = 'Comment', --[[ underline = true ]] })
+      hi('@string', { force = true, link = 'String' })
+      hi('@string.documentation', { force = true, link = '@string' })
+      hm('@string.escape',
+        { force = true, link = '@string', bold = true })
+      hm('@string.regexp',
+        { force = true, link = '@string', italic = true, bold = true })
+      hm('@string.special',
+        { force = true, link = '@string', italic = true, bold = true })
+      hi('@string.special.path', { force = true, link = 'Directory' })
+      hi('@string.special.symbol', { force = true, link = '@constant' })
+      hi('@string.special.url', { force = true, link = '@markup.link.url' })
+      hm('@string.special.url.comment',
+        { force = true, link = 'Comment', --[[ underline = true ]] })
 
-      hi('@character',                           { force = true,     link = 'Character' })
-      hm('@character.special',                   { force = true,     link = '@character',          bold = true })
+      hi('@character', { force = true, link = 'Character' })
+      hm('@character.special',
+        { force = true, link = '@character', bold = true })
 
-      hi('@boolean',                             { force = true,     link = 'Boolean' })
-      hi('@number',                              { force = true,     link = 'Number' })
-      hi('@number.float',                        { force = true,     link = 'Float' })
+      hi('@boolean', { force = true, link = 'Boolean' })
+      hi('@number', { force = true, link = 'Number' })
+      hi('@number.float', { force = true, link = 'Float' })
 
       -- Types
 
-      hi('@type',                                { force = true,     link = 'Type' })
-      hm('@type.builtin',                        { force = true,     link = '@type',               bold = true })
-      hi('@type.definition',                     { force = true,     link = 'Typedef' })
-      hi('@type.qualifier',                      { force = true,     link = 'StorageClass' })
+      hi('@type', { force = true, link = 'Type' })
+      hm('@type.builtin',
+        { force = true, link = '@type', bold = true })
+      hi('@type.definition', { force = true, link = 'Typedef' })
+      hi('@type.qualifier', { force = true, link = 'StorageClass' })
 
-      hi('@attribute',                           { force = true,     link = 'Macro' })
-      hm('@attribute.builtin',                   { force = true,     link = '@attribute',          bold = true })
-      hi('@property',                            { force = true,     link = '@variable' })
+      hi('@attribute', { force = true, link = 'Macro' })
+      hm('@attribute.builtin',
+        { force = true, link = '@attribute', bold = true })
+      hi('@property', { force = true, link = '@variable' })
 
       -- Functions
 
-      hi('@function',                            { force = true,     link = 'Function' })
-      hm('@function.builtin',                    { force = true,     link = '@function',           bold = true })
-      hm('@function.call',                       { force = true,     link = '@function',           italic = true })
-      hi('@function.macro',                      { force = true,     link = 'Macro' })
+      hi('@function', { force = true, link = 'Function' })
+      hm('@function.builtin',
+        { force = true, link = '@function', bold = true })
+      hm('@function.call',
+        { force = true, link = '@function', italic = true })
+      hi('@function.macro', { force = true, link = 'Macro' })
 
-      hi('@function.method',                     { force = true,     link = '@function' })
-      hi('@function.method.call',                { force = true,     link = '@function.call' })
+      hi('@function.method', { force = true, link = '@function' })
+      hi('@function.method.call', { force = true, link = '@function.call' })
 
-      hi('@constructor',                         { force = true,     link = '@function.builtin' })
-      hi('@operator',                            { force = true,     link = 'Operator' })
+      hi('@constructor', { force = true, link = '@function.builtin' })
+      hi('@operator', { force = true, link = 'Operator' })
 
       -- Keywords
 
-      hi('@keyword',                             { force = true,     link = 'Keyword' })
-      hi('@keyword.coroutine',                   { force = true,     link = '@keyword' })
-      hi('@keyword.debug',                       { force = true,     link = '@keyword' })
-      hi('@keyword.exception',                   { force = true,     link = '@keyword' })
-      hi('@keyword.function',                    { force = true,     link = '@keyword' })
-      hi('@keyword.import',                      { force = true,     link = '@keyword' })
-      hi('@keyword.modifier',                    { force = true,     link = '@keyword' })
-      hi('@keyword.operator',                    { force = true,     link = '@keyword' })
-      hi('@keyword.repeat',                      { force = true,     link = '@keyword' })
-      hi('@keyword.return',                      { force = true,     link = '@keyword' })
-      hi('@keyword.storage',                     { force = true,     link = '@keyword' })
-      hi('@keyword.type',                        { force = true,     link = '@keyword' })
+      hi('@keyword', { force = true, link = 'Keyword' })
+      hi('@keyword.coroutine', { force = true, link = '@keyword' })
+      hi('@keyword.debug', { force = true, link = '@keyword' })
+      hi('@keyword.exception', { force = true, link = '@keyword' })
+      hi('@keyword.function', { force = true, link = '@keyword' })
+      hi('@keyword.import', { force = true, link = '@keyword' })
+      hi('@keyword.modifier', { force = true, link = '@keyword' })
+      hi('@keyword.operator', { force = true, link = '@keyword' })
+      hi('@keyword.repeat', { force = true, link = '@keyword' })
+      hi('@keyword.return', { force = true, link = '@keyword' })
+      hi('@keyword.storage', { force = true, link = '@keyword' })
+      hi('@keyword.type', { force = true, link = '@keyword' })
 
-      hi('@keyword.conditional',                 { force = true,     link = 'Conditional' })
-      hi('@keyword.conditional.ternary',         { force = true,     link = 'Conditional' })
+      hi('@keyword.conditional', { force = true, link = 'Conditional' })
+      hi('@keyword.conditional.ternary',
+        { force = true, link = 'Conditional' })
 
-      hi('@keyword.directive',                   { force = true,     link = '@keyword' })
-      hi('@keyword.directive.define',            { force = true,     link = '@keyword.directive' })
+      hi('@keyword.directive', { force = true, link = '@keyword' })
+      hi('@keyword.directive.define',
+        { force = true, link = '@keyword.directive' })
 
       -- Punctuation
 
-      hi('@punctuation',                         { force = true,     link = 'Delimiter' })
-      hi('@punctuation.bracket',                 { force = true,     link = '@punctuation' })
-      hi('@punctuation.delimiter',               { force = true,     link = '@punctuation' })
-      hm('@punctuation.special',                 { force = true,     link = '@punctuation',        bold = true })
+      hi('@punctuation', { force = true, link = 'Delimiter' })
+      hi('@punctuation.bracket', { force = true, link = '@punctuation' })
+      hi('@punctuation.delimiter', { force = true, link = '@punctuation' })
+      hm('@punctuation.special',
+        { force = true, link = '@punctuation', bold = true })
 
       -- Comments
 
-      hi('@comment',                             { force = true,     link = 'Comment' })
-      hi('@comment.documentation',               { force = true,     link = '@comment' })
+      hi('@comment', { force = true, link = 'Comment' })
+      hi('@comment.documentation', { force = true, link = '@comment' })
 
       -- TODO: minihipatterns
-      hi('@comment.error',                       { force = true,     link = '@text.danger' })
-      hi('@comment.note',                        { force = true,     link = '@text.note' })
-      hi('@comment.todo',                        { force = true,     link = '@text.todo' })
-      hi('@comment.warning',                     { force = true,     link = '@text.warning' })
+      hi('@comment.error', { force = true, link = '@text.danger' })
+      hi('@comment.note', { force = true, link = '@text.note' })
+      hi('@comment.todo', { force = true, link = '@text.todo' })
+      hi('@comment.warning', { force = true, link = '@text.warning' })
 
       -- Markup
 
-      hi('@markup.strong',                       { force = true,     link = '@text.strong' })
-      hi('@markup.italic',                       { force = true,     link = '@text.emphasis' })
-      hi('@markup.strikethrough',                { force = true,     link = '@text.strikethrough' })
-      hi('@markup.underline',                    { force = true,     link = '@text.underline' })
+      hi('@markup.strong', { force = true, link = '@text.strong' })
+      hi('@markup.italic', { force = true, link = '@text.emphasis' })
+      hi('@markup.strikethrough',
+        { force = true, link = '@text.strikethrough' })
+      hi('@markup.underline', { force = true, link = '@text.underline' })
 
-      hi('@markup.heading',                      { force = true,     link = '@text.title' })
-      hi('@markup.heading.1',                    { force = true,     link = '@text.title' })
-      hi('@markup.heading.2',                    { force = true,     link = '@text.title' })
-      hi('@markup.heading.3',                    { force = true,     link = '@text.title' })
-      hi('@markup.heading.4',                    { force = true,     link = '@text.title' })
-      hi('@markup.heading.5',                    { force = true,     link = '@text.title' })
-      hi('@markup.heading.6',                    { force = true,     link = '@text.title' })
+      hi('@markup.heading', { force = true, link = '@text.title' })
+      hi('@markup.heading.1', { force = true, link = '@text.title' })
+      hi('@markup.heading.2', { force = true, link = '@text.title' })
+      hi('@markup.heading.3', { force = true, link = '@text.title' })
+      hi('@markup.heading.4', { force = true, link = '@text.title' })
+      hi('@markup.heading.5', { force = true, link = '@text.title' })
+      hi('@markup.heading.6', { force = true, link = '@text.title' })
 
-      hi('@markup.quote',                        { force = true,     link = '@string.special' })
-      hi('@markup.math',                         { force = true,     link = '@string.special' })
+      hi('@markup.quote', { force = true, link = '@string.special' })
+      hi('@markup.math', { force = true, link = '@string.special' })
 
-      hi('@markup.link',                         { force = true,     link = '@text.reference' })
-      hi('@markup.link.label',                   { force = true,     link = '@markup.link' })
-      hi('@markup.link.url',                     { force = true,     fg = p.base05,                bg = nil,         underline = true })
+      hi('@markup.link', { force = true, link = '@text.reference' })
+      hi('@markup.link.label', { force = true, link = '@markup.link' })
+      hi('@markup.link.url',
+        { force = true, fg = p.base05, bg = nil, underline = true })
 
-      hi('@markup.raw',                          { force = true,     link = '@text.literal' })
-      hi('@markup.raw.block',                    { force = true,     link = '@markup.raw' })
+      hi('@markup.raw', { force = true, link = '@text.literal' })
+      hi('@markup.raw.block', { force = true, link = '@markup.raw' })
 
-      hi('@markup.list',                         { force = true,     link = '@punctuation.special' })
-      hi('@markup.list.checked',                 { force = true,     link = 'DiagnosticOk' })
-      hi('@markup.list.unchecked',               { force = true,     link = 'DiagnosticWarn' })
+      hi('@markup.list', { force = true, link = '@punctuation.special' })
+      hi('@markup.list.checked', { force = true, link = 'DiagnosticOk' })
+      hi('@markup.list.unchecked', { force = true, link = 'DiagnosticWarn' })
 
-      hi('@markup.environment',                  { force = true,     link = '@module' })
+      hi('@markup.environment', { force = true, link = '@module' })
 
       -- Other: Text
 
-      hi('@text.strong',                         { force = true,     fg = nil,                     bg = nil,         bold = true })
-      hi('@text.strike',                         { force = true,     fg = nil,                     bg = nil,         strikethrough = true })
-      hi('@text.emphasis',                       { force = true,     fg = nil,                     bg = nil,         italic = true })
-      hi('@text.underline',                      { force = true,     link = 'Underlined' })
+      hi('@text.strong',
+        { force = true, fg = nil, bg = nil, bold = true })
+      hi('@text.strike',
+        { force = true, fg = nil, bg = nil, strikethrough = true })
+      hi('@text.emphasis',
+        { force = true, fg = nil, bg = nil, italic = true })
+      hi('@text.underline', { force = true, link = 'Underlined' })
 
-      hi('@text.danger',                         { force = true,     link = 'ErrorMsg' })
-      hi('@text.literal',                        { force = true,     link = 'Special' })
-      hi('@text.note',                           { force = true,     link = 'MoreMsg' })
-      hi('@text.reference',                      { force = true,     link = 'Identifier' })
-      hi('@text.title',                          { force = true,     link = 'Title' })
-      hi('@text.todo',                           { force = true,     link = 'Todo' })
-      hi('@text.uri',                            { force = true,     link = 'Underlined' })
-      hi('@text.warning',                        { force = true,     link = 'WarningMsg' })
+      hi('@text.danger', { force = true, link = 'ErrorMsg' })
+      hi('@text.literal', { force = true, link = 'Special' })
+      hi('@text.note', { force = true, link = 'MoreMsg' })
+      hi('@text.reference', { force = true, link = 'Identifier' })
+      hi('@text.title', { force = true, link = 'Title' })
+      hi('@text.todo', { force = true, link = 'Todo' })
+      hi('@text.uri', { force = true, link = 'Underlined' })
+      hi('@text.warning', { force = true, link = 'WarningMsg' })
 
       -- Other
 
-      hi('@diff.delta',                          { force = true,     link = 'Changed' })
-      hi('@diff.minus',                          { force = true,     link = 'Removed' })
-      hi('@diff.plus',                           { force = true,     link = 'Added' })
+      hi('@diff.delta', { force = true, link = 'Changed' })
+      hi('@diff.minus', { force = true, link = 'Removed' })
+      hi('@diff.plus', { force = true, link = 'Added' })
 
-      hi('@symbol',                              { force = true,     link = 'Keyword' })
+      hi('@symbol', { force = true, link = 'Keyword' })
 
-      hi('@tag',                                 { force = true,     link = 'Tag' })
-      hi('@tag.attribute',                       { force = true,     link = '@tag' })
-      hm('@tag.builtin',                         { force = true,     link = '@tag',                bold = true })
-      hi('@tag.delimiter',                       { force = true,     link = '@punctuation' })
+      hi('@tag', { force = true, link = 'Tag' })
+      hi('@tag.attribute', { force = true, link = '@tag' })
+      hm('@tag.builtin',
+        { force = true, link = '@tag', bold = true })
+      hi('@tag.delimiter', { force = true, link = '@punctuation' })
 
       -- Source: `:h lsp-semantic-highlight`
 
       -- hi('@lsp.type.class',                      { })
-      hi('@lsp.type.class',                      { force = true,     link = 'Structure' })
-      hi('@lsp.type.comment',                    { force = true,     link = '@comment' })
-      hi('@lsp.type.decorator',                  { force = true,     link = '@function' })
-      hi('@lsp.type.enum',                       { force = true,     link = '@type' })
-      hi('@lsp.type.enumMember',                 { force = true,     link = '@constant' })
-      hi('@lsp.type.event',                      { force = true,     link = '@type' })
-      hi('@lsp.type.function',                   { force = true,     link = '@function' })
-      hi('@lsp.type.interface',                  { force = true,     link = '@type' })
-      hi('@lsp.type.keyword',                    { force = true,     link = '@keyword' })
-      hi('@lsp.type.macro',                      { force = true,     link = '@function.macro' })
-      hi('@lsp.type.method',                     { force = true,     link = '@function.method' })
-      hi('@lsp.type.modifier',                   { force = true,     link = '@type.qualifier' })
-      hi('@lsp.type.namespace',                  { force = true,     link = '@module' })
-      hi('@lsp.type.number',                     { force = true,     link = '@number' })
-      hi('@lsp.type.operator',                   { force = true,     link = '@operator' })
-      hi('@lsp.type.parameter',                  { force = true,     link = '@variable.parameter' })
-      hi('@lsp.type.property',                   { force = true,     link = '@property' })
-      hi('@lsp.type.regexp',                     { force = true,     link = '@string.regexp' })
-      hi('@lsp.type.string',                     { force = true,     link = '@string' })
-      hi('@lsp.type.struct',                     { force = true,     link = 'Structure' })
-      hi('@lsp.type.type',                       { force = true,     link = '@type' })
-      hi('@lsp.type.typeParameter',              { force = true,     link = '@type.definition' })
-      hi('@lsp.type.variable',                   { force = true,     link = '@variable' })
-      hi('@lsp.typemod.variable.readonly',       { force = true,     link = '@constant' })
-      hm('@lsp.typemod.function.async',          { force = true,     link = '@function',           bold = true })
+      hi('@lsp.type.class', { force = true, link = 'Structure' })
+      hi('@lsp.type.comment', { force = true, link = '@comment' })
+      hi('@lsp.type.decorator', { force = true, link = '@function' })
+      hi('@lsp.type.enum', { force = true, link = '@type' })
+      hi('@lsp.type.enumMember', { force = true, link = '@constant' })
+      hi('@lsp.type.event', { force = true, link = '@type' })
+      hi('@lsp.type.function', { force = true, link = '@function' })
+      hi('@lsp.type.interface', { force = true, link = '@type' })
+      hi('@lsp.type.keyword', { force = true, link = '@keyword' })
+      hi('@lsp.type.macro', { force = true, link = '@function.macro' })
+      hi('@lsp.type.method', { force = true, link = '@function.method' })
+      hi('@lsp.type.modifier', { force = true, link = '@type.qualifier' })
+      hi('@lsp.type.namespace', { force = true, link = '@module' })
+      hi('@lsp.type.number', { force = true, link = '@number' })
+      hi('@lsp.type.operator', { force = true, link = '@operator' })
+      hi('@lsp.type.parameter',
+        { force = true, link = '@variable.parameter' })
+      hi('@lsp.type.property', { force = true, link = '@property' })
+      hi('@lsp.type.regexp', { force = true, link = '@string.regexp' })
+      hi('@lsp.type.string', { force = true, link = '@string' })
+      hi('@lsp.type.struct', { force = true, link = 'Structure' })
+      hi('@lsp.type.type', { force = true, link = '@type' })
+      hi('@lsp.type.typeParameter',
+        { force = true, link = '@type.definition' })
+      hi('@lsp.type.variable', { force = true, link = '@variable' })
+      hi('@lsp.typemod.variable.readonly',
+        { force = true, link = '@constant' })
+      hm('@lsp.typemod.function.async',
+        { force = true, link = '@function', bold = true })
 
-      hi('@lsp.mod.defaultLibrary',              {})
+      hi('@lsp.mod.defaultLibrary', {})
       hi("@lsp.typemod.function.defaultLibrary", { link = "@function.builtin" })
-      hi("@lsp.typemod.method.defaultLibrary",   { link = "@function.builtin" })
+      hi("@lsp.typemod.method.defaultLibrary", { link = "@function.builtin" })
       hi("@lsp.typemod.variable.defaultLibrary", { link = "@variable.builtin" })
-      hi('@lsp.mod.deprecated',                  { fg = p.base08,    bg = nil })
-      hi('@lsp.mod.documentation',               { link = '@string.documentation' })
+      hi('@lsp.mod.deprecated', { fg = p.base08, bg = nil })
+      hi('@lsp.mod.documentation', { link = '@string.documentation' })
 
       -- TODO: integrate this https://github.com/eldritch-theme/eldritch.nvim/blob/master/lua/eldritch/groups.lua
       hi("@lsp.type.boolean", { link = "@boolean" })
@@ -561,35 +626,47 @@ require('lazy').setup({
       -- hi('@lsp.mod.static',                   {})
 
       -- hm('@lsp.mod.declaration',              { link = "@variable" })
-      hi('@type.typescript',                     { link = "Normal" })
+      hi('@type.typescript', { link = "Normal" })
 
-      hi('EyelinerPrimary',                      { underline = true, bold = true })
-      hi('EyelinerSecondary',                    { bold = false,     underline = true })
-      hi('IndentBlanklineChar',                  { nocombine = true, ctermbg = nil,                ctermfg = 8,      bg = nil,     fg = '#332E33' })
-      hi('IndentBlanklineCharScope',             { nocombine = true, ctermbg = nil,                ctermfg = 8,      bold = false, bg = nil, fg = '#474247' })
-      hi('MiniJump',                             { link = 'SpellRare' })
-      hi('MiniJump2dSpot',                       { reverse = true,   bold = true,                  nocombine = true, sp = nil })
-      hi('MiniJump2dSpotUnique',                 { link = 'MiniJump2dSpot' })
+      hi('EyelinerPrimary', { underline = true, bold = true })
+      hi('EyelinerSecondary', { bold = false, underline = true })
+      hi('IndentBlanklineChar',
+        { nocombine = true, ctermbg = nil, ctermfg = 8, bg = nil, fg = '#332E33' })
+      hi('IndentBlanklineCharScope',
+        {
+          nocombine = true,
+          ctermbg = nil,
+          ctermfg = 8,
+          bold = false,
+          bg = nil,
+          fg =
+          '#474247'
+        })
+      hi('MiniJump', { link = 'SpellRare' })
+      hi('MiniJump2dSpot',
+        { reverse = true, bold = true, nocombine = true, sp = nil })
+      hi('MiniJump2dSpotUnique', { link = 'MiniJump2dSpot' })
 
-      hi('Todo',                                 { force = true,     link ='MiniHipatternsTodo' })
-      hi('@comment.todo',                        { force = true,     link ='MiniHipatternsTodo' })
-      hi('NormalFloat',                          { force = true,     link ='Normal' })
-      hi('FloatBorder',                          { force = true,     link ='Normal' })
-      hi('FloatBorder',                          { force = true,     link ='Normal' })
-      hi('NormalFloat',                          { force = true,     link ='Normal' })
-      hi('DiagnosticFloatingError',              { force = true,     link ='Normal' })
-      hi('DiagnosticFloatingHint',               { force = true,     link ='Normal' })
-      hi('DiagnosticFloatingInfo',               { force = true,     link ='Normal' })
-      hi('DiagnosticFloatingWarn',               { force = true,     link ='Normal' })
-      hi('DiagnosticUnnecessary',                { force = true,     fg   = p.base04, bg = nil, nocombine = false })
-      hi('WinSeparator',                         { force = true,     link ='Normal' })
-      hi('WhichKeySeparator',                    { force = true,     link ='String' })
-      hi('WhichKeyFloat',                        { force = true,     link ='Normal' })
-      hi('WhichKeyBorder',                       { force = true,     link ='Normal' })
-      hi('ZenBg',                                { force = true,     link ='Normal' })
-      hi('LazyButton',                           { force = true,     link ='Comment' })
-      hi('LazyButtonActive',                     { force = true,     link ='Normal' })
-      hi('LazyH1',                               { force = true,     link ='Normal' })
+      hi('Todo', { force = true, link = 'MiniHipatternsTodo' })
+      hi('@comment.todo', { force = true, link = 'MiniHipatternsTodo' })
+      hi('NormalFloat', { force = true, link = 'Normal' })
+      hi('FloatBorder', { force = true, link = 'Normal' })
+      hi('FloatBorder', { force = true, link = 'Normal' })
+      hi('NormalFloat', { force = true, link = 'Normal' })
+      hi('DiagnosticFloatingError', { force = true, link = 'Normal' })
+      hi('DiagnosticFloatingHint', { force = true, link = 'Normal' })
+      hi('DiagnosticFloatingInfo', { force = true, link = 'Normal' })
+      hi('DiagnosticFloatingWarn', { force = true, link = 'Normal' })
+      hi('DiagnosticUnnecessary',
+        { force = true, fg = p.base04, bg = nil, nocombine = false })
+      hi('WinSeparator', { force = true, link = 'Normal' })
+      hi('WhichKeySeparator', { force = true, link = 'String' })
+      hi('WhichKeyFloat', { force = true, link = 'Normal' })
+      hi('WhichKeyBorder', { force = true, link = 'Normal' })
+      hi('ZenBg', { force = true, link = 'Normal' })
+      hi('LazyButton', { force = true, link = 'Comment' })
+      hi('LazyButtonActive', { force = true, link = 'Normal' })
+      hi('LazyH1', { force = true, link = 'Normal' })
 
       -- hi('@conditional',                      { force = true,     link = 'Conditional' })
       -- hi('@debug',                            { force = true,     link = 'Debug' })
@@ -828,6 +905,9 @@ require('lazy').setup({
       vim.lsp.handlers['textDocument/signatureHelp'] =
         vim.lsp.with(vim.lsp.handlers.signature_help, { border = 'rounded' })
 
+      local lspconfig = require('lspconfig')
+      local mason = require('mason-registry')
+
       require('lspconfig.ui.windows').default_options.border = 'rounded'
       require('neodev').setup({})
       -- This is where all the LSP shenanigans will live
@@ -941,10 +1021,13 @@ require('lazy').setup({
         handlers = {
           lsp_zero.default_setup,
           dockerls = function()
-            require('lspconfig').dockerls.setup({})
+            lspconfig.dockerls.setup({})
+          end,
+          volar = function()
+            lspconfig.volar.setup({})
           end,
           yamlls = function()
-            require('lspconfig').yamlls.setup({
+            lspconfig.yamlls.setup({
               capabilities = capabilities,
               on_init = on_init,
               settings = {
@@ -1003,7 +1086,7 @@ require('lazy').setup({
             })
           end,
           jsonls = function()
-            require('lspconfig').jsonls.setup({
+            lspconfig.jsonls.setup({
               capabilities = capabilities,
               on_init = on_init,
               settings = {
@@ -1017,14 +1100,16 @@ require('lazy').setup({
         },
       })
 
-      require('lspconfig').lua_ls.setup(
+      lspconfig.dockerls.setup({})
+
+      lspconfig.lua_ls.setup(
         vim.tbl_deep_extend('force', {}, lsp_zero.nvim_lua_ls(), {
           capabilities = capabilities,
           on_init = on_init,
         })
       )
 
-      require('lspconfig').pyright.setup({
+      lspconfig.pyright.setup({
         capabilities = capabilities,
         on_init = on_init,
         fix = {
@@ -1037,7 +1122,7 @@ require('lazy').setup({
         },
       })
 
-      require('lspconfig').ruff_lsp.setup({
+      lspconfig.ruff_lsp.setup({
         capabilities = capabilities,
         on_init = on_init,
         fix = {
@@ -1055,6 +1140,8 @@ require('lazy').setup({
           end,
         },
       })
+
+      local hasVolar = mason.is_installed('vue-language-server')
 
       local tsserverwWorkspaceConfiguration = {
         format = {
@@ -1084,18 +1171,18 @@ require('lazy').setup({
         },
       }
 
-      require('lspconfig').tsserver.setup({
+      lspconfig.tsserver.setup({
         capabilities = capabilities,
         on_init = on_init,
         fix = {
           function(bufnr, client)
-            require('conform.lsp_format').format({
-              bufnr = bufnr,
-              filter = function(value)
-                return value == client
-              end,
-              async = false,
-            }, noop)
+            -- require('conform.lsp_format').format({
+            --   bufnr = bufnr,
+            --   filter = function(value)
+            --     return value == client
+            --   end,
+            --   async = false,
+            -- }, noop)
 
             client.request_sync('workspace/executeCommand', {
               command = '_typescript.organizeImports',
@@ -1103,7 +1190,13 @@ require('lazy').setup({
             }, 3000, bufnr)
           end,
         },
-        init_options = {
+        filetypes = concat({
+          'typescript',
+          'javascript',
+          'javascriptreact',
+          'typescriptreact',
+        }, hasVolar and { 'vue' } or {}),
+        init_options = vim.tbl_deep_extend('force', {
           hostInfo = 'neovim',
           preferences = {
             -- Supported values 'auto', 'double', 'single'
@@ -1117,7 +1210,18 @@ require('lazy').setup({
             importModuleSpecifierPreference = 'relative',
             interactiveInlayHints = false,
           },
-        },
+        }, hasVolar and {
+          plugins = {
+            {
+              name = '@vue/typescript-plugin',
+              location = mason
+                .get_package('vue-language-server')
+                :get_install_path()
+                .. '/node_modules/@vue/language-server',
+              languages = { 'vue', 'typescript' },
+            },
+          },
+        } or {}),
         settings = {
           typescript = tsserverwWorkspaceConfiguration,
           javascript = tsserverwWorkspaceConfiguration,
@@ -1130,7 +1234,7 @@ require('lazy').setup({
         },
       })
 
-      require('lspconfig').eslint.setup({
+      lspconfig.eslint.setup({
         filetypes = {
           'astro',
           'javascript',
@@ -1215,6 +1319,11 @@ require('lazy').setup({
             'eslint',
           },
         },
+        dockerfile = {
+          order = {
+            'dockerls',
+          },
+        },
         python = {
           order = {
             'pyright',
@@ -1244,7 +1353,7 @@ require('lazy').setup({
       {
         '<leader>f',
         function()
-          require('conform').format({ async = true, lsp_fallback = true })
+          require('conform').format({ async = true, lsp_format = 'first' })
         end,
         desc = 'Format',
       },
@@ -1252,16 +1361,17 @@ require('lazy').setup({
     config = function()
       require('conform').setup({
         formatters_by_ft = {
-          javascript = { { 'prettier' } },
-          json = { { 'prettier' } },
-          json5 = { { 'prettier' } },
-          jsonc = { { 'prettier' } },
-          lua = { { 'stylua' } },
-          markdown = { { 'prettier' } },
-          sh = { { 'shfmt' } },
-          typescript = { { 'prettier' } },
-          vue = { { 'prettier' } },
-          yaml = { { 'prettier' } },
+          javascript = { 'prettier' },
+          json = { 'prettier' },
+          json5 = { 'prettier' },
+          jsonc = { 'prettier' },
+          lua = { 'stylua' },
+          tex = { 'latexindent' },
+          markdown = { 'prettier' },
+          sh = { 'shfmt' },
+          typescript = { 'prettier' },
+          vue = { 'prettier' },
+          yaml = { 'prettier' },
         },
         formatters = {
           shfmt = {
@@ -1453,6 +1563,9 @@ require('lazy').setup({
         },
         autotag = {
           enable = true,
+          enable_rename = true,
+          enable_close = true,
+          enable_close_on_slash = true,
         },
         playground = {
           enable = true,
@@ -1572,7 +1685,9 @@ require('lazy').setup({
   {
     'windwp/nvim-ts-autotag',
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
-    event = { 'VeryLazy' },
+    -- event = { 'VeryLazy' },
+    ft = { 'html', 'vue' },
+    event = { 'BufReadPre', 'BufNewFile' },
   },
   {
     'jinh0/eyeliner.nvim',
@@ -1589,6 +1704,7 @@ require('lazy').setup({
     event = { 'VeryLazy' },
     -- keys = { { "gc", mode = { "n", "v" } }, { "gb", mode = { "n", "v" } } },
     dependencies = {
+      'nvim-treesitter/nvim-treesitter',
       'JoosepAlviste/nvim-ts-context-commentstring',
     },
     config = function()
@@ -1868,7 +1984,7 @@ require('lazy').setup({
   {
     'echasnovski/mini.jump2d',
     dependencies = { 'echasnovski/mini.base16' },
-    keys = { '<CR>' },
+    keys = { '<CR>', desc = 'Jump' },
     config = function()
       require('mini.jump2d').setup({
         view = {
@@ -1881,13 +1997,42 @@ require('lazy').setup({
   {
     'max397574/better-escape.nvim',
     event = 'InsertEnter',
-    keys = { 'jj', mode = 'i' },
+    keys = { 'jj', mode = 'i', desc = 'Escape' },
     config = function()
       require('better_escape').setup({
         -- timeout = 300,
-        mapping = { 'jj' },
-        clear_empty_lines = false,
-        keys = '<Esc>',
+        default_mappings = false,
+        mappings = {
+          i = {
+            j = {
+              -- These can all also be functions
+              -- k = '<Esc>',
+              j = '<Esc>',
+            },
+          },
+          -- c = {
+          --   j = {
+          --     k = '<Esc>',
+          --     j = '<Esc>',
+          --   },
+          -- },
+          -- t = {
+          --   j = {
+          --     k = '<Esc>',
+          --     j = '<Esc>',
+          --   },
+          -- },
+          -- v = {
+          --   j = {
+          --     k = '<Esc>',
+          --   },
+          -- },
+          -- s = {
+          --   j = {
+          --     k = '<Esc>',
+          --   },
+          -- },
+        },
       })
     end,
   },
@@ -1908,7 +2053,7 @@ require('lazy').setup({
   {
     'echasnovski/mini.align',
     version = '*',
-    keys = { { '<leader>a', mode = { 'n', 'x' } } },
+    keys = { { '<leader>a', mode = { 'n', 'x' }, desc = 'Align' } },
     config = function()
       require('mini.align').setup({
         mappings = {
@@ -1939,69 +2084,45 @@ require('lazy').setup({
     'folke/which-key.nvim',
     cmd = 'WhichKey',
     event = 'VeryLazy',
-    config = function(_, opts)
-      local presets = require('which-key.plugins.presets')
-
-      presets.motions['ge'] = nil
-      presets.motions['gg'] = nil
-      presets.operators['g~'] = nil
-      presets.operators['gu'] = nil
-      presets.operators['gU'] = nil
-      presets.operators['!'] = nil
-      presets.operators['zf'] = nil
-
-      ---@type table<string, string|table>
-      local miniAI = {
-        [' '] = 'Whitespace',
-        ['"'] = 'Balanced "',
-        ["'"] = "Balanced '",
-        ['`'] = 'Balanced `',
-        ['('] = 'Balanced (',
-        [')'] = 'Balanced ) including white-space',
-        ['>'] = 'Balanced > including white-space',
-        ['<lt>'] = 'Balanced <',
-        [']'] = 'Balanced ] including white-space',
-        ['['] = 'Balanced [',
-        ['}'] = 'Balanced } including white-space',
-        ['{'] = 'Balanced {',
-        ['?'] = 'User Prompt',
-        _ = 'Underscore',
-        a = 'Argument',
-        b = 'Balanced ), ], }',
-        c = 'Class',
-        f = 'Function',
-        o = 'Block, conditional, loop',
-        q = 'Quote `, ", \'',
-        t = 'Tag',
-      }
-
-      local objects = vim.deepcopy(presets.objects)
-
-      presets.objects = vim.tbl_deep_extend('force', {}, objects, {
-        ['a'] = { n = miniAI, N = miniAI },
-        ['i'] = { n = miniAI, N = miniAI },
-      })
-
-      local wk = require('which-key')
-      wk.setup(opts)
-
-      wk.register(
-        { s = 'Surround' },
-        { prefix = '<leader>', mode = { 'n', 'x' } }
-      )
-      wk.register({ T = 'Tags' }, { prefix = '<leader>' })
-      wk.register({ a = 'Align' }, { prefix = '<leader>', mode = { 'n', 'x' } })
-      wk.register({ n = 'Next' })
-      wk.register({ N = 'Previous' })
-      wk.register({ ['<Down>'] = 'Next' })
-      wk.register({ ['<Up>'] = 'Previous' })
-      wk.register({ ['<CR>'] = 'Jump' })
-      wk.register({ ['<CR>'] = 'Jump' })
-    end,
+    keys = {
+      {
+        '<leader>?',
+        function()
+          require('which-key').show({ global = true })
+        end,
+        desc = 'Which Key',
+      },
+    },
     opts = {
+      ---@type false | "classic" | "modern" | "helix"
+      preset = 'classic',
+      -- Delay before showing the popup. Can be a number or a function that returns a number.
+      ---@type number | fun(ctx: { keys: string, mode: string, plugin?: string }):number
+      delay = function(ctx)
+        return ctx.plugin and 0 or 200
+      end,
+      ---@param mapping wk.Mapping
+      filter = function(mapping)
+        -- example to exclude mappings without a description
+        -- return mapping.desc and mapping.desc ~= ""
+        return true
+      end,
+      --- You can add any mappings here, or use `require('which-key').add()` later
+      ---@type wk.Spec
+      spec = {},
+      -- show a warning when issues were detected with your mappings
+      notify = true,
+      -- Start hidden and wait for a key to be pressed before showing the popup
+      -- Only used by enabled xo mapping modes.
+      ---@param ctx { mode: string, operator: string }
+      defer = function(ctx)
+        return ctx.mode == 'V' or ctx.mode == '<C-V>'
+      end,
       plugins = {
-        marks = false,
-        registers = false,
+        marks = true, -- shows a list of your marks on ' and `
+        registers = true, -- shows your registers on " in NORMAL or <C-r> in INSERT mode
+        -- the presets plugin, adds help for a bunch of default keybindings in Neovim
+        -- No actual key bindings are created
         spelling = {
           enabled = false,
         },
@@ -2010,75 +2131,133 @@ require('lazy').setup({
           motions = true, -- adds help for motions
           text_objects = true, -- help for text objects triggered after entering an operator
           windows = true, -- default bindings on <c-w>
-          nav = false, -- misc bindings to work with windows
-          z = false, -- bindings for folds, spelling and others prefixed with z
-          g = false, -- bindings for prefixed with g
+          nav = true, -- misc bindings to work with windows
+          z = true, -- bindings for folds, spelling and others prefixed with z
+          g = true, -- bindings for prefixed with g
         },
       },
-      operators = {
-        ['<leader>c'] = 'Comment',
-        ['<leader>C'] = 'Comment',
-        ['<leader>S'] = 'Sort',
-        ['<leader>sa'] = 'Surround',
+      ---@type wk.Win.opts
+      win = {
+        -- don't allow the popup to overlap with the cursor
+        no_overlap = true,
+        -- width = 1,
+        -- height = { min = 4, max = 25 },
+        -- col = 0,
+        -- row = math.huge,
+        border = 'rounded',
+        padding = { 2, 2 }, -- extra window padding [top/bottom, right/left]
+        title = false,
+        title_pos = 'center',
+        zindex = 1000,
+        -- Additional vim.wo and vim.bo options
+        bo = {},
+        wo = {
+          winblend = 10, -- value between 0-100 0 for fully opaque and 100 for fully transparent
+        },
       },
-      motions = {
-        count = true,
+      layout = {
+        width = { min = 10, max = 30 }, -- min and max width of the columns
+        spacing = 2, -- spacing between columns
+        align = 'center', -- align columns left, center or right
+      },
+      keys = {
+        scroll_down = '<c-d>', -- binding to scroll down inside the popup
+        scroll_up = '<c-u>', -- binding to scroll up inside the popup
+      },
+      ---@type (string|wk.Sorter)[]
+      --- Mappings are sorted using configured sorters and natural sort of the keys
+      --- Available sorters:
+      --- * local: buffer-local mappings first
+      --- * order: order of the items (Used by plugins like marks / registers)
+      --- * group: groups last
+      --- * alphanum: alpha-numerical first
+      --- * mod: special modifier keys last
+      --- * manual: the order the mappings were added
+      --- * case: lower-case first
+      sort = { 'local', 'order', 'group', 'alphanum', 'mod' },
+      ---@type number|fun(node: wk.Node):boolean?
+      expand = 0, -- expand groups when <= n mappings
+      -- expand = function(node)
+      --   return not node.desc -- expand all nodes without a description
+      -- end,
+      -- Functions/Lua Patterns for formatting the labels
+      ---@type table<string, ({[1]:string, [2]:string}|fun(str:string):string)[]>
+      replace = {
+        key = {
+          function(key)
+            return require('which-key.view').format(key)
+          end,
+          -- { "<Space>", "SPC" },
+        },
+        desc = {
+          { '<Plug>%(?(.*)%)?', '%1' },
+          { '^%+', '' },
+          { '<[cC]md>', '' },
+          { '<[cC][rR]>', '' },
+          { '<[sS]ilent>', '' },
+          { '^lua%s+', '' },
+          { '^call%s+', '' },
+          { '^:%s*', '' },
+        },
       },
       icons = {
         breadcrumb = '»', -- symbol used in the command line area that shows your active key combo
         separator = '➜', -- symbol used between a key and it's label
         group = '+', -- symbol prepended to a group
+        ellipsis = '…',
+        -- set to false to disable all mapping icons,
+        -- both those explicitely added in a mapping
+        -- and those from rules
+        mappings = false,
+        --- See `lua/which-key/icons.lua` for more details
+        --- Set to `false` to disable keymap icons from rules
+        ---@type wk.IconRule[]|false
+        rules = {},
+        -- use the highlights from mini.icons
+        -- When `false`, it will use `WhichKeyIcon` instead
+        colors = true,
+        -- used by key format
+        keys = {
+          Up = '<Up>',
+          Down = '<Down>',
+          Left = '<Left>',
+          Right = '<Right>',
+          C = '',
+          M = '',
+          D = '',
+          S = '',
+          CR = '<CR>',
+          Esc = '<Esc>',
+          ScrollWheelDown = ' ',
+          ScrollWheelUp = ' ',
+          NL = ' ',
+          BS = '<Backspace>',
+          Space = '<Space>',
+          Tab = '<Tab>',
+          F1 = '<F1>',
+          F2 = '<F2>',
+          F3 = '<F3>',
+          F4 = '<F4>',
+          F5 = '<F5>',
+          F6 = '<F6>',
+          F7 = '<F7>',
+          F8 = '<F8>',
+          F9 = '<F9>',
+          F10 = '<F10>',
+          F11 = '<F11>',
+          F12 = '<F12>',
+        },
       },
-      popup_mappings = {
-        scroll_down = '<c-d>', -- binding to scroll down inside the popup
-        scroll_up = '<c-u>', -- binding to scroll up inside the popup
-      },
-      window = {
-        border = 'rounded', -- none, single, double, shadow
-        position = 'top', -- bottom, top
-        margin = { 1, 0, 1, 0 }, -- extra window margin [top, right, bottom, left]. When between 0 and 1, will be treated as a percentage of the screen size.
-        padding = { 1, 2, 1, 2 }, -- extra window padding [top, right, bottom, left]
-        winblend = 10, -- value between 0-100 0 for fully opaque and 100 for fully transparent
-        zindex = 1000, -- positive value to position WhichKey above other floating windows.
-      },
-      layout = {
-        height = { min = 4, max = 25 }, -- min and max height of the columns
-        width = { min = 20, max = 50 }, -- min and max width of the columns
-        spacing = 3, -- spacing between columns
-        align = 'left', -- align columns left, center or right
-      },
-      ignore_missing = false, -- enable this to hide mappings for which you didn't specify a label
-      hidden = {
-        '<CR>',
-        '<Cmd>',
-        '<cmd>',
-        '<silent>',
-        '^ ',
-        '^:',
-        '^call ',
-        '^lua ',
-      }, -- hide mapping boilerplate
       show_help = true, -- show a help message in the command line for using WhichKey
       show_keys = true, -- show the currently pressed key and its label as a message in the command line
-      triggers = {
-        '<',
-        '<c-w>',
-        '<leader>',
-        '>',
-        'c',
-        'd',
-        'v',
-        'y',
-      },
-      triggers_nowait = {},
-      triggers_blacklist = {
-        i = { 'j', 'k', 'z' },
-        v = { 'j', 'k', 'z' },
-        n = { 'z' },
-        c = { 'W', 'w' },
-      },
+      -- Which-key automatically sets up triggers for your mappings.
+      -- But you can disable this and setup the triggers yourself.
+      -- Be aware, that triggers are not needed for visual and operator pending mode.
+      -- triggers = true, -- automatically setup triggers
       disable = {
-        buftypes = {
+        -- disable WhichKey for certain buf types and file types.
+        ft = { 'mason', 'lazy', 'TelescopePrompt' },
+        bt = {
           'help',
           'nofile',
           'nowrite',
@@ -2086,9 +2265,78 @@ require('lazy').setup({
           'terminal',
           'prompt',
         },
-        filetypes = { 'mason', 'lazy', 'TelescopePrompt' },
+        -- -- disable a trigger for a certain context by returning true
+        -- ---@type fun(ctx: { keys: string, mode: string, plugin?: string }):boolean?
+        -- trigger = function(ctx)
+        --   return false
+        -- end,
       },
+      debug = false, -- enable wk.log in the current directory
     },
+    config = function(_, opts)
+      local presets = require('which-key.plugins.presets')
+
+      presets.operators = vim.tbl_deep_extend('force', presets.operators, {
+        { '<leader>S', desc = 'Sort' },
+        { '<leader>sa', desc = 'Surround' },
+      })
+
+      -- [''] = 'Comment',
+      -- ['<leader>C'] = 'Comment',
+      -- ['<leader>S'] = 'Sort',
+      -- ['<leader>sa'] = 'Surround',
+
+      -- ---@type table<string, string|table>
+      -- local miniAI = {
+      --   [' '] = 'Whitespace',
+      --   ['"'] = 'Balanced "',
+      --   ["'"] = "Balanced '",
+      --   ['`'] = 'Balanced `',
+      --   ['('] = 'Balanced (',
+      --   [')'] = 'Balanced ) including white-space',
+      --   ['>'] = 'Balanced > including white-space',
+      --   ['<lt>'] = 'Balanced <',
+      --   [']'] = 'Balanced ] including white-space',
+      --   ['['] = 'Balanced [',
+      --   ['}'] = 'Balanced } including white-space',
+      --   ['{'] = 'Balanced {',
+      --   ['?'] = 'User Prompt',
+      --   _ = 'Underscore',
+      --   a = 'Argument',
+      --   b = 'Balanced ), ], }',
+      --   c = 'Class',
+      --   f = 'Function',
+      --   o = 'Block, conditional, loop',
+      --   q = 'Quote `, ", \'',
+      --   t = 'Tag',
+      -- }
+      --
+      -- local objects = vim.deepcopy(presets.objects)
+      --
+      -- presets.objects = vim.tbl_deep_extend('force', {}, objects, {
+      --   ['a'] = { n = miniAI, N = miniAI },
+      --   ['i'] = { n = miniAI, N = miniAI },
+      -- })
+
+      local wk = require('which-key')
+      wk.setup(opts)
+
+      -- wk.register(
+      --   { s = 'Surround' },
+      --   { prefix = '<leader>', mode = { 'n', 'x' } }
+      -- )
+      -- wk.register({ n = 'Next' })
+      -- wk.register({ N = 'Previous' })
+      -- wk.register({ ['<Down>'] = 'Next' })
+      -- wk.register({ ['<Up>'] = 'Previous' })
+      -- wk.register({ ['<CR>'] = 'Jump' })
+      -- wk.register({ ['<CR>'] = 'Jump' })
+    end,
+  },
+  {
+    'BranimirE/fix-auto-scroll.nvim',
+    config = true,
+    event = 'VeryLazy',
   },
   {
     'ghillb/cybu.nvim',
