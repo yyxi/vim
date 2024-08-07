@@ -19,6 +19,11 @@ nnoremap <silent><Down> n
 nnoremap <silent><expr> n (v:searchforward ? 'n' : 'N')
 nnoremap <silent><Up> N
 nnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
+
+vnoremap <silent><Down> n
+vnoremap <silent><expr> n (v:searchforward ? 'n' : 'N')
+vnoremap <silent><Up> N
+vnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
 ]])
 
 local function concat(t1, t2)
@@ -178,7 +183,7 @@ vim.o.virtualedit = 'onemore'
 vim.o.visualbell = false
 vim.o.whichwrap = '<,>,h,l'
 vim.o.wildignore =
-  '*/.git/*,*/.hg/*,*/.svn/*,*.aux,*.out,*.toc,*.jpg,*.bmp,*.gif,*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]'
+'*/.git/*,*/.hg/*,*/.svn/*,*.aux,*.out,*.toc,*.jpg,*.bmp,*.gif,*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]'
 vim.o.wildmenu = true
 vim.o.wildmode = 'longest:full,full'
 vim.o.winblend = 10
@@ -291,7 +296,7 @@ require('lazy').setup({
   },
   {
     'echasnovski/mini.base16',
-    lazy = false, -- make sure we load this during startup if it is your main colorscheme
+    lazy = false,    -- make sure we load this during startup if it is your main colorscheme
     branch = 'stable',
     priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
@@ -901,9 +906,9 @@ require('lazy').setup({
     config = function()
       vim.lsp.set_log_level('ERROR')
       vim.lsp.handlers['textDocument/hover'] =
-        vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded' })
+          vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded' })
       vim.lsp.handlers['textDocument/signatureHelp'] =
-        vim.lsp.with(vim.lsp.handlers.signature_help, { border = 'rounded' })
+          vim.lsp.with(vim.lsp.handlers.signature_help, { border = 'rounded' })
 
       local lspconfig = require('lspconfig')
       local mason = require('mason-registry')
@@ -1034,7 +1039,8 @@ require('lazy').setup({
                 yaml = {
                   schemas = vim.list_extend(
                     {
-                      [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
+                      [vim.fn.expand('~/.vim/empty-schema.json')] =
+                      'contents.yaml',
                       ['https://json.schemastore.org/lefthook.json'] = {
                         '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
                       },
@@ -1215,9 +1221,9 @@ require('lazy').setup({
             {
               name = '@vue/typescript-plugin',
               location = mason
-                .get_package('vue-language-server')
-                :get_install_path()
-                .. '/node_modules/@vue/language-server',
+                  .get_package('vue-language-server')
+                  :get_install_path()
+                  .. '/node_modules/@vue/language-server',
               languages = { 'vue', 'typescript' },
             },
           },
@@ -1422,8 +1428,8 @@ require('lazy').setup({
       vim.api.nvim_create_autocmd('InsertLeave', {
         callback = function()
           if
-            require('luasnip').session.current_nodes[vim.api.nvim_get_current_buf()]
-            and not require('luasnip').session.jump_active
+              require('luasnip').session.current_nodes[vim.api.nvim_get_current_buf()]
+              and not require('luasnip').session.jump_active
           then
             require('luasnip').unlink_current()
           end
@@ -1447,9 +1453,9 @@ require('lazy').setup({
         },
         sources = cmp.config.sources({
           { priority = 16, name = 'nvim_lsp' },
-          { priority = 2, name = 'buffer' },
-          { priority = 8, name = 'luasnip' },
-          { priority = 8, name = 'path' },
+          { priority = 2,  name = 'buffer' },
+          { priority = 8,  name = 'luasnip' },
+          { priority = 8,  name = 'path' },
         }, {}),
         sorting = {
           priority_weight = 10,
@@ -1817,10 +1823,10 @@ require('lazy').setup({
         '<cmd>Telescope lsp_workspace_symbols<cr>',
         desc = 'Workspace Symbols',
       },
-      { '<leader>g', '<cmd>Telescope live_grep<cr>', desc = 'Grep' },
+      { '<leader>g', '<cmd>Telescope live_grep<cr>',    desc = 'Grep' },
       { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
-      { '<leader>e', '<cmd>Telescope find_files<cr>', desc = 'Edit' },
-      { '<leader>b', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
+      { '<leader>e', '<cmd>Telescope find_files<cr>',   desc = 'Edit' },
+      { '<leader>b', '<cmd>Telescope buffers<cr>',      desc = 'Buffers' },
       {
         '<leader>d',
         '<cmd>Telescope lsp_definitions<cr>',
@@ -1842,18 +1848,18 @@ require('lazy').setup({
       local telescope = require('telescope')
 
       require('telescope.pickers.layout_strategies').horizontal_untitled = function(
-        picker,
-        max_columns,
-        max_lines,
-        layout_config
+          picker,
+          max_columns,
+          max_lines,
+          layout_config
       )
         local layout =
-          require('telescope.pickers.layout_strategies').horizontal(
-            picker,
-            max_columns,
-            max_lines,
-            layout_config
-          )
+            require('telescope.pickers.layout_strategies').horizontal(
+              picker,
+              max_columns,
+              max_lines,
+              layout_config
+            )
 
         layout.results.title = ''
         layout.prompt.title = ''
@@ -1901,10 +1907,10 @@ require('lazy').setup({
         },
         extensions = {
           fzf = {
-            fuzzy = true, -- false will only do exact matching
+            fuzzy = true,                   -- false will only do exact matching
             override_generic_sorter = true, -- override the generic sorter
-            override_file_sorter = true, -- override the file sorter
-            case_mode = 'smart_case', -- or "ignore_case" or "respect_case"
+            override_file_sorter = true,    -- override the file sorter
+            case_mode = 'smart_case',       -- or "ignore_case" or "respect_case"
           },
         },
       })
@@ -1942,8 +1948,8 @@ require('lazy').setup({
           t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' },
         },
         mappings = {
-          around = '',
-          inside = '',
+          around = 'a',
+          inside = 'i',
           around_next = 'an',
           around_last = 'aN',
           inside_next = 'in',
@@ -1964,21 +1970,21 @@ require('lazy').setup({
     },
     opts = {
       mappings = {
-        add = '<leader>sa', -- Add surrounding in Normal and Visual modes
-        delete = '<leader>sd', -- Delete surrounding
-        find = '<leader>sf', -- Find surrounding (to the right)
-        find_left = '<leader>sF', -- Find surrounding (to the left)
-        highlight = '', -- Highlight surrounding
-        replace = '<leader>sr', -- Replace surrounding
+        add = '<leader>sa',            -- Add surrounding in Normal and Visual modes
+        delete = '<leader>sd',         -- Delete surrounding
+        find = '<leader>sf',           -- Find surrounding (to the right)
+        find_left = '<leader>sF',      -- Find surrounding (to the left)
+        highlight = '',                -- Highlight surrounding
+        replace = '<leader>sr',        -- Replace surrounding
         update_n_lines = '<leader>sn', -- Update `n_lines`
-        suffix_last = '', -- Suffix to search with "prev" method
-        suffix_next = '', -- Suffix to search with "next" method
+        suffix_last = '',              -- Suffix to search with "prev" method
+        suffix_next = '',              -- Suffix to search with "next" method
       },
       n_lines = 500,
     },
     config = function(_, opts)
-      opts.custom_surroundings = nil
-      require('mini.surround').setup()
+      -- opts.custom_surroundings = nil
+      require('mini.surround').setup(opts)
     end,
   },
   {
@@ -2037,17 +2043,18 @@ require('lazy').setup({
     end,
   },
   {
-    'christoomey/vim-sort-motion',
+    'sQVe/sort.nvim',
     event = 'InsertEnter',
     keys = {
-      { '<leader>S', '<Plug>SortMotion', desc = 'Sort' },
       {
         '<leader>S',
-        '<Plug>SortMotionVisual',
+        '<Esc><Cmd>Sort<CR>',
         desc = 'Sort',
+        silent = true,
         mode = 'x',
       },
-      { '<leader>Ss', '<Plug>SortLines', desc = 'Sort Lines' },
+      -- { '', '<Plug>SortMotion', desc = 'Sort' },
+      -- { '', '<Plug>SortLines', desc = 'Sort Lines' },
     },
   },
   {
@@ -2119,7 +2126,7 @@ require('lazy').setup({
         return ctx.mode == 'V' or ctx.mode == '<C-V>'
       end,
       plugins = {
-        marks = true, -- shows a list of your marks on ' and `
+        marks = true,     -- shows a list of your marks on ' and `
         registers = true, -- shows your registers on " in NORMAL or <C-r> in INSERT mode
         -- the presets plugin, adds help for a bunch of default keybindings in Neovim
         -- No actual key bindings are created
@@ -2127,13 +2134,13 @@ require('lazy').setup({
           enabled = false,
         },
         presets = {
-          operators = true, -- adds help for operators like d, y, ...
-          motions = true, -- adds help for motions
+          operators = true,    -- adds help for operators like d, y, ...
+          motions = true,      -- adds help for motions
           text_objects = true, -- help for text objects triggered after entering an operator
-          windows = true, -- default bindings on <c-w>
-          nav = true, -- misc bindings to work with windows
-          z = true, -- bindings for folds, spelling and others prefixed with z
-          g = true, -- bindings for prefixed with g
+          windows = true,      -- default bindings on <c-w>
+          nav = true,          -- misc bindings to work with windows
+          z = true,            -- bindings for folds, spelling and others prefixed with z
+          g = true,            -- bindings for prefixed with g
         },
       },
       ---@type wk.Win.opts
@@ -2157,12 +2164,12 @@ require('lazy').setup({
       },
       layout = {
         width = { min = 10, max = 30 }, -- min and max width of the columns
-        spacing = 2, -- spacing between columns
-        align = 'center', -- align columns left, center or right
+        spacing = 2,                    -- spacing between columns
+        align = 'center',               -- align columns left, center or right
       },
       keys = {
         scroll_down = '<c-d>', -- binding to scroll down inside the popup
-        scroll_up = '<c-u>', -- binding to scroll up inside the popup
+        scroll_up = '<c-u>',   -- binding to scroll up inside the popup
       },
       ---@type (string|wk.Sorter)[]
       --- Mappings are sorted using configured sorters and natural sort of the keys
@@ -2191,13 +2198,13 @@ require('lazy').setup({
         },
         desc = {
           { '<Plug>%(?(.*)%)?', '%1' },
-          { '^%+', '' },
-          { '<[cC]md>', '' },
-          { '<[cC][rR]>', '' },
-          { '<[sS]ilent>', '' },
-          { '^lua%s+', '' },
-          { '^call%s+', '' },
-          { '^:%s*', '' },
+          { '^%+',              '' },
+          { '<[cC]md>',         '' },
+          { '<[cC][rR]>',       '' },
+          { '<[sS]ilent>',      '' },
+          { '^lua%s+',          '' },
+          { '^call%s+',         '' },
+          { '^:%s*',            '' },
         },
       },
       icons = {
@@ -2274,42 +2281,102 @@ require('lazy').setup({
       debug = false, -- enable wk.log in the current directory
     },
     config = function(_, opts)
-      local presets = require('which-key.plugins.presets')
+      -- local presets = require('which-key.plugins.presets')
+      --
+      -- presets.operators = vim.tbl_deep_extend('force', presets.operators, {
+      --   { '<leader>c',  desc = 'Comment' },
+      --   { '<leader>C',  desc = 'Comment' },
+      --   -- { '<leader>S', desc = 'Sort' },
+      --   -- { '<leader>sa', desc = 'Surround' },
+      --
+      --   -- add = '<leader>sa', -- Add surrounding in Normal and Visual modes
+      --   -- delete = '<leader>sd', -- Delete surrounding
+      --   -- find = '<leader>sf', -- Find surrounding (to the right)
+      --   -- find_left = '<leader>sF', -- Find surrounding (to the left)
+      --   -- highlight = '', -- Highlight surrounding
+      --   -- replace = '<leader>sr', -- Replace surrounding
+      --   -- update_n_lines = '<leader>sn', -- Update `n_lines`
+      -- })
 
-      presets.operators = vim.tbl_deep_extend('force', presets.operators, {
-        { '<leader>S', desc = 'Sort' },
-        { '<leader>sa', desc = 'Surround' },
+      local wk = require('which-key')
+      wk.setup(opts)
+
+      -- wk.register({ ['<CR>'] = 'Jump' })
+      -- wk.register({ ['<CR>'] = 'Jump' })
+
+      wk.add({
+        { "<leader>T",  desc = "Tags" },
+        { "<leader>sa", desc = "Add surrounding",     mode = { "n", "x" } },
+        { "<leader>sd", desc = "Delete surrounding",  mode = "n" },
+        { "<leader>sf", desc = "Find surrounding",    mode = "n" },
+        { "<leader>sF", desc = "Find surrounding",    mode = "n" },
+        { "<leader>sr", desc = "Replace surrounding", mode = "n" },
+        { "n",          desc = "Next",                mode = { "n", "x" } },
+        { "N",          desc = "Previous",            mode = { "n", "x" } },
+        { "n",          desc = "Down",                mode = { "n", "x" } },
+        { "N",          desc = "Up",                  mode = { "n", "x" }, }
       })
 
-      -- [''] = 'Comment',
+      local objects = {
+        { " ", desc = "whitespace" },
+        { '"', desc = '" string' },
+        { "'", desc = "' string" },
+        { "(", desc = "() block" },
+        { ")", desc = "() block with ws" },
+        { "<", desc = "<> block" },
+        { ">", desc = "<> block with ws" },
+        { "?", desc = "user prompt" },
+        { "U", desc = "use/call without dot" },
+        { "[", desc = "[] block" },
+        { "]", desc = "[] block with ws" },
+        { "_", desc = "underscore" },
+        { "`", desc = "` string" },
+        { "a", desc = "argument" },
+        { "b", desc = ")]} block" },
+        { "c", desc = "class" },
+        { "d", desc = "digit(s)" },
+        { "e", desc = "CamelCase / snake_case" },
+        { "f", desc = "function" },
+        { "g", desc = "entire file" },
+        { "i", desc = "indent" },
+        { "o", desc = "block, conditional, loop" },
+        { "q", desc = "quote `\"'" },
+        { "t", desc = "tag" },
+        { "u", desc = "use/call" },
+        { "{", desc = "{} block" },
+        { "}", desc = "{} with ws" },
+      }
+
+      local ret = { mode = { "o", "x" } }
+      ---@type table<string, string>
+      local mappings = vim.tbl_extend("force", {}, {
+        around = "a",
+        inside = "i",
+        around_last = "aN",
+        around_next = "an",
+        inside_last = "iN",
+        inside_next = "in",
+      }, opts.mappings or {})
+      mappings.goto_left = nil
+      mappings.goto_right = nil
+
+      for name, prefix in pairs(mappings) do
+        name = name:gsub("^around_", ""):gsub("^inside_", "")
+        ret[#ret + 1] = { prefix, group = name }
+        for _, obj in ipairs(objects) do
+          local desc = obj.desc
+          if prefix:sub(1, 1) == "i" then
+            desc = desc:gsub(" with ws", "")
+          end
+          ret[#ret + 1] = { prefix .. obj[1], desc = obj.desc }
+        end
+      end
+      wk.add(ret, { notify = false })
+
+      -- ['<leader>c'] = 'Comment',
       -- ['<leader>C'] = 'Comment',
       -- ['<leader>S'] = 'Sort',
       -- ['<leader>sa'] = 'Surround',
-
-      -- ---@type table<string, string|table>
-      -- local miniAI = {
-      --   [' '] = 'Whitespace',
-      --   ['"'] = 'Balanced "',
-      --   ["'"] = "Balanced '",
-      --   ['`'] = 'Balanced `',
-      --   ['('] = 'Balanced (',
-      --   [')'] = 'Balanced ) including white-space',
-      --   ['>'] = 'Balanced > including white-space',
-      --   ['<lt>'] = 'Balanced <',
-      --   [']'] = 'Balanced ] including white-space',
-      --   ['['] = 'Balanced [',
-      --   ['}'] = 'Balanced } including white-space',
-      --   ['{'] = 'Balanced {',
-      --   ['?'] = 'User Prompt',
-      --   _ = 'Underscore',
-      --   a = 'Argument',
-      --   b = 'Balanced ), ], }',
-      --   c = 'Class',
-      --   f = 'Function',
-      --   o = 'Block, conditional, loop',
-      --   q = 'Quote `, ", \'',
-      --   t = 'Tag',
-      -- }
       --
       -- local objects = vim.deepcopy(presets.objects)
       --
@@ -2317,20 +2384,6 @@ require('lazy').setup({
       --   ['a'] = { n = miniAI, N = miniAI },
       --   ['i'] = { n = miniAI, N = miniAI },
       -- })
-
-      local wk = require('which-key')
-      wk.setup(opts)
-
-      -- wk.register(
-      --   { s = 'Surround' },
-      --   { prefix = '<leader>', mode = { 'n', 'x' } }
-      -- )
-      -- wk.register({ n = 'Next' })
-      -- wk.register({ N = 'Previous' })
-      -- wk.register({ ['<Down>'] = 'Next' })
-      -- wk.register({ ['<Up>'] = 'Previous' })
-      -- wk.register({ ['<CR>'] = 'Jump' })
-      -- wk.register({ ['<CR>'] = 'Jump' })
     end,
   },
   {
@@ -2341,7 +2394,7 @@ require('lazy').setup({
   {
     'ghillb/cybu.nvim',
     keys = {
-      { '<Left>', '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
+      { '<Left>',  '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
       { '<Right>', '<Plug>(CybuNext)', desc = 'Next Buffer' },
       -- { '<C-Left>', '<Plug>(CybuLastusedPrev)', desc = 'Previous Buffer' },
       -- { '<C-Right>', '<Plug>(CybuLastusedNext)', desc = 'Next Buffer' },
@@ -2375,11 +2428,11 @@ require('lazy').setup({
           mode = {
             default = {
               switch = 'immediate', -- immediate, on_close
-              view = 'rolling', -- paging, rolling
+              view = 'rolling',     -- paging, rolling
             },
             last_used = {
               switch = 'immediate', -- immediate, on_close
-              view = 'rolling', -- paging, rolling
+              view = 'rolling',     -- paging, rolling
             },
             auto = {
               view = 'rolling',
@@ -2387,8 +2440,8 @@ require('lazy').setup({
           },
           show_on_autocmd = false, -- event to trigger cybu (eg. "BufEnter")
         },
-        display_time = 500, -- time the cybu window is displayed
-        exclude = { -- filetypes, cybu will not be active
+        display_time = 500,        -- time the cybu window is displayed
+        exclude = {                -- filetypes, cybu will not be active
           'neo-tree',
           'fugitive',
           'qf',
