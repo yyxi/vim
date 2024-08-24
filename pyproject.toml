@@ -1,11 +1,16 @@
 [project]
 name = "vim"
 version = "0.1.0"
-dependencies = [
-    "neovim>=0.3.1",
-    "pip>=24.0",
-]
+dependencies = ["neovim>=0.3.1", "pip>=24.0"]
 requires-python = ">= 3.8"
 
-[tool.rye]
-virtual = true
+# [tool.uv]
+# no-build = true
+[tool.uv]
+managed = true
+
+[tool.uv.workspace]
+members = []
+
+[tool.setuptools]
+py-modules = []

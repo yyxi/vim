@@ -26,6 +26,15 @@ vnoremap <silent><Up> N
 vnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
 ]])
 
+-- https://github.com/echasnovski/neovim/blob/master/runtime/lua/vim/_defaults.lua
+vim.keymap.del({ 'n', 'x' }, 'gc')
+vim.keymap.del('n', 'gcc')
+vim.keymap.del({ 'o' }, 'gc')
+
+function custom_fold_text()
+  return vim.fn.getline(vim.v.foldstart)
+end
+
 local function concat(t1, t2)
   for _, v in ipairs(t2) do
     table.insert(t1, v)
@@ -122,7 +131,11 @@ vim.o.encoding = 'utf-8'
 vim.o.errorbells = false
 vim.o.expandtab = true
 vim.o.fileencoding = 'utf-8'
-vim.o.foldenable = false
+vim.o.fillchars = vim.o.fillchars .. "fold: "
+vim.o.foldenable = true
+vim.o.foldlevelstart = 99
+vim.o.foldcolumn = "0"
+vim.o.foldtext = 'v:lua.custom_fold_text()'
 vim.o.formatoptions = 'jcroqln'
 vim.o.hidden = true
 vim.o.history = 5000
@@ -370,6 +383,9 @@ require('lazy').setup({
       hi('Structure',
         { force = true, fg = p.base05, bg = nil, attr = nil, sp = nil, nocombine = false })
       hi('Identifier', { force = true, link = 'Normal', })
+
+      hi('Folded',
+        { force = true, fg = p.base04, bg = '#262A2B', attr = nil, sp = nil, nocombine = false })
 
       -- FIXME https://github.com/microsoft/vscode/issues/97063
       -- TreeSitter Highlights https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md
@@ -780,6 +796,26 @@ require('lazy').setup({
     end,
   },
   {
+    "domharries/foldnav.nvim",
+    dependencies = { 'nvim-treesitter/nvim-treesitter' },
+    event = 'VeryLazy',
+    config = function()
+      vim.g.foldnav = {
+        flash = {
+          enabled = false,
+        },
+      }
+    end,
+
+    keys = {
+      -- { "<C-h>", function() require("foldnav").goto_start() end },
+      { "<C-Right>", function() require("foldnav").goto_next() end },
+      { "<C-Left>",  function() require("foldnav").goto_prev_start() end },
+      -- { "<C-k>", function() require("foldnav").goto_prev_end() end },
+      -- { "<C-l>", function() require("foldnav").goto_end() end },
+    },
+  },
+  {
     'echasnovski/mini.hipatterns',
     event = 'VeryLazy',
     dependencies = { 'echasnovski/mini.base16' },
@@ -1031,6 +1067,9 @@ require('lazy').setup({
           volar = function()
             lspconfig.volar.setup({})
           end,
+          taplo = function()
+            lspconfig.taplo.setup({})
+          end,
           yamlls = function()
             lspconfig.yamlls.setup({
               capabilities = capabilities,
@@ -1250,6 +1289,7 @@ require('lazy').setup({
           'json5',
           'jsonc',
           'svelte',
+          'toml',
           'typescript',
           'typescript.tsx',
           'typescriptreact',
@@ -1305,6 +1345,11 @@ require('lazy').setup({
           },
         },
         jsonc = {
+          order = {
+            'eslint',
+          },
+        },
+        toml = {
           order = {
             'eslint',
           },
@@ -1660,6 +1705,7 @@ require('lazy').setup({
 
       vim.o.foldmethod = 'expr'
       vim.o.foldexpr = 'nvim_treesitter#foldexpr()'
+      -- vim.o.foldtext = "nvim_treesitter#foldtext()"
       vim.o.indentexpr = 'nvim_treesitter#indent()'
     end,
   },
@@ -1702,6 +1748,7 @@ require('lazy').setup({
       require('eyeliner').setup({
         highlight_on_key = false, -- this must be set to true for dimming to work!
         dim = false,
+        disabled_buftypes = { 'TelescopePrompt', 'mason', 'lazy', 'vim', 'nofile' },
       })
     end,
   },
