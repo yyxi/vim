@@ -946,16 +946,17 @@ require('lazy').setup({
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
+      { 'hrsh7th/cmp-nvim-lsp' },
       {
         'VonHeikemen/lsp-zero.nvim',
-        branch = 'v3.x',
-        init = function()
-          -- Disable automatic setup, we are doing it manually
-          vim.g.lsp_zero_ui_float_border = 0
-          vim.g.lsp_zero_ui_signcolumn = 0
-          vim.g.lsp_zero_extend_cmp = 0
-          vim.g.lsp_zero_extend_lspconfig = 0
-        end,
+        branch = 'v4.x',
+        -- init = function()
+        --   -- Disable automatic setup, we are doing it manually
+        --   vim.g.lsp_zero_ui_float_border = 0
+        --   vim.g.lsp_zero_ui_signcolumn = 0
+        --   vim.g.lsp_zero_extend_cmp = 0
+        --   vim.g.lsp_zero_extend_lspconfig = 0
+        -- end,
         config = noop,
       },
       {
@@ -1004,7 +1005,18 @@ require('lazy').setup({
       require('neodev').setup({})
       -- This is where all the LSP shenanigans will live
       local lsp_zero = require('lsp-zero')
-      lsp_zero.extend_lspconfig()
+
+      lsp_zero.extend_lspconfig({
+        capabilities = require('cmp_nvim_lsp').default_capabilities(),
+        float_border = 'rounded',
+        sign_text = {
+          error = '◆',
+          warn = '◇',
+          hint = '•',
+          info = '∙',
+        },
+      })
+
       local capabilities = lsp_zero.get_capabilities()
 
       if capabilities ~= nil then
@@ -1026,13 +1038,6 @@ require('lazy').setup({
           },
         }
       end
-
-      lsp_zero.set_sign_icons({
-        error = '◆',
-        warn = '◇',
-        hint = '•',
-        info = '∙',
-      })
 
       local on_init = noop
       -- local on_init = function(client, _)
@@ -1401,6 +1406,7 @@ require('lazy').setup({
         },
         toml = {
           order = {
+            'taplo',
             'eslint',
           },
         },
@@ -1899,9 +1905,19 @@ require('lazy').setup({
   {
     'jiaoshijie/undotree',
     dependencies = 'nvim-lua/plenary.nvim',
-    config = true,
-    keys = { -- load the plugin only when using it's keybinding:
-      { '<leader>u', "<cmd>lua require('undotree').toggle()<cr>" },
+    opts = {
+      position = 'right',
+      float_diff = true,
+      window = {
+        winblend = 10,
+      },
+    },
+    keys = {
+      {
+        '<leader>u',
+        "<cmd>lua require('undotree').toggle()<cr>",
+        desc = 'Undo Tree',
+      },
     },
   },
   {
@@ -2658,6 +2674,24 @@ require('lazy').setup({
     },
   },
   {
+    'hrsh7th/nvim-gtd',
+    event = { 'BufReadPre', 'BufNewFile' },
+    keys = {
+      -- { "<C-h>", function() require("foldnav").goto_start() end },
+      {
+        'gf',
+        mode = { 'n', 'v' },
+        desc = 'Go to file',
+        function()
+          require('gtd').exec({ command = 'edit' })
+        end,
+      },
+    },
+    config = function()
+      require('gtd').setup()
+    end,
+  },
+  {
     'johmsalas/text-case.nvim',
     dependencies = { 'nvim-telescope/telescope.nvim' },
     event = { 'BufReadPre', 'BufNewFile' },
@@ -2713,27 +2747,28 @@ require('lazy').setup({
     rtp = {
       disabled_plugins = {
         '2html_plugin',
-        'tohtml',
+        'bugreport',
+        'compiler',
+        'ftplugin',
         'getscript',
         'getscriptPlugin',
         'logipat',
+        'matchit',
         'netrw',
+        'netrwFileHandlers',
         'netrwPlugin',
         'netrwSettings',
-        'netrwFileHandlers',
-        'matchit',
+        'optwin',
+        'rplugin',
         'rrhelper',
         'spellfile_plugin',
+        'spellfile_plugin',
+        'synmenu',
+        'syntax',
+        'tohtml',
+        'tutor',
         'vimball',
         'vimballPlugin',
-        'tutor',
-        'rplugin',
-        'syntax',
-        'synmenu',
-        'optwin',
-        'compiler',
-        'bugreport',
-        'ftplugin',
       },
     },
   },
