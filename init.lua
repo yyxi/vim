@@ -1108,7 +1108,7 @@ require('lazy').setup({
 
         require('lsp-fix').on_attach(client, bufnr)
 
-        if client.name == 'ruff_lsp' then
+        if client.name == 'ruff' then
           client.server_capabilities.hoverProvider = false
         end
       end)
@@ -1125,6 +1125,9 @@ require('lazy').setup({
           end,
           taplo = function()
             lspconfig.taplo.setup({})
+          end,
+          glslls= function()
+            lspconfig.glslls.setup({})
           end,
           yamlls = function()
             lspconfig.yamlls.setup({
@@ -1222,20 +1225,37 @@ require('lazy').setup({
         },
       })
 
-      lspconfig.ruff_lsp.setup({
+      lspconfig.ruff.setup({
         capabilities = capabilities,
         on_init = on_init,
         fix = {
+          -- SupportedCommand::Format => "ruff.applyFormat",
+          -- SupportedCommand::FixAll => "ruff.applyAutofix",
+          -- SupportedCommand::OrganizeImports => "ruff.applyOrganizeImports",
+          -- SupportedCommand::Debug => "ruff.printDebugInformation",
+                  -- version = vim.lsp.util.buf_versions[bufnr],
           function(bufnr, client)
             client.request_sync('workspace/executeCommand', {
               command = 'ruff.applyOrganizeImports',
-              arguments = { { uri = vim.uri_from_bufnr(0) } },
+              -- arguments = { { uri = vim.uri_from_bufnr(0) } },
+              arguments = {
+                {
+                  uri = vim.uri_from_bufnr(bufnr),
+                  version = vim.lsp.util.buf_versions[bufnr],
+                },
+              },
             }, 3000, bufnr)
           end,
           function(bufnr, client)
             client.request_sync('workspace/executeCommand', {
               command = 'ruff.applyAutofix',
-              arguments = { { uri = vim.uri_from_bufnr(0) } },
+              -- arguments = { { uri = vim.uri_from_bufnr(0) } },
+              arguments = {
+                {
+                  uri = vim.uri_from_bufnr(bufnr),
+                  version = vim.lsp.util.buf_versions[bufnr],
+                },
+              },
             }, 3000, bufnr)
           end,
         },
@@ -1434,7 +1454,7 @@ require('lazy').setup({
         python = {
           order = {
             'pyright',
-            'ruff_lsp',
+            'ruff',
           },
         },
         vue = {
@@ -1477,6 +1497,8 @@ require('lazy').setup({
           markdown = { 'prettier' },
           sh = { 'shfmt' },
           typescript = { 'prettier' },
+          typescriptreact = { "prettier", lsp_format = "first"  },
+          css = { 'prettier' },
           vue = { 'prettier' },
           yaml = { 'prettier' },
         },
