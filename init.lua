@@ -98,6 +98,20 @@ if vim.loader then
   vim.loader.enable()
 end
 
+local function is_installed(binary)
+  -- Split PATH into individual directories
+  local path_dirs = vim.split(vim.env.PATH or '', ':', { trimempty = true })
+  -- Check each directory for the binary
+  for _, dir in ipairs(path_dirs) do
+    local full_path = dir .. package.config:sub(1, 1) .. binary
+    if vim.loop.fs_stat(full_path) then
+      return true
+    end
+  end
+
+  return false
+end
+
 vim.api.nvim_set_keymap(
   'n',
   '<c-j>',
@@ -267,16 +281,27 @@ vim.diagnostic.config({
   severity_sort = false,
 })
 
+-- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
-if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system({
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+  local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
+  local out = vim.fn.system({
     'git',
     'clone',
     '--filter=blob:none',
-    'https://github.com/folke/lazy.nvim.git',
+    '--branch=stable',
+    lazyrepo,
     lazypath,
   })
-  vim.fn.system({ 'git', '-C', lazypath, 'checkout', 'tags/stable' }) -- last stable release
+  if vim.v.shell_error ~= 0 then
+    vim.api.nvim_echo({
+      { 'Failed to clone lazy.nvim:\n', 'ErrorMsg' },
+      { out, 'WarningMsg' },
+      { '\nPress any key to exit...' },
+    }, true, {})
+    vim.fn.getchar()
+    os.exit(1)
+  end
 end
 vim.opt.rtp:prepend(lazypath)
 
@@ -291,6 +316,7 @@ vim.filetype.add({
     tfstate = 'json',
   },
   filename = {
+    ['gitconfig'] = 'gitconfig',
     ['.ansible-lint'] = 'yaml',
     ['fish_history'] = 'yaml',
     ['go.sum'] = 'go',
@@ -942,6 +968,37 @@ require('lazy').setup({
     },
   },
   {
+    'nvimtools/none-ls.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'neovim/nvim-lspconfig',
+    },
+    event = { 'BufReadPre', 'BufNewFile' },
+    config = function()
+      local null_ls = require('null-ls')
+      null_ls.setup({
+        sources = {
+          -- https://github.com/nvimtools/none-ls.nvim/blob/main/doc/BUILTINS.md
+          null_ls.builtins.diagnostics.actionlint.with({
+            condition = function()
+              return is_installed('actionlint')
+            end,
+          }),
+          null_ls.builtins.diagnostics.fish.with({
+            condition = function()
+              return is_installed('fish')
+            end,
+          }),
+          null_ls.builtins.diagnostics.hadolint.with({
+            condition = function()
+              return is_installed('hadolint')
+            end,
+          }),
+        },
+      })
+    end,
+  },
+  {
     'neovim/nvim-lspconfig',
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
@@ -950,13 +1007,6 @@ require('lazy').setup({
       {
         'VonHeikemen/lsp-zero.nvim',
         branch = 'v4.x',
-        -- init = function()
-        --   -- Disable automatic setup, we are doing it manually
-        --   vim.g.lsp_zero_ui_float_border = 0
-        --   vim.g.lsp_zero_ui_signcolumn = 0
-        --   vim.g.lsp_zero_extend_cmp = 0
-        --   vim.g.lsp_zero_extend_lspconfig = 0
-        -- end,
         config = noop,
       },
       {
@@ -965,7 +1015,7 @@ require('lazy').setup({
         config = noop,
       },
       {
-        'folke/neodev.nvim',
+        'folke/lazydev.nvim',
         dependencies = { 'williamboman/mason-lspconfig.nvim' },
         config = noop,
       },
@@ -1002,8 +1052,7 @@ require('lazy').setup({
       local mason = require('mason-registry')
 
       require('lspconfig.ui.windows').default_options.border = 'rounded'
-      require('neodev').setup({})
-      -- This is where all the LSP shenanigans will live
+
       local lsp_zero = require('lsp-zero')
 
       lsp_zero.extend_lspconfig({
@@ -1082,6 +1131,7 @@ require('lazy').setup({
           '<cmd>lua vim.lsp.buf.code_action()<cr>',
           { noremap = true, silent = true, desc = 'Code Action' }
         )
+
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'x',
@@ -1126,7 +1176,7 @@ require('lazy').setup({
           taplo = function()
             lspconfig.taplo.setup({})
           end,
-          glslls= function()
+          glslls = function()
             lspconfig.glslls.setup({})
           end,
           yamlls = function()
@@ -1135,54 +1185,12 @@ require('lazy').setup({
               on_init = on_init,
               settings = {
                 yaml = {
-                  schemas = vim.list_extend(
-                    {
-                      [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
-                      ['https://json.schemastore.org/lefthook.json'] = {
-                        '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
-                      },
-                      -- ['https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/tasks'] = 'tasks/*.yml',
-                      -- ['https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json#/$defs/handlers'] = {
-                      --   'handlers/*.yml',
-                      --   'handlers/*.yaml',
-                      -- },
-                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/requirements.json'] = {
-                      --   'requirements.yml',
-                      -- },
-                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/meta.json'] = {
-                      --   'meta/main.yml',
-                      --   'meta/main.yaml',
-                      -- },
-                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/vars.json'] = {
-                      --   'playbooks/vars/*.yml',
-                      --   'playbooks/vars/*.yaml',
-                      --   'vars/*.yml',
-                      --   'vars/*.yaml',
-                      --   'defaults/*.yml',
-                      --   'defaults/*.yaml',
-                      --   'host_vars/*.yml',
-                      --   'host_vars/*.yaml',
-                      --   'group_vars/*.yml',
-                      --   'group_vars/*.yaml',
-                      -- },
-                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/ansible-lint-config.json'] = {
-                      --   '.ansible-lint',
-                      --   '.config/ansible-lint.yml',
-                      --   '.config/ansible-lint.yaml',
-                      -- },
-                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/molecule.json'] = {
-                      --   'molecule/*/molecule.yml',
-                      -- },
-                      -- ['https://github.com/ansible/ansible-lint/blob/main/src/ansiblelint/schemas/galaxy.json'] = {
-                      --   'galaxy.yml',
-                      -- },
+                  schemas = vim.list_extend({
+                    [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
+                    ['https://json.schemastore.org/lefthook.json'] = {
+                      '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
                     },
-                    require('schemastore').yaml.schemas({
-                      ignore = {
-                        'IMG Catapult PSP',
-                      },
-                    })
-                  ),
+                  }, require('schemastore').yaml.schemas()),
                   validate = { enable = true },
                 },
               },
@@ -1201,200 +1209,188 @@ require('lazy').setup({
             })
           end,
         },
-      })
-
-      lspconfig.dockerls.setup({})
-
-      lspconfig.lua_ls.setup(
-        vim.tbl_deep_extend('force', {}, lsp_zero.nvim_lua_ls(), {
-          capabilities = capabilities,
-          on_init = on_init,
-        })
-      )
-
-      lspconfig.pyright.setup({
-        capabilities = capabilities,
-        on_init = on_init,
-        fix = {
-          function(bufnr, client)
-            client.request_sync('workspace/executeCommand', {
-              command = 'pyright.organizeimports',
-              arguments = { vim.uri_from_bufnr(bufnr) },
-            }, 3000, bufnr)
-          end,
-        },
-      })
-
-      lspconfig.ruff.setup({
-        capabilities = capabilities,
-        on_init = on_init,
-        fix = {
-          -- SupportedCommand::Format => "ruff.applyFormat",
-          -- SupportedCommand::FixAll => "ruff.applyAutofix",
-          -- SupportedCommand::OrganizeImports => "ruff.applyOrganizeImports",
-          -- SupportedCommand::Debug => "ruff.printDebugInformation",
-                  -- version = vim.lsp.util.buf_versions[bufnr],
-          function(bufnr, client)
-            client.request_sync('workspace/executeCommand', {
-              command = 'ruff.applyOrganizeImports',
-              -- arguments = { { uri = vim.uri_from_bufnr(0) } },
-              arguments = {
-                {
-                  uri = vim.uri_from_bufnr(bufnr),
-                  version = vim.lsp.util.buf_versions[bufnr],
-                },
-              },
-            }, 3000, bufnr)
-          end,
-          function(bufnr, client)
-            client.request_sync('workspace/executeCommand', {
-              command = 'ruff.applyAutofix',
-              -- arguments = { { uri = vim.uri_from_bufnr(0) } },
-              arguments = {
-                {
-                  uri = vim.uri_from_bufnr(bufnr),
-                  version = vim.lsp.util.buf_versions[bufnr],
-                },
-              },
-            }, 3000, bufnr)
-          end,
-        },
-      })
-
-      local hasVolar = mason.is_installed('vue-language-server')
-
-      local tsWorkspaceConfiguration = {
-        format = {
-          indentSize = vim.o.shiftwidth,
-          convertTabsToSpaces = vim.o.expandtab,
-          tabSize = vim.o.tabstop,
-          indentStyle = 'Smart',
-          semicolons = 'remove',
-          trimTrailingWhitespace = false,
-          insertSpaceAfterCommaDelimiter = true,
-          placeOpenBraceOnNewLineForControlBlocks = false,
-          placeOpenBraceOnNewLineForFunctions = false,
-          insertSpaceAfterConstructor = false,
-          insertSpaceAfterFunctionKeywordForAnonymousFunctions = true,
-          insertSpaceAfterKeywordsInControlFlowStatements = true,
-          insertSpaceAfterOpeningAndBeforeClosingEmptyBraces = false,
-          insertSpaceAfterOpeningAndBeforeClosingJsxExpressionBraces = false,
-          insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces = true,
-          insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets = false,
-          insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis = false,
-          insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces = false,
-          insertSpaceAfterSemicolonInForStatements = true,
-          insertSpaceAfterTypeAssertion = false,
-          insertSpaceBeforeAndAfterBinaryOperators = true,
-          insertSpaceBeforeFunctionParenthesis = false,
-          insertSpaceBeforeTypeAnnotation = false,
-        },
-      }
-
-      lspconfig.ts_ls.setup({
-        capabilities = capabilities,
-        on_init = on_init,
-        fix = {
-          function(bufnr, client)
-            -- require('conform.lsp_format').format({
-            --   bufnr = bufnr,
-            --   filter = function(value)
-            --     return value == client
-            --   end,
-            --   async = false,
-            -- }, noop)
-
-            client.request_sync('workspace/executeCommand', {
-              command = '_typescript.organizeImports',
-              arguments = { vim.api.nvim_buf_get_name(bufnr) },
-            }, 3000, bufnr)
-          end,
-        },
-        filetypes = concat({
-          'typescript',
-          'javascript',
-          'javascriptreact',
-          'typescriptreact',
-        }, hasVolar and { 'vue' } or {}),
-        init_options = vim.tbl_deep_extend('force', {
-          hostInfo = 'neovim',
-          preferences = {
-            -- Supported values 'auto', 'double', 'single'
-            quotePreference = 'auto',
-            organizeImportsIgnoreCase = false,
-            organizeImportsCollation = 'unicode',
-            organizeImportsCollationLocale = 'en',
-            organizeImportsNumericCollation = true,
-            organizeImportsAccentCollation = false,
-            organizeImportsCaseFirst = false,
-            importModuleSpecifierPreference = 'relative',
-            interactiveInlayHints = false,
-          },
-        }, hasVolar and {
-          plugins = {
-            {
-              name = '@vue/typescript-plugin',
-              location = mason
-                .get_package('vue-language-server')
-                :get_install_path()
-                .. '/node_modules/@vue/language-server',
-              languages = { 'vue', 'typescript' },
+        lua_ls = function()
+          require('lazydev').setup()
+        end,
+        pyright = function()
+          lspconfig.pyright.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+            fix = {
+              function(bufnr, client)
+                client.request_sync('workspace/executeCommand', {
+                  command = 'pyright.organizeimports',
+                  arguments = { vim.uri_from_bufnr(bufnr) },
+                }, 3000, bufnr)
+              end,
             },
-          },
-        } or {}),
-        settings = {
-          typescript = tsWorkspaceConfiguration,
-          javascript = tsWorkspaceConfiguration,
-          completions = {
-            completeFunctionCalls = true,
-          },
-          diagnostics = {
-            ignoredCodes = { 80006 },
-          },
-        },
-      })
+          })
+        end,
+        ruff = function()
+          lspconfig.ruff.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+            fix = {
+              function(bufnr, client)
+                client.request_sync('workspace/executeCommand', {
+                  command = 'ruff.applyOrganizeImports',
+                  arguments = {
+                    {
+                      uri = vim.uri_from_bufnr(bufnr),
+                      version = vim.lsp.util.buf_versions[bufnr],
+                    },
+                  },
+                }, 3000, bufnr)
+              end,
+              function(bufnr, client)
+                client.request_sync('workspace/executeCommand', {
+                  command = 'ruff.applyAutofix',
+                  arguments = {
+                    {
+                      uri = vim.uri_from_bufnr(bufnr),
+                      version = vim.lsp.util.buf_versions[bufnr],
+                    },
+                  },
+                }, 3000, bufnr)
+              end,
+            },
+          })
+        end,
+        ts_ls = function()
+          local hasVolar = mason.is_installed('vue-language-server')
 
-      lspconfig.eslint.setup({
-        filetypes = {
-          'astro',
-          'javascript',
-          'javascript.jsx',
-          'javascriptreact',
-          'json',
-          'json5',
-          'jsonc',
-          'svelte',
-          'toml',
-          'typescript',
-          'typescript.tsx',
-          'typescriptreact',
-          'vue',
-          'yaml',
-        },
-        capabilities = capabilities,
-        on_init = on_init,
-        settings = {
-          workingDirectories = { mode = 'location' },
-          experimental = {
-            useFlatConfig = true,
-          },
-          useFlatConfig = true,
-        },
-        fix = {
-          function(bufnr, client)
-            local params = {
-              command = 'eslint.applyAllFixes',
-              arguments = {
+          local tsWorkspaceConfiguration = {
+            format = {
+              indentSize = vim.o.shiftwidth,
+              convertTabsToSpaces = vim.o.expandtab,
+              tabSize = vim.o.tabstop,
+              indentStyle = 'Smart',
+              semicolons = 'remove',
+              trimTrailingWhitespace = false,
+              insertSpaceAfterCommaDelimiter = true,
+              placeOpenBraceOnNewLineForControlBlocks = false,
+              placeOpenBraceOnNewLineForFunctions = false,
+              insertSpaceAfterConstructor = false,
+              insertSpaceAfterFunctionKeywordForAnonymousFunctions = true,
+              insertSpaceAfterKeywordsInControlFlowStatements = true,
+              insertSpaceAfterOpeningAndBeforeClosingEmptyBraces = false,
+              insertSpaceAfterOpeningAndBeforeClosingJsxExpressionBraces = false,
+              insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces = true,
+              insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets = false,
+              insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis = false,
+              insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces = false,
+              insertSpaceAfterSemicolonInForStatements = true,
+              insertSpaceAfterTypeAssertion = false,
+              insertSpaceBeforeAndAfterBinaryOperators = true,
+              insertSpaceBeforeFunctionParenthesis = false,
+              insertSpaceBeforeTypeAnnotation = false,
+            },
+          }
+
+          lspconfig.ts_ls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+            fix = {
+              function(bufnr, client)
+                client.request_sync('workspace/executeCommand', {
+                  command = '_typescript.organizeImports',
+                  arguments = { vim.api.nvim_buf_get_name(bufnr) },
+                }, 3000, bufnr)
+              end,
+            },
+            filetypes = concat({
+              'typescript',
+              'javascript',
+              'javascriptreact',
+              'typescriptreact',
+            }, hasVolar and { 'vue' } or {}),
+            init_options = vim.tbl_deep_extend('force', {
+              hostInfo = 'neovim',
+              preferences = {
+                -- Supported values 'auto', 'double', 'single'
+                quotePreference = 'auto',
+                organizeImportsIgnoreCase = false,
+                organizeImportsCollation = 'unicode',
+                organizeImportsCollationLocale = 'en',
+                organizeImportsNumericCollation = true,
+                organizeImportsAccentCollation = false,
+                organizeImportsCaseFirst = false,
+                importModuleSpecifierPreference = 'relative',
+                interactiveInlayHints = false,
+              },
+            }, hasVolar and {
+              plugins = {
                 {
-                  uri = vim.uri_from_bufnr(bufnr),
-                  version = vim.lsp.util.buf_versions[bufnr],
+                  name = '@vue/typescript-plugin',
+                  location = mason
+                    .get_package('vue-language-server')
+                    :get_install_path()
+                    .. '/node_modules/@vue/language-server',
+                  languages = { 'vue', 'typescript' },
                 },
               },
-            }
+            } or {}),
+            settings = {
+              typescript = tsWorkspaceConfiguration,
+              javascript = tsWorkspaceConfiguration,
+              completions = {
+                completeFunctionCalls = true,
+              },
+              diagnostics = {
+                ignoredCodes = { 80006 },
+              },
+            },
+          })
+        end,
+        eslint = function()
+          lspconfig.eslint.setup({
+            filetypes = {
+              'astro',
+              'javascript',
+              'javascript.jsx',
+              'javascriptreact',
+              'json',
+              'json5',
+              'jsonc',
+              'svelte',
+              'toml',
+              'typescript',
+              'typescript.tsx',
+              'typescriptreact',
+              'vue',
+              'yaml',
+            },
+            capabilities = capabilities,
+            on_init = on_init,
+            settings = {
+              workingDirectories = { mode = 'location' },
+              experimental = {
+                useFlatConfig = true,
+              },
+              useFlatConfig = true,
+            },
+            fix = {
+              function(bufnr, client)
+                local params = {
+                  command = 'eslint.applyAllFixes',
+                  arguments = {
+                    {
+                      uri = vim.uri_from_bufnr(bufnr),
+                      version = vim.lsp.util.buf_versions[bufnr],
+                    },
+                  },
+                }
 
-            client.request_sync('workspace/executeCommand', params, 3000, bufnr)
-          end,
-        },
+                client.request_sync(
+                  'workspace/executeCommand',
+                  params,
+                  3000,
+                  bufnr
+                )
+              end,
+            },
+          })
+        end,
       })
     end,
   },
@@ -1497,7 +1493,7 @@ require('lazy').setup({
           markdown = { 'prettier' },
           sh = { 'shfmt' },
           typescript = { 'prettier' },
-          typescriptreact = { "prettier", lsp_format = "first"  },
+          typescriptreact = { 'prettier', lsp_format = 'first' },
           css = { 'prettier' },
           vue = { 'prettier' },
           yaml = { 'prettier' },
@@ -1520,7 +1516,7 @@ require('lazy').setup({
     dependencies = {
       { 'neovim/nvim-lspconfig' },
       { 'hrsh7th/cmp-nvim-lsp' },
-      { 'hrsh7th/cmp-nvim-lua' },
+      -- { 'hrsh7th/cmp-nvim-lua' },
       { 'hrsh7th/cmp-buffer' },
       { 'hrsh7th/cmp-path' },
       {
@@ -1819,23 +1815,6 @@ require('lazy').setup({
     ft = { 'html', 'vue' },
     event = { 'BufReadPre', 'BufNewFile' },
   },
-  -- {
-  --   'jinh0/eyeliner.nvim',
-  --   event = { 'VeryLazy' },
-  --   config = function()
-  --     require('eyeliner').setup({
-  --       highlight_on_key = false, -- this must be set to true for dimming to work!
-  --       dim = false,
-  --       disabled_buftypes = {
-  --         'TelescopePrompt',
-  --         'mason',
-  --         'lazy',
-  --         'vim',
-  --         'nofile',
-  --       },
-  --     })
-  --   end,
-  -- },
   {
     'numToStr/Comment.nvim',
     event = { 'VeryLazy' },
@@ -2464,28 +2443,8 @@ require('lazy').setup({
       debug = false, -- enable wk.log in the current directory
     },
     config = function(_, opts)
-      -- local presets = require('which-key.plugins.presets')
-      --
-      -- presets.operators = vim.tbl_deep_extend('force', presets.operators, {
-      --   { '<leader>c',  desc = 'Comment' },
-      --   { '<leader>C',  desc = 'Comment' },
-      --   -- { '<leader>S', desc = 'Sort' },
-      --   -- { '<leader>sa', desc = 'Surround' },
-      --
-      --   -- add = '<leader>sa', -- Add surrounding in Normal and Visual modes
-      --   -- delete = '<leader>sd', -- Delete surrounding
-      --   -- find = '<leader>sf', -- Find surrounding (to the right)
-      --   -- find_left = '<leader>sF', -- Find surrounding (to the left)
-      --   -- highlight = '', -- Highlight surrounding
-      --   -- replace = '<leader>sr', -- Replace surrounding
-      --   -- update_n_lines = '<leader>sn', -- Update `n_lines`
-      -- })
-
       local wk = require('which-key')
       wk.setup(opts)
-
-      -- wk.register({ ['<CR>'] = 'Jump' })
-      -- wk.register({ ['<CR>'] = 'Jump' })
 
       wk.add({
         { '<leader>T', desc = 'Tags' },
@@ -2554,19 +2513,8 @@ require('lazy').setup({
           ret[#ret + 1] = { prefix .. obj[1], desc = obj.desc }
         end
       end
-      wk.add(ret, { notify = false })
 
-      -- ['<leader>c'] = 'Comment',
-      -- ['<leader>C'] = 'Comment',
-      -- ['<leader>S'] = 'Sort',
-      -- ['<leader>sa'] = 'Surround',
-      --
-      -- local objects = vim.deepcopy(presets.objects)
-      --
-      -- presets.objects = vim.tbl_deep_extend('force', {}, objects, {
-      --   ['a'] = { n = miniAI, N = miniAI },
-      --   ['i'] = { n = miniAI, N = miniAI },
-      -- })
+      wk.add(ret, { notify = false })
     end,
   },
   {
@@ -2685,13 +2633,11 @@ require('lazy').setup({
         },
       },
 
-      on_open = function(win)
+      on_open = function()
         require('ibl').update({ enabled = false })
-        -- require('eyeliner').disable()
       end,
       on_close = function()
         require('ibl').update({ enabled = true })
-        -- require('eyeliner').enable()
       end,
     },
   },
