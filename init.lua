@@ -346,21 +346,6 @@ vim.filetype.add({
 
 require('lazy').setup({
   {
-    'wincent/terminus',
-    lazy = false,
-    enabled = false,
-    priority = 1000,
-    init = function()
-      vim.g.TerminusCursorShape = 1
-      vim.g.TerminusInsertCursorShape = 0
-      vim.g.TerminusNormalCursorShape = 1
-      vim.g.TerminusReplaceCursorShape = 1
-      vim.g.TerminusMouse = 1
-      vim.g.TerminusFocusReporting = 1
-      vim.g.TerminusBracketedPaste = 0
-    end,
-  },
-  {
     'farmergreg/vim-lastplace',
     lazy = false,
     priority = 1000,
@@ -1181,6 +1166,12 @@ require('lazy').setup({
         end,
         glslls = function()
           lspconfig.glslls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+          })
+        end,
+        bashls = function()
+          lspconfig.bashls.setup({
             capabilities = capabilities,
             on_init = on_init,
           })
