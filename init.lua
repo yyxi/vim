@@ -1089,15 +1089,12 @@ require('lazy').setup({
       end
 
       local on_init = noop
+
       -- local on_init = function(client, _)
       --   if client.supports_method('textDocument/semanticTokens') then
       --     client.server_capabilities.semanticTokensProvider = nil
       --   end
       -- end
-
-      -- require('inc_rename').setup({
-      --   cmd_name = 'Rename'
-      -- })
 
       lsp_zero.on_attach(function(client, bufnr)
         vim.api.nvim_buf_set_keymap(
@@ -1163,54 +1160,113 @@ require('lazy').setup({
         end
       end)
 
-      require('mason-lspconfig').setup({
-        ensure_installed = {},
-        handlers = {
-          lsp_zero.default_setup,
-          dockerls = function()
-            lspconfig.dockerls.setup({})
-          end,
-          volar = function()
-            lspconfig.volar.setup({})
-          end,
-          taplo = function()
-            lspconfig.taplo.setup({})
-          end,
-          glslls = function()
-            lspconfig.glslls.setup({})
-          end,
-          yamlls = function()
-            lspconfig.yamlls.setup({
-              capabilities = capabilities,
-              on_init = on_init,
-              settings = {
-                yaml = {
-                  schemas = vim.list_extend({
-                    [vim.fn.expand('~/.vim/empty-schema.json')] = 'contents.yaml',
-                    ['https://json.schemastore.org/lefthook.json'] = {
-                      '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
-                    },
-                  }, require('schemastore').yaml.schemas()),
-                  validate = { enable = true },
-                },
+      local handlers = {
+        dockerls = function()
+          lspconfig.dockerls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+          })
+        end,
+        volar = function()
+          lspconfig.volar.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+          })
+        end,
+        taplo = function()
+          lspconfig.taplo.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+          })
+        end,
+        glslls = function()
+          lspconfig.glslls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+          })
+        end,
+        yamlls = function()
+          lspconfig.yamlls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+            settings = {
+              yaml = {
+                schemas = vim.list_extend({
+                  ['https://json.schemastore.org/lefthook.json'] = {
+                    '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
+                  },
+                }, require('schemastore').yaml.schemas()),
+                validate = { enable = true },
               },
-            })
-          end,
-          jsonls = function()
-            lspconfig.jsonls.setup({
-              capabilities = capabilities,
-              on_init = on_init,
-              settings = {
-                json = {
-                  schemas = require('schemastore').json.schemas(),
-                  validate = { enable = true },
-                },
+            },
+          })
+        end,
+        jsonls = function()
+          lspconfig.jsonls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+            settings = {
+              json = {
+                schemas = require('schemastore').json.schemas(),
+                validate = { enable = true },
               },
-            })
-          end,
-        },
+            },
+          })
+        end,
         lua_ls = function()
           require('lazydev').setup()
+          -- require('lspconfig').lua_ls.setup({
+          --   settings = {
+          --     Lua = {
+          --       telemetry = {
+          --         enable = false,
+          --       },
+          --     },
+          --   },
+          --   on_init = function(client)
+          --     -- local join = vim.fs.joinpath
+          --     -- local path = client.workspace_folders[1].name
+          --     --
+          --     -- -- Don't do anything if there is project local config
+          --     -- if
+          --     --   vim.uv.fs_stat(join(path, '.luarc.json'))
+          --     --   or vim.uv.fs_stat(join(path, '.luarc.jsonc'))
+          --     -- then
+          --     --   return
+          --     -- end
+          --     --
+          --     -- -- Apply neovim specific settings
+          --     -- local runtime_path = vim.split(package.path, ';')
+          --     -- table.insert(runtime_path, join('lua', '?.lua'))
+          --     -- table.insert(runtime_path, join('lua', '?', 'init.lua'))
+          --     --
+          --     -- local nvim_settings = {
+          --     --   runtime = {
+          --     --     -- Tell the language server which version of Lua you're using
+          --     --     version = 'LuaJIT',
+          --     --     path = runtime_path,
+          --     --   },
+          --     --   diagnostics = {
+          --     --     -- Get the language server to recognize the `vim` global
+          --     --     globals = { 'vim' },
+          --     --   },
+          --     --   workspace = {
+          --     --     checkThirdParty = false,
+          --     --     library = {
+          --     --       -- Make the server aware of Neovim runtime files
+          --     --       vim.env.VIMRUNTIME,
+          --     --       vim.fn.stdpath('config'),
+          --     --     },
+          --     --   },
+          --     -- }
+          --     --
+          --     -- client.config.settings.Lua = vim.tbl_deep_extend(
+          --     --   'force',
+          --     --   client.config.settings.Lua,
+          --     --   nvim_settings
+          --     -- )
+          --   end,
+          -- })
         end,
         pyright = function()
           lspconfig.pyright.setup({
@@ -1391,6 +1447,20 @@ require('lazy').setup({
             },
           })
         end,
+      }
+
+      local handler = function(server_name)
+        lsp_zero.default_setup()
+
+        if handlers[server_name] == nil then
+        else
+          handlers[server_name]()
+        end
+      end
+
+      require('mason-lspconfig').setup({
+        ensure_installed = {},
+        handlers = { handler },
       })
     end,
   },
@@ -1929,6 +1999,9 @@ require('lazy').setup({
       {
         'nvim-telescope/telescope-fzf-native.nvim',
         build = 'make',
+        cond = function()
+          return vim.fn.executable('make') == 1
+        end,
       },
       'nvim-treesitter/nvim-treesitter',
       'neovim/nvim-lspconfig',
