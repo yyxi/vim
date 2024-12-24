@@ -1146,6 +1146,12 @@ require('lazy').setup({
       end)
 
       local handlers = {
+        ansiblels = function()
+          lspconfig.ansiblels.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+          })
+        end,
         dockerls = function()
           lspconfig.dockerls.setup({
             capabilities = capabilities,
