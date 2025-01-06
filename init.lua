@@ -112,6 +112,13 @@ local function is_installed(binary)
   return false
 end
 
+-- Define the ternary function
+local function ternary(condition, true_value, false_value)
+  true_value = true_value or nil
+  false_value = false_value or nil
+  return condition and true_value or false_value
+end
+
 vim.api.nvim_set_keymap(
   'n',
   '<c-j>',
@@ -1146,12 +1153,32 @@ require('lazy').setup({
       end)
 
       local handlers = {
-        ansiblels = function()
+        ansiblels = ternary(is_installed('ansible-config'), function()
           lspconfig.ansiblels.setup({
             capabilities = capabilities,
             on_init = on_init,
+            settings = {
+              ansible = {
+                python = {
+                  interpreterPath = 'python',
+                },
+                ansible = {
+                  path = 'ansible',
+                },
+                executionEnvironment = {
+                  enabled = false,
+                },
+                validation = {
+                  enabled = true,
+                  lint = {
+                    enabled = is_installed('ansible-lint'),
+                    path = 'ansible-lint',
+                  },
+                },
+              },
+            },
           })
-        end,
+        end),
         dockerls = function()
           lspconfig.dockerls.setup({
             capabilities = capabilities,
@@ -1412,6 +1439,7 @@ require('lazy').setup({
               'typescriptreact',
               'vue',
               'yaml',
+              'yaml.ansible',
             },
             capabilities = capabilities,
             on_init = on_init,
