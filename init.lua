@@ -705,9 +705,6 @@ require('lazy').setup({
       -- hm('@lsp.mod.declaration',              { link = "@variable" })
       hi('@type.typescript', { link = "Normal" })
 
-      hi('EyelinerPrimary', { underline = true, bold = true })
-      hi('EyelinerSecondary', { bold = false, underline = true })
-
       hi('FlashLabel', { underline = true, bold = true, fg = '#ffffff' })
 
       hi('IndentBlanklineChar',
@@ -722,10 +719,6 @@ require('lazy').setup({
           fg =
           '#474247'
         })
-      hi('MiniJump', { link = 'SpellRare' })
-      hi('MiniJump2dSpot',
-        { reverse = true, bold = true, nocombine = true, sp = nil })
-      hi('MiniJump2dSpotUnique', { link = 'MiniJump2dSpot' })
 
       hi('Todo', { force = true, link = 'MiniHipatternsTodo' })
       hi('@comment.todo', { force = true, link = 'MiniHipatternsTodo' })
@@ -2776,11 +2769,6 @@ require('lazy').setup({
       })
     end,
   },
-  -- {
-  --   "arminfro/hand-side-fix.nvim",
-  --   event = "BufEnter",
-  --   opts = true
-  -- }
 }, {
   defaults = {
     lazy = true,
