@@ -119,30 +119,10 @@ local function ternary(condition, true_value, false_value)
   return condition and true_value or false_value
 end
 
-vim.api.nvim_set_keymap(
-  'n',
-  '<c-j>',
-  '<c-w>j',
-  { noremap = true, silent = true, desc = 'Go to the down window' }
-)
-vim.api.nvim_set_keymap(
-  'n',
-  '<c-k>',
-  '<c-w>k',
-  { noremap = true, silent = true, desc = 'Go to the up window' }
-)
-vim.api.nvim_set_keymap(
-  'n',
-  '<c-l>',
-  '<c-w>l',
-  { noremap = true, silent = true, desc = 'Go to the right window' }
-)
-vim.api.nvim_set_keymap(
-  'n',
-  '<c-h>',
-  '<c-w>h',
-  { noremap = true, silent = true, desc = 'Go to the left window' }
-)
+-- vim.api.nvim_set_keymap('n', '<c-w>j', { noremap = true, silent = true, desc = 'Go to the down window' })
+-- vim.api.nvim_set_keymap('n', '<c-w>k', { noremap = true, silent = true, desc = 'Go to the up window' })
+-- vim.api.nvim_set_keymap('n', '<c-w>l', { noremap = true, silent = true, desc = 'Go to the right window' })
+-- vim.api.nvim_set_keymap('n', '<c-w>h', { noremap = true, silent = true, desc = 'Go to the left window' })
 
 -- Using expression mappings for conditional behavior
 
@@ -873,8 +853,6 @@ require('lazy').setup({
           require('foldnav').goto_prev_start()
         end,
       },
-      -- { "<C-k>", function() require("foldnav").goto_prev_end() end },
-      -- { "<C-l>", function() require("foldnav").goto_end() end },
     },
   },
   {
@@ -1089,7 +1067,6 @@ require('lazy').setup({
           '<cmd>lua vim.lsp.buf.signature_help()<cr>',
           { noremap = true, silent = true, desc = 'Signature Help' }
         )
-
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
@@ -2768,6 +2745,50 @@ require('lazy').setup({
         prefix = '<leader>n',
       })
     end,
+  },
+  {
+    'aaronik/treewalker.nvim',
+    keys = {
+      -- Movement
+      {
+        '<C-S-k>',
+        '<cmd>Treewalker Up<cr>',
+        mode = { 'n', 'v' },
+        desc = 'Move up',
+        silent = true,
+      },
+      {
+        '<C-S-j>',
+        '<cmd>Treewalker Down<cr>',
+        mode = { 'n', 'v' },
+        desc = 'Move down',
+        silent = true,
+      },
+      {
+        '<C-S-l>',
+        '<cmd>Treewalker Right<cr>',
+        mode = { 'n', 'v' },
+        desc = 'Move right',
+        silent = true,
+      },
+      {
+        '<C-S-h>',
+        '<cmd>Treewalker Left<cr>',
+        mode = { 'n', 'v' },
+        desc = 'Move left',
+        silent = true,
+      },
+      -- Swapping
+      -- { '<C-S-j>', '<cmd>Treewalker SwapDown<cr>', mode = 'n', desc = 'Swap down', silent = true },
+      -- { '<C-S-k>', '<cmd>Treewalker SwapUp<cr>', mode = 'n', desc = 'Swap up', silent = true },
+      -- { '<C-S-l>', '<cmd>Treewalker SwapRight<CR>', mode = 'n', desc = 'Swap right', silent = true },
+      -- { '<C-S-h>', '<cmd>Treewalker SwapLeft<CR>', mode = 'n', desc = 'Swap left', silent = true },
+    },
+    opts = {
+      highlight = true,
+      highlight_duration = 250,
+      highlight_group = 'CursorLine',
+    },
   },
 }, {
   defaults = {
