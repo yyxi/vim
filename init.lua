@@ -721,6 +721,16 @@ require('lazy').setup({
       hi('LazyButtonActive', { force = true, link = 'Normal' })
       hi('LazyH1', { force = true, link = 'Normal' })
 
+
+      hi('LazyH1', { force = true, link = 'Normal' })
+
+      hi('AvanteConflictCurrent', { force = true, link = 'Normal' })
+      hi('AvanteConflictIncoming', { force = true, link = 'Normal' })
+      hi('AvanteConflictCurrentLabel', { force = true, link = 'Normal' })
+      hi('AvanteConflictIncomingLabel', { force = true, link = 'Normal' })
+      hi('AvantePopupHint', { force = true, link = 'Normal' })
+      hi('AvanteInlineHint', { force = true, link = 'Normal' })
+
       -- hi('@conditional',                      { force = true,     link = 'Conditional' })
       -- hi('@debug',                            { force = true,     link = 'Debug' })
       -- hi('@define',                           { force = true,     link = 'Define' })
@@ -1120,6 +1130,10 @@ require('lazy').setup({
         if client.name == 'ruff' then
           client.server_capabilities.hoverProvider = false
         end
+
+        if client.name == 'cssls' then
+          client.server_capabilities.diagnosticProvider = false
+        end
       end)
 
       local handlers = {
@@ -1151,6 +1165,12 @@ require('lazy').setup({
         end),
         dockerls = function()
           lspconfig.dockerls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
+          })
+        end,
+        terraformls = function()
+          lspconfig.terraformls.setup({
             capabilities = capabilities,
             on_init = on_init,
           })
@@ -1205,6 +1225,12 @@ require('lazy').setup({
                 validate = { enable = true },
               },
             },
+          })
+        end,
+        cssls = function()
+          lspconfig.cssls.setup({
+            capabilities = capabilities,
+            on_init = on_init,
           })
         end,
         lua_ls = function()
@@ -1558,7 +1584,7 @@ require('lazy').setup({
           markdown = { 'prettier' },
           sh = { 'shfmt' },
           typescript = { 'prettier' },
-          typescriptreact = { 'prettier', lsp_format = 'first' },
+          typescriptreact = { 'prettier' },
           css = { 'prettier' },
           vue = { 'prettier' },
           yaml = { 'prettier' },
@@ -1892,7 +1918,7 @@ require('lazy').setup({
       require('Comment').setup({
         toggler = {
           line = '<leader>cc',
-          block = '<leader>Cc',
+          block = '<leader>cC',
         },
         opleader = {
           line = '<leader>c',
@@ -2290,12 +2316,12 @@ require('lazy').setup({
   {
     'echasnovski/mini.align',
     version = '*',
-    keys = { { '<leader>a', mode = { 'n', 'x' }, desc = 'Align' } },
+    keys = { { '<leader>l', mode = { 'n', 'x' }, desc = 'Align' } },
     config = function()
       require('mini.align').setup({
         mappings = {
           start = '',
-          start_with_preview = '<leader>a',
+          start_with_preview = '<leader>l',
         },
         --  ['s'] = --<function: enter split pattern>,
         --  ['j'] = --<function: choose justify side>,
@@ -2515,7 +2541,11 @@ require('lazy').setup({
       wk.setup(opts)
 
       wk.add({
+        { '<leader>c', desc = 'Comment' },
         { '<leader>T', desc = 'Tags' },
+        { '<leader>n', desc = 'Case', mode = { 'n', 'x' } },
+        { '<leader>a', desc = 'Avante', mode = { 'n', 'x' } },
+        { '<leader>s', desc = 'Surround', mode = { 'n', 'x' } },
         { '<leader>sa', desc = 'Add surrounding', mode = { 'n', 'x' } },
         { '<leader>sd', desc = 'Delete surrounding', mode = 'n' },
         { '<leader>sf', desc = 'Find surrounding', mode = 'n' },
@@ -2785,9 +2815,194 @@ require('lazy').setup({
       -- { '<C-S-h>', '<cmd>Treewalker SwapLeft<CR>', mode = 'n', desc = 'Swap left', silent = true },
     },
     opts = {
-      highlight = true,
+      highlight = false,
       highlight_duration = 250,
       highlight_group = 'CursorLine',
+    },
+  },
+  -- {
+  --   -- Make sure to set this up properly if you have lazy=true
+  --   'MeanderingProgrammer/render-markdown.nvim',
+  --   opts = {
+  --     file_types = { 'markdown', 'Avante' },
+  --     sign = {
+  --       enabled = false,
+  --     },
+  --   },
+  --   ft = { 'markdown', 'Avante' },
+  -- },
+  {
+    'yetone/avante.nvim',
+    event = 'VeryLazy',
+    -- lazy = false,
+    version = false, -- set this to "*" if you want to always pull the latest change, false to update on release
+    opts = {
+      debug = false,
+      ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "vertex" | "cohere" | "copilot" | string
+      provider = 'openai', -- Only recommend using Claude
+      auto_suggestions_provider = 'openai',
+
+      ---@type AvanteSupportedProvider
+      openai = {
+        endpoint = 'https://api.openai.com/v1',
+        model = 'gpt-4o',
+      },
+      ---Specify the behaviour of avante.nvim
+      ---1. auto_apply_diff_after_generation: Whether to automatically apply diff after LLM response.
+      ---                                     This would simulate similar behaviour to cursor. Default to false.
+      ---2. auto_set_keymaps                : Whether to automatically set the keymap for the current line. Default to true.
+      ---                                     Note that avante will safely set these keymap. See https://github.com/yetone/avante.nvim/wiki#keymaps-and-api-i-guess for more details.
+      ---3. auto_set_highlight_group        : Whether to automatically set the highlight group for the current line. Default to true.
+      ---4. support_paste_from_clipboard    : Whether to support pasting image from clipboard. This will be determined automatically based whether img-clip is available or not.
+      ---5. minimize_diff                   : Whether to remove unchanged lines when applying a code block
+      behaviour = {
+        auto_focus_sidebar = true,
+        auto_suggestions = false, -- Experimental stage
+        auto_suggestions_respect_ignore = false,
+        auto_set_highlight_group = true,
+        auto_set_keymaps = true,
+        auto_apply_diff_after_generation = false,
+        support_paste_from_clipboard = false,
+        minimize_diff = true,
+      },
+      history = {
+        max_tokens = 4096,
+      },
+      mappings = {
+        ---@class AvanteConflictMappings
+        diff = {
+          ours = 'co',
+          theirs = 'ct',
+          all_theirs = 'ca',
+          both = 'cb',
+          cursor = 'cc',
+          next = ']x',
+          prev = '[x',
+        },
+        suggestion = {
+          accept = '<M-l>',
+          next = '<M-]>',
+          prev = '<M-[>',
+          dismiss = '<C-]>',
+        },
+        jump = {
+          next = ']]',
+          prev = '[[',
+        },
+        submit = {
+          normal = '<CR>',
+          insert = '<C-s>',
+        },
+        -- NOTE: The following will be safely set by avante.nvim
+        ask = '<leader>aa',
+        edit = '<leader>ae',
+        refresh = '<leader>ar',
+        focus = '<leader>af',
+        toggle = {
+          default = '<leader>at',
+          debug = '<leader>ad',
+          hint = '<leader>ah',
+          suggestion = '<leader>as',
+          repomap = '<leader>aR',
+        },
+        sidebar = {
+          apply_all = 'A',
+          apply_cursor = 'a',
+          switch_windows = '<Tab>',
+          reverse_switch_windows = '<S-Tab>',
+          remove_file = 'd',
+          add_file = '@',
+        },
+        files = {
+          add_current = '<leader>ac', -- Add current buffer to selected files
+        },
+      },
+      windows = {
+        ---@alias AvantePosition "right" | "left" | "top" | "bottom" | "smart"
+        position = 'right',
+        wrap = true, -- similar to vim.o.wrap
+        width = 30, -- default % based on available width in vertical layout
+        height = 30, -- default % based on available height in horizontal layout
+        sidebar_header = {
+          enabled = false, -- true, false to enable/disable the header
+          align = 'center', -- left, center, right for title
+          rounded = true,
+        },
+        input = {
+          prefix = '> ',
+          height = 8, -- Height of the input window in vertical layout
+        },
+        edit = {
+          border = 'rounded',
+          start_insert = true, -- Start insert mode when opening the edit window
+        },
+        ask = {
+          floating = false, -- Open the 'AvanteAsk' prompt in a floating window
+          border = 'rounded',
+          start_insert = true, -- Start insert mode when opening the ask window
+          ---@alias AvanteInitialDiff "ours" | "theirs"
+          focus_on_apply = 'ours', -- which diff to focus after applying
+        },
+      },
+      --- @class AvanteConflictConfig
+      diff = {
+        autojump = true,
+        --- Override the 'timeoutlen' setting while hovering over a diff (see :help timeoutlen).
+        --- Helps to avoid entering operator-pending mode with diff mappings starting with `c`.
+        --- Disable by setting to -1.
+        override_timeoutlen = 500,
+      },
+      --- @class AvanteHintsConfig
+      hints = {
+        enabled = false,
+      },
+      --- @class AvanteRepoMapConfig
+      repo_map = {
+        ignore_patterns = {
+          '%.git',
+          '%.worktree',
+          '__pycache__',
+          'node_modules',
+        }, -- ignore files matching these
+        negate_patterns = {}, -- negate ignore files matching these.
+      },
+      --- @class AvanteFileSelectorConfig
+      file_selector = {
+        --- @alias FileSelectorProvider "native" | "fzf" | "telescope" | string
+        provider = 'native',
+        -- Options override for custom providers
+        provider_opts = {},
+      },
+    },
+    -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
+    build = 'make',
+    -- build = "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false" -- for windows
+    dependencies = {
+      'stevearc/dressing.nvim',
+      'nvim-lua/plenary.nvim',
+      'MunifTanjim/nui.nvim',
+      -- 'MeanderingProgrammer/render-markdown.nvim',
+      --- The below dependencies are optional,
+      -- 'hrsh7th/nvim-cmp', -- autocompletion for avante commands and mentions
+      -- 'nvim-tree/nvim-web-devicons', -- or echasnovski/mini.icons
+      -- 'zbirenbaum/copilot.lua', -- for providers='copilot'
+      -- {
+      --   -- support for image pasting
+      --   'HakonHarnes/img-clip.nvim',
+      --   event = 'VeryLazy',
+      --   opts = {
+      --     -- recommended settings
+      --     default = {
+      --       embed_image_as_base64 = false,
+      --       prompt_for_file_name = false,
+      --       drag_and_drop = {
+      --         insert_mode = true,
+      --       },
+      --       -- required for Windows users
+      --       use_absolute_path = true,
+      --     },
+      --   },
+      -- },
     },
   },
 }, {
