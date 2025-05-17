@@ -736,6 +736,34 @@ require('lazy').setup({
       hi('AvantePopupHint', { force = true, link = 'Normal' })
       hi('AvanteInlineHint', { force = true, link = 'Normal' })
 
+      hi('Pmenu', { fg = p.base05, bg = p.base00, sp = nil, force = true })
+      hi('PmenuExtra', { fg = p.base05, bg = p.base00, sp = nil, force = true })
+      hi('PmenuKind', { fg = p.base05, bg = p.base00, sp = nil, force = true })
+      hi('PmenuSbar', { fg = nil, bg = p.base01, sp = nil, force = true })
+      hi('PmenuThumb', { fg = nil, bg = p.base07, sp = nil, force = true })
+      hi('PmenuExtraSel',
+        { fg = p.base05, bg = p.base00, reverse = true, sp = nil, force = true })
+      hi('PmenuKindSel',
+        { fg = p.base05, bg = p.base00, reverse = true, sp = nil, force = true })
+      hi('PmenuSel',
+        { fg = p.base05, bg = p.base00, reverse = true, sp = nil, force = true })
+      hi('PmenuMatch',
+        { fg = p.base05, bg = p.base00, bold = true, sp = nil, force = true })
+      hi('PmenuMatchSel',
+        { fg = p.base05, bg = p.base00, bold = true, reverse = true, sp = nil, force = true })
+
+      hi('CmpItemAbbr', { fg = p.base05, bg = nil, sp = nil, force = true })
+      hi('CmpItemAbbrDeprecated',
+        { fg = p.base03, bg = nil, sp = nil, force = true })
+      hi('CmpItemAbbrMatch',
+        { fg = p.base0A, bg = nil, bold = true, sp = nil, force = true })
+      hi('CmpItemAbbrMatchFuzzy',
+        { fg = p.base0A, bg = nil, bold = true, sp = nil, force = true })
+      hi('CmpItemKind', { fg = p.base0F, bg = p.base00, sp = nil, force = true })
+      hi('CmpItemMenu', { fg = p.base05, bg = p.base00, sp = nil, force = true })
+
+      hi('BlinkCmpLabelDescription', { force = true, link = 'Comment' })
+
       -- hi('MasonHeader', { force = true, fg = p.base00, bg = nil, nocombine = true })
 
       -- hi('@conditional',                      { force = true,     link = 'Conditional' })
@@ -986,7 +1014,7 @@ require('lazy').setup({
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
-      { 'hrsh7th/cmp-nvim-lsp' },
+      { 'saghen/blink.cmp' },
       {
         'mason-org/mason-lspconfig.nvim',
         dependencies = { 'mason-org/mason.nvim' },
@@ -1033,27 +1061,32 @@ require('lazy').setup({
 
       require('lspconfig.ui.windows').default_options.border = 'rounded'
 
-      local capabilities = require('cmp_nvim_lsp').default_capabilities()
+      local capabilities = vim.tbl_deep_extend(
+        'force',
+        vim.lsp.protocol.make_client_capabilities(),
+        require('blink.cmp').get_lsp_capabilities({}, false)
+        -- require('cmp_nvim_lsp').default_capabilities()
+      )
 
-      if capabilities ~= nil then
-        capabilities.textDocument.completion.completionItem = {
-          documentationFormat = { 'markdown', 'plaintext' },
-          snippetSupport = true,
-          preselectSupport = true,
-          insertReplaceSupport = true,
-          labelDetailsSupport = true,
-          deprecatedSupport = true,
-          commitCharactersSupport = true,
-          tagSupport = { valueSet = { 1 } },
-          resolveSupport = {
-            properties = {
-              'documentation',
-              'detail',
-              'additionalTextEdits',
-            },
-          },
-        }
-      end
+      -- if capabilities ~= nil then
+      --   capabilities.textDocument.completion.completionItem = {
+      --     documentationFormat = { 'markdown', 'plaintext' },
+      --     snippetSupport = true,
+      --     preselectSupport = true,
+      --     insertReplaceSupport = true,
+      --     labelDetailsSupport = true,
+      --     deprecatedSupport = true,
+      --     commitCharactersSupport = true,
+      --     tagSupport = { valueSet = { 1 } },
+      --     resolveSupport = {
+      --       properties = {
+      --         'documentation',
+      --         'detail',
+      --         'additionalTextEdits',
+      --       },
+      --     },
+      --   }
+      -- end
 
       local on_attach = function(client, bufnr)
         vim.api.nvim_buf_set_keymap(
@@ -1509,161 +1542,208 @@ require('lazy').setup({
     end,
   },
   {
-    'hrsh7th/nvim-cmp',
+    'saghen/blink.cmp',
+    version = '1.*',
     event = 'InsertEnter',
     dependencies = {
-      { 'neovim/nvim-lspconfig' },
-      { 'hrsh7th/cmp-nvim-lsp' },
-      -- { 'hrsh7th/cmp-nvim-lua' },
-      { 'hrsh7th/cmp-buffer' },
-      { 'hrsh7th/cmp-path' },
+      { 'xzbdmw/colorful-menu.nvim' },
+      { 'rafamadriz/friendly-snippets' },
       {
-        'saadparwaiz1/cmp_luasnip',
+        'L3MON4D3/LuaSnip',
+        version = 'v2.*',
+        build = 'make install_jsregexp',
         config = noop,
-        dependencies = {
-          {
-            'L3MON4D3/LuaSnip',
-            dependencies = { 'rafamadriz/friendly-snippets' },
-            build = 'make install_jsregexp',
-            config = noop,
-          },
-        },
+        dependencies = { { 'rafamadriz/friendly-snippets' } },
       },
     },
     config = function()
-      -- And you can configure cmp even more, if you want to.
-      local cmp = require('cmp')
-      -- local cmp_action = lsp_zero.cmp_action()
-
+      local cmp = require('blink.cmp')
       local luasnip = require('luasnip')
-      luasnip.config.setup()
 
-      vim.api.nvim_create_autocmd('InsertLeave', {
-        callback = function()
-          if
-            require('luasnip').session.current_nodes[vim.api.nvim_get_current_buf()]
-            and not require('luasnip').session.jump_active
-          then
-            require('luasnip').unlink_current()
-          end
-        end,
-      })
+      luasnip.config.setup()
 
       require('luasnip.loaders.from_vscode').lazy_load({
         exclude = { 'html', 'all' },
       })
 
+      ---@module 'blink.cmp'
+      ---@type blink.cmp.Config
       cmp.setup({
-        preselect = cmp.PreselectMode.None,
+        snippets = { preset = 'luasnip' },
+        keymap = {
+          preset = 'none',
+          ['<Up>'] = { 'select_prev', 'fallback' },
+          ['<Down>'] = { 'select_next', 'fallback' },
+          ['<CR>'] = { 'accept', 'fallback' },
+          ['<Tab>'] = { 'select_next', 'snippet_forward', 'fallback' },
+          ['<S-Tab>'] = { 'select_prev', 'snippet_backward', 'fallback' },
+          ['<Esc>'] = { 'fallback' },
+        },
+        appearance = {
+          use_nvim_cmp_as_default = true,
+          -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
+          -- Adjusts spacing to ensure icons are aligned
+          nerd_font_variant = 'mono',
+        },
+        -- signature = { enabled = true },
         completion = {
-          completeopt = 'menu,menuone,noinsert,noselect',
-          -- scrollbar = false,
-        },
-        snippet = {
-          expand = function(args)
-            luasnip.lsp_expand(args.body, {})
-          end,
-        },
-        sources = cmp.config.sources({
-          { priority = 16, name = 'nvim_lsp' },
-          { priority = 2, name = 'buffer' },
-          { priority = 8, name = 'luasnip' },
-          { priority = 8, name = 'path' },
-        }, {}),
-        sorting = {
-          priority_weight = 10,
-          comparators = {
-            cmp.config.compare.score,
-            cmp.config.compare.exact,
-            cmp.config.compare.scopes,
-            cmp.config.compare.locality,
-            cmp.config.compare.recently_used,
-            cmp.config.compare.sort_text,
+          documentation = {
+            auto_show = true,
+            auto_show_delay_ms = 50,
+            window = { border = 'rounded' },
+          },
+          trigger = {
+            show_in_snippet = false,
+          },
+          list = {
+            cycle = {
+              from_bottom = true,
+              from_top = true,
+            },
+            selection = {
+              preselect = false,
+              -- preselect = function(ctx)
+              --   return not cmp.snippet_active()
+              -- end,
+              auto_insert = function(ctx)
+                return not cmp.snippet_active()
+              end,
+            },
+          },
+          ghost_text = { enabled = true },
+          menu = {
+            border = 'rounded',
+            winblend = 10,
+            draw = {
+              padding = { 1, 1 },
+              columns = {
+                { 'label' },
+                { 'label_description' },
+                { 'source_name' },
+              },
+              components = {
+                source_name = {
+                  text = function(ctx)
+                    local source_name = ctx.source_name
+
+                    if source_name == 'Snippets' then
+                      return '∫'
+                    end
+
+                    if source_name == 'LSP' then
+                      return '∴'
+                    end
+
+                    if source_name == 'Path' then
+                      return '☇'
+                    end
+
+                    return source_name
+                  end,
+                },
+                label_description = {
+                  width = { fill = true, max = 60 },
+                },
+                label = {
+                  width = { fill = true, max = 60 },
+                  text = function(ctx)
+                    return ctx.label .. ctx.label_detail
+                  end,
+                  highlight = function(ctx)
+                    -- label and label details
+                    local highlights = {
+                      {
+                        0,
+                        #ctx.label,
+                        group = ctx.deprecated and 'BlinkCmpLabelDeprecated'
+                          or 'BlinkCmpLabel',
+                      },
+                    }
+                    if ctx.label_detail then
+                      table.insert(highlights, {
+                        #ctx.label,
+                        #ctx.label + #ctx.label_detail,
+                        group = 'BlinkCmpLabelDetail',
+                      })
+                    end
+
+                    return highlights
+                  end,
+                },
+              },
+            },
           },
         },
-        window = {
-          completion = cmp.config.window.bordered(),
-          documentation = cmp.config.window.bordered(),
+        sources = {
+          default = { 'lsp', 'path', 'snippets', 'buffer' },
         },
-        -- formatting = lsp_zero.cmp_format({ details = true }),
-        mapping = cmp.mapping.preset.insert({
-          -- ['<C-e>'] = cmp.mapping(function( --[[ fallback ]]) if cmp.visible() then cmp.abort() else cmp.complete() end end),
-          -- ['<C-f>'] = cmp.mapping.scroll_docs(5),
-          -- ['<C-n>'] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Insert }),
-          -- ['<C-p>'] = cmp.mapping.select_prev_item({ behavior = cmp.SelectBehavior.Insert }),
-          -- ['<C-u>'] = cmp.mapping.scroll_docs(-5),
-          -- ['<C-y>'] = cmp.mapping.confirm({ select = false }),
-          ['<C-Space>'] = cmp.mapping.complete(),
-          ['<CR>'] = cmp.mapping.confirm({
-            behavior = cmp.ConfirmBehavior.Insert,
-            select = true,
-          }),
-          ['<Up>'] = cmp.mapping.select_prev_item({
-            behavior = cmp.SelectBehavior.Insert,
-          }),
-          ['<Down>'] = cmp.mapping.select_next_item({
-            behavior = cmp.SelectBehavior.Insert,
-          }),
-          ['<Tab>'] = cmp.mapping(function(fallback)
-            local col = vim.fn.col('.') - 1
-
-            if cmp.visible() then
-              cmp.select_next_item()
-            elseif luasnip.expand_or_locally_jumpable() then
-              luasnip.expand_or_jump()
-            elseif
-              col == 0 or vim.fn.getline('.'):sub(col, col):match('%s')
-            then
-              fallback()
-            else
-              cmp.complete()
-            end
-          end, { 'i', 's' }),
-          ['<S-Tab>'] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-              cmp.select_prev_item()
-            elseif luasnip.locally_jumpable(-1) then
-              luasnip.jump(-1)
-            else
-              fallback()
-            end
-          end, { 'i', 's' }),
-          -- ['<Tab>'] = cmp.mapping(function(fallback)
-          --   if cmp.visible() then
-          --     cmp.select_next_item()
-          --   elseif require('luasnip').expand_or_jumpable() then
-          --     vim.fn.feedkeys(
-          --       vim.api.nvim_replace_termcodes(
-          --         '<Plug>luasnip-expand-or-jump',
-          --         true,
-          --         true,
-          --         true
-          --       ),
-          --       ''
-          --     )
-          --   else
-          --     fallback()
-          --   end
-          -- end, { 'i', 's' }),
-          --
-          -- ['<S-Tab>'] = cmp.mapping(function(fallback)
-          --   if cmp.visible() then
-          --     cmp.select_prev_item()
-          --   elseif require('luasnip').jumpable(-1) then
-          --     vim.fn.feedkeys(
-          --       vim.api.nvim_replace_termcodes(
-          --         '<Plug>luasnip-jump-prev',
-          --         true,
-          --         true,
-          --         true
-          --       ),
-          --       ''
-          --     )
-          --   else
-          --     fallback()
-          --   end
-          -- end, { 'i', 's' }),
-        }),
+        fuzzy = {
+          sorts = {
+            'exact',
+            -- defaults
+            'score',
+            'sort_text',
+          },
+          implementation = 'prefer_rust_with_warning',
+        },
+        cmdline = {
+          enabled = true,
+          keymap = {
+            preset = 'none',
+            ['<Up>'] = { 'select_prev', 'fallback' },
+            ['<Down>'] = { 'select_next', 'fallback' },
+            ['<CR>'] = { 'accept', 'fallback' },
+            ['<Tab>'] = {
+              function(cmp)
+                if
+                  not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!')
+                then
+                  return true
+                end
+              end,
+              'show_and_insert',
+              'select_next',
+            },
+            ['<S-Tab>'] = {
+              function(cmp)
+                if
+                  not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!')
+                then
+                  return true
+                end
+              end,
+              'show_and_insert',
+              'select_prev',
+            },
+            ['<Esc>'] = { 'fallback' },
+          },
+          completion = {
+            list = {
+              cycle = {
+                from_bottom = true,
+                from_top = true,
+              },
+              selection = {
+                preselect = false,
+                auto_insert = true,
+              },
+            },
+            menu = {
+              draw = {
+                padding = { 1, 1 },
+                columns = {
+                  { 'label' },
+                },
+              },
+              auto_show = function(ctx)
+                return vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!'
+              end,
+            },
+            ghost_text = {
+              enabled = false,
+            },
+          },
+        },
       })
     end,
   },
@@ -1867,7 +1947,6 @@ require('lazy').setup({
   {
     'windwp/nvim-autopairs',
     event = 'InsertEnter',
-    dependencies = { 'hrsh7th/nvim-cmp' },
     config = function()
       require('nvim-autopairs').setup({
         check_ts = true,
@@ -1877,9 +1956,9 @@ require('lazy').setup({
         disable_filetype = { 'TelescopePrompt', 'mason', 'lazy', 'vim' },
       })
 
-      local cmp_autopairs = require('nvim-autopairs.completion.cmp')
-      local cmp = require('cmp')
-      cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
+      -- local cmp_autopairs = require('nvim-autopairs.completion.cmp')
+      -- local cmp = require('cmp')
+      -- cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
     end,
   },
   {
@@ -2119,19 +2198,20 @@ require('lazy').setup({
   {
     'folke/flash.nvim',
     event = 'VeryLazy',
+    ---@type Flash.Config
     opts = {
-      -- search = {
-      --   exclude = {
-      --     'notify',
-      --     'cmp_menu',
-      --     'noice',
-      --     'flash_prompt',
-      --     function(win)
-      --       -- exclude non-focusable windows
-      --       return not vim.api.nvim_win_get_config(win).focusable
-      --     end,
-      --   },
-      -- },
+      search = {
+        exclude = {
+          'notify',
+          'cmp_menu',
+          'noice',
+          'flash_prompt',
+          function(win)
+            -- exclude non-focusable windows
+            return not vim.api.nvim_win_get_config(win).focusable
+          end,
+        },
+      },
       modes = {
         search = {
           enabled = true,
@@ -2590,8 +2670,12 @@ require('lazy').setup({
         },
         display_time = 500, -- time the cybu window is displayed
         exclude = { -- filetypes, cybu will not be active
-          'neo-tree',
+          'cmp_menu',
+          'flash_prompt',
           'fugitive',
+          'neo-tree',
+          'noice',
+          'notify',
           'qf',
         },
         filter = {
@@ -2739,188 +2823,6 @@ require('lazy').setup({
       highlight_group = 'CursorLine',
     },
   },
-  -- {
-  --   -- Make sure to set this up properly if you have lazy=true
-  --   'MeanderingProgrammer/render-markdown.nvim',
-  --   opts = {
-  --     file_types = { 'markdown', 'Avante' },
-  --     sign = {
-  --       enabled = false,
-  --     },
-  --   },
-  --   ft = { 'markdown', 'Avante' },
-  -- },
-  {
-    'yetone/avante.nvim',
-    event = 'VeryLazy',
-    -- lazy = false,
-    version = false, -- set this to "*" if you want to always pull the latest change, false to update on release
-    opts = {
-      debug = false,
-      provider = 'openai', -- Only recommend using Claude
-      auto_suggestions_provider = 'openai',
-
-      openai = {
-        endpoint = 'https://api.openai.com/v1',
-        model = 'gpt-4o',
-      },
-      ---Specify the behaviour of avante.nvim
-      ---1. auto_apply_diff_after_generation: Whether to automatically apply diff after LLM response.
-      ---                                     This would simulate similar behaviour to cursor. Default to false.
-      ---2. auto_set_keymaps                : Whether to automatically set the keymap for the current line. Default to true.
-      ---                                     Note that avante will safely set these keymap. See https://github.com/yetone/avante.nvim/wiki#keymaps-and-api-i-guess for more details.
-      ---3. auto_set_highlight_group        : Whether to automatically set the highlight group for the current line. Default to true.
-      ---4. support_paste_from_clipboard    : Whether to support pasting image from clipboard. This will be determined automatically based whether img-clip is available or not.
-      ---5. minimize_diff                   : Whether to remove unchanged lines when applying a code block
-      behaviour = {
-        auto_focus_sidebar = true,
-        auto_suggestions = false, -- Experimental stage
-        auto_suggestions_respect_ignore = false,
-        auto_set_highlight_group = true,
-        auto_set_keymaps = true,
-        auto_apply_diff_after_generation = false,
-        support_paste_from_clipboard = false,
-        minimize_diff = true,
-      },
-      history = {
-        max_tokens = 4096,
-      },
-      mappings = {
-        ---@class AvanteConflictMappings
-        diff = {
-          ours = 'co',
-          theirs = 'ct',
-          all_theirs = 'ca',
-          both = 'cb',
-          cursor = 'cc',
-          next = ']x',
-          prev = '[x',
-        },
-        suggestion = {
-          accept = '<M-l>',
-          next = '<M-]>',
-          prev = '<M-[>',
-          dismiss = '<C-]>',
-        },
-        jump = {
-          next = ']]',
-          prev = '[[',
-        },
-        submit = {
-          normal = '<CR>',
-          insert = '<C-s>',
-        },
-        -- NOTE: The following will be safely set by avante.nvim
-        ask = '<leader>aa',
-        edit = '<leader>ae',
-        refresh = '<leader>ar',
-        focus = '<leader>af',
-        toggle = {
-          default = '<leader>at',
-          debug = '<leader>ad',
-          hint = '<leader>ah',
-          suggestion = '<leader>as',
-          repomap = '<leader>aR',
-        },
-        sidebar = {
-          apply_all = 'A',
-          apply_cursor = 'a',
-          switch_windows = '<Tab>',
-          reverse_switch_windows = '<S-Tab>',
-          remove_file = 'd',
-          add_file = '@',
-        },
-        files = {
-          add_current = '<leader>ac', -- Add current buffer to selected files
-        },
-      },
-      windows = {
-        position = 'right',
-        wrap = true, -- similar to vim.o.wrap
-        width = 30, -- default % based on available width in vertical layout
-        height = 30, -- default % based on available height in horizontal layout
-        sidebar_header = {
-          enabled = false, -- true, false to enable/disable the header
-          align = 'center', -- left, center, right for title
-          rounded = true,
-        },
-        input = {
-          prefix = '> ',
-          height = 8, -- Height of the input window in vertical layout
-        },
-        edit = {
-          border = 'rounded',
-          start_insert = true, -- Start insert mode when opening the edit window
-        },
-        ask = {
-          floating = false, -- Open the 'AvanteAsk' prompt in a floating window
-          border = 'rounded',
-          start_insert = true, -- Start insert mode when opening the ask window
-          ---@alias AvanteInitialDiff "ours" | "theirs"
-          focus_on_apply = 'ours', -- which diff to focus after applying
-        },
-      },
-      --- @class AvanteConflictConfig
-      diff = {
-        autojump = true,
-        --- Override the 'timeoutlen' setting while hovering over a diff (see :help timeoutlen).
-        --- Helps to avoid entering operator-pending mode with diff mappings starting with `c`.
-        --- Disable by setting to -1.
-        override_timeoutlen = 500,
-      },
-      --- @class AvanteHintsConfig
-      hints = {
-        enabled = false,
-      },
-      --- @class AvanteRepoMapConfig
-      repo_map = {
-        ignore_patterns = {
-          '%.git',
-          '%.worktree',
-          '__pycache__',
-          'node_modules',
-        }, -- ignore files matching these
-        negate_patterns = {}, -- negate ignore files matching these.
-      },
-      --- @class AvanteFileSelectorConfig
-      file_selector = {
-        --- @alias FileSelectorProvider "native" | "fzf" | "telescope" | string
-        provider = 'native',
-        -- Options override for custom providers
-        provider_opts = {},
-      },
-    },
-    -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
-    build = 'make',
-    -- build = "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false" -- for windows
-    dependencies = {
-      'stevearc/dressing.nvim',
-      'nvim-lua/plenary.nvim',
-      'MunifTanjim/nui.nvim',
-      -- 'MeanderingProgrammer/render-markdown.nvim',
-      --- The below dependencies are optional,
-      -- 'hrsh7th/nvim-cmp', -- autocompletion for avante commands and mentions
-      -- 'nvim-tree/nvim-web-devicons', -- or echasnovski/mini.icons
-      -- 'zbirenbaum/copilot.lua', -- for providers='copilot'
-      -- {
-      --   -- support for image pasting
-      --   'HakonHarnes/img-clip.nvim',
-      --   event = 'VeryLazy',
-      --   opts = {
-      --     -- recommended settings
-      --     default = {
-      --       embed_image_as_base64 = false,
-      --       prompt_for_file_name = false,
-      --       drag_and_drop = {
-      --         insert_mode = true,
-      --       },
-      --       -- required for Windows users
-      --       use_absolute_path = true,
-      --     },
-      --   },
-      -- },
-    },
-  },
 }, {
   defaults = {
     lazy = true,
@@ -2979,7 +2881,3 @@ require('lazy').setup({
     },
   },
 })
-
--- TODO: {'akinsho/git-conflict.nvim', version = "*", config = true}
--- https://github.com/akinsho/git-conflict.nvim
--- https://github.com/nvim-neotest/neotest
