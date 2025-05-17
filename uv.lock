@@ -38,34 +38,25 @@ wheels = [
 ]
 
 [[package]]
-name = "neovim"
-version = "0.3.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pynvim" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/78/ec/ac9905ccab8774b64c37cdff9e08db320c349eda0ae3161aebcac83e5590/neovim-0.3.1.tar.gz", hash = "sha256:a6a0e7a5b4433bf4e6ddcbc5c5ff44170be7d84259d002b8e8d8fb4ee78af60f", size = 804 }
-
-[[package]]
 name = "pip"
-version = "24.2"
+version = "25.1.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4d/87/fb90046e096a03aeab235e139436b3fe804cdd447ed2093b0d70eba3f7f8/pip-24.2.tar.gz", hash = "sha256:5b5e490b5e9cb275c879595064adce9ebd31b854e3e803740b72f9ccf34a45b8", size = 1922041 }
+sdist = { url = "https://files.pythonhosted.org/packages/59/de/241caa0ca606f2ec5fe0c1f4261b0465df78d786a38da693864a116c37f4/pip-25.1.1.tar.gz", hash = "sha256:3de45d411d308d5054c2168185d8da7f9a2cd753dbac8acbfa88a8909ecd9077", size = 1940155 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/55/90db48d85f7689ec6f81c0db0622d704306c5284850383c090e6c7195a5c/pip-24.2-py3-none-any.whl", hash = "sha256:2cd581cf58ab7fcfca4ce8efa6dcacd0de5bf8d0a3eb9ec927e07405f4d9e2a2", size = 1815170 },
+    { url = "https://files.pythonhosted.org/packages/29/a2/d40fb2460e883eca5199c62cfc2463fd261f760556ae6290f88488c362c0/pip-25.1.1-py3-none-any.whl", hash = "sha256:2913a38a2abf4ea6b64ab507bd9e967f3b53dc1ede74b01b0931e1ce548751af", size = 1825227 },
 ]
 
 [[package]]
 name = "pynvim"
-version = "0.5.0"
+version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "greenlet" },
+    { name = "greenlet", marker = "platform_python_implementation != 'PyPy'" },
     { name = "msgpack" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ce/17/259ab6acfb3fc85e209a649b0de1800c50f875bb946ac9df050827da8970/pynvim-0.5.0.tar.gz", hash = "sha256:e80a11f6f5d194c6a47bea4135b90b55faca24da3544da7cf4a5f7ba8fb09215", size = 47584 }
+sdist = { url = "https://files.pythonhosted.org/packages/09/84/c77ec45e084907e128710e08f5d7926723d7a67ccbebf27089309118807d/pynvim-0.5.2.tar.gz", hash = "sha256:734a2432db8683519f58572617528ecb4a2f321bc7b27f034b3f9b2322c15615", size = 50053 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/40/ee2ec24f1b5ca528f4a87b09c55346c4b67014ad11c1f60ee6b3878b3222/pynvim-0.5.0-py2.py3-none-any.whl", hash = "sha256:2ac197ef0cdfff53719184a45c33cfb7cef88d1c9bf7f0525c21b3239cb5365f", size = 45343 },
+    { url = "https://files.pythonhosted.org/packages/d2/11/70758ae8d5869241fe5f6ae2083a9af908f037d07e847bec53de0f96c51b/pynvim-0.5.2-py3-none-any.whl", hash = "sha256:20b1c5a18c4cddfc480950094d4135f782b1a98c32149ea63e24bbdb7021eb54", size = 46175 },
 ]
 
 [[package]]
@@ -73,12 +64,12 @@ name = "vim"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "neovim" },
     { name = "pip" },
+    { name = "pynvim" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "neovim", specifier = ">=0.3.1" },
-    { name = "pip", specifier = ">=24.0" },
+    { name = "pip", specifier = ">=25.1.1" },
+    { name = "pynvim", specifier = ">=0.5.2" },
 ]

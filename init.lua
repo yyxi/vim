@@ -1,3 +1,4 @@
+---@diagnostic disable: lowercase-global, missing-fields
 -- 'wincent/terminus'
 -- 'ojroques/vim-oscyank'
 
@@ -60,7 +61,8 @@ local function dirname(path)
 end
 
 local function python3_path()
-  local stat = vim.loop.fs_stat(vim.fn.expand('~/.vim/.venv/bin'))
+  ---@diagnostic disable-next-line: undefined-field
+  local stat = vim.uv.fs_stat(vim.fn.expand('~/.vim/.venv/bin'))
   if not stat then
     return nil
   end
@@ -74,7 +76,8 @@ end
 
 local function mason_path()
   local directory = vim.fn.expand(vim.fn.stdpath('data') .. 'mason/bin')
-  local stat = vim.loop.fs_stat(directory)
+  ---@diagnostic disable-next-line: undefined-field
+  local stat = vim.uv.fs_stat(directory)
   if not stat then
     return nil
   end
@@ -104,7 +107,8 @@ local function is_installed(binary)
   -- Check each directory for the binary
   for _, dir in ipairs(path_dirs) do
     local full_path = dir .. package.config:sub(1, 1) .. binary
-    if vim.loop.fs_stat(full_path) then
+    ---@diagnostic disable-next-line: undefined-field
+    if vim.uv.fs_stat(full_path) then
       return true
     end
   end
@@ -270,7 +274,8 @@ vim.diagnostic.config({
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
+---@diagnostic disable-next-line: undefined-field
+if not vim.uv.fs_stat(lazypath) then
   local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
   local out = vim.fn.system({
     'git',
@@ -372,7 +377,7 @@ require('lazy').setup({
           ['lukas-reineke/indent-blankline.nvim'] = true,
           ['nvim-lualine/lualine.nvim'] = true,
           ['nvim-telescope/telescope.nvim'] = true,
-          ['williamboman/mason.nvim'] = true,
+          ['mason-org/mason.nvim'] = true,
         },
       }
 
@@ -731,6 +736,8 @@ require('lazy').setup({
       hi('AvantePopupHint', { force = true, link = 'Normal' })
       hi('AvanteInlineHint', { force = true, link = 'Normal' })
 
+      -- hi('MasonHeader', { force = true, fg = p.base00, bg = nil, nocombine = true })
+
       -- hi('@conditional',                      { force = true,     link = 'Conditional' })
       -- hi('@debug',                            { force = true,     link = 'Debug' })
       -- hi('@define',                           { force = true,     link = 'Define' })
@@ -899,7 +906,7 @@ require('lazy').setup({
     end,
   },
   {
-    'williamboman/mason.nvim',
+    'mason-org/mason.nvim',
     dependencies = { 'echasnovski/mini.base16' },
     -- lazy = false,
     cmd = {
@@ -918,6 +925,9 @@ require('lazy').setup({
       PATH = 'append',
       log_level = vim.log.levels.WARN,
       max_concurrent_installers = 10,
+      pip = {
+        upgrade_pip = false,
+      },
       ui = {
         border = 'rounded',
         width = 0.8,
@@ -978,23 +988,26 @@ require('lazy').setup({
     dependencies = {
       { 'hrsh7th/cmp-nvim-lsp' },
       {
-        'VonHeikemen/lsp-zero.nvim',
-        branch = 'v4.x',
-        config = noop,
-      },
-      {
-        'williamboman/mason-lspconfig.nvim',
-        dependencies = { 'williamboman/mason.nvim' },
+        'mason-org/mason-lspconfig.nvim',
+        dependencies = { 'mason-org/mason.nvim' },
         config = noop,
       },
       {
         'folke/lazydev.nvim',
-        dependencies = { 'williamboman/mason-lspconfig.nvim' },
-        config = noop,
+        ft = 'lua',
+        dependencies = { 'mason-org/mason-lspconfig.nvim' },
+        opts = {
+          library = {
+            -- See the configuration section for more details
+            -- Load luvit types when the `vim.uv` word is found
+            { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
+          },
+        },
+        -- config = noop,
       },
       {
         'b0o/schemastore.nvim',
-        dependencies = { 'williamboman/mason-lspconfig.nvim' },
+        dependencies = { 'mason-org/mason-lspconfig.nvim' },
         config = noop,
       },
       {
@@ -1016,30 +1029,11 @@ require('lazy').setup({
     },
     config = function()
       vim.lsp.set_log_level('ERROR')
-      vim.lsp.handlers['textDocument/hover'] =
-        vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded' })
-      vim.lsp.handlers['textDocument/signatureHelp'] =
-        vim.lsp.with(vim.lsp.handlers.signature_help, { border = 'rounded' })
-
-      local lspconfig = require('lspconfig')
       local mason = require('mason-registry')
 
       require('lspconfig.ui.windows').default_options.border = 'rounded'
 
-      local lsp_zero = require('lsp-zero')
-
-      lsp_zero.extend_lspconfig({
-        capabilities = require('cmp_nvim_lsp').default_capabilities(),
-        float_border = 'rounded',
-        sign_text = {
-          error = '◆',
-          warn = '◇',
-          hint = '•',
-          info = '∙',
-        },
-      })
-
-      local capabilities = lsp_zero.get_capabilities()
+      local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
       if capabilities ~= nil then
         capabilities.textDocument.completion.completionItem = {
@@ -1061,27 +1055,19 @@ require('lazy').setup({
         }
       end
 
-      local on_init = noop
-
-      -- local on_init = function(client, _)
-      --   if client.supports_method('textDocument/semanticTokens') then
-      --     client.server_capabilities.semanticTokensProvider = nil
-      --   end
-      -- end
-
-      lsp_zero.on_attach(function(client, bufnr)
+      local on_attach = function(client, bufnr)
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
           '<C-k>',
-          '<cmd>lua vim.lsp.buf.signature_help()<cr>',
+          '<cmd>lua vim.lsp.buf.signature_help({ border = "rounded" })<cr>',
           { noremap = true, silent = true, desc = 'Signature Help' }
         )
         vim.api.nvim_buf_set_keymap(
           bufnr,
           'n',
           'K',
-          '<cmd>lua vim.lsp.buf.hover()<cr>',
+          '<cmd>lua vim.lsp.buf.hover({ border = "rounded" })<cr>',
           { noremap = true, silent = true, desc = 'Hover' }
         )
         vim.api.nvim_buf_set_keymap(
@@ -1134,13 +1120,25 @@ require('lazy').setup({
         if client.name == 'cssls' then
           client.server_capabilities.diagnosticProvider = false
         end
-      end)
+      end
+
+      vim.api.nvim_create_autocmd('LspAttach', {
+        desc = 'LSP actions',
+        callback = function(event)
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if not client then
+            return
+          end
+
+          local bufnr = event.buf
+          on_attach(client, bufnr)
+        end,
+      })
 
       local handlers = {
         ansiblels = ternary(is_installed('ansible-config'), function()
-          lspconfig.ansiblels.setup({
+          vim.lsp.config('ansiblels', {
             capabilities = capabilities,
-            on_init = on_init,
             settings = {
               ansible = {
                 python = {
@@ -1163,46 +1161,9 @@ require('lazy').setup({
             },
           })
         end),
-        dockerls = function()
-          lspconfig.dockerls.setup({
-            capabilities = capabilities,
-            on_init = on_init,
-          })
-        end,
-        terraformls = function()
-          lspconfig.terraformls.setup({
-            capabilities = capabilities,
-            on_init = on_init,
-          })
-        end,
-        volar = function()
-          lspconfig.volar.setup({
-            capabilities = capabilities,
-            on_init = on_init,
-          })
-        end,
-        taplo = function()
-          lspconfig.taplo.setup({
-            capabilities = capabilities,
-            on_init = on_init,
-          })
-        end,
-        glslls = function()
-          lspconfig.glslls.setup({
-            capabilities = capabilities,
-            on_init = on_init,
-          })
-        end,
-        bashls = function()
-          lspconfig.bashls.setup({
-            capabilities = capabilities,
-            on_init = on_init,
-          })
-        end,
         yamlls = function()
-          lspconfig.yamlls.setup({
+          vim.lsp.config('yamlls', {
             capabilities = capabilities,
-            on_init = on_init,
             settings = {
               yaml = {
                 schemas = vim.list_extend({
@@ -1216,9 +1177,8 @@ require('lazy').setup({
           })
         end,
         jsonls = function()
-          lspconfig.jsonls.setup({
+          vim.lsp.config('jsonls', {
             capabilities = capabilities,
-            on_init = on_init,
             settings = {
               json = {
                 schemas = require('schemastore').json.schemas(),
@@ -1227,71 +1187,18 @@ require('lazy').setup({
             },
           })
         end,
-        cssls = function()
-          lspconfig.cssls.setup({
-            capabilities = capabilities,
-            on_init = on_init,
-          })
-        end,
-        lua_ls = function()
-          require('lazydev').setup()
-          -- require('lspconfig').lua_ls.setup({
-          --   settings = {
-          --     Lua = {
-          --       telemetry = {
-          --         enable = false,
-          --       },
-          --     },
-          --   },
-          --   on_init = function(client)
-          --     -- local join = vim.fs.joinpath
-          --     -- local path = client.workspace_folders[1].name
-          --     --
-          --     -- -- Don't do anything if there is project local config
-          --     -- if
-          --     --   vim.uv.fs_stat(join(path, '.luarc.json'))
-          --     --   or vim.uv.fs_stat(join(path, '.luarc.jsonc'))
-          --     -- then
-          --     --   return
-          --     -- end
-          --     --
-          --     -- -- Apply neovim specific settings
-          --     -- local runtime_path = vim.split(package.path, ';')
-          --     -- table.insert(runtime_path, join('lua', '?.lua'))
-          --     -- table.insert(runtime_path, join('lua', '?', 'init.lua'))
-          --     --
-          --     -- local nvim_settings = {
-          --     --   runtime = {
-          --     --     -- Tell the language server which version of Lua you're using
-          --     --     version = 'LuaJIT',
-          --     --     path = runtime_path,
-          --     --   },
-          --     --   diagnostics = {
-          --     --     -- Get the language server to recognize the `vim` global
-          --     --     globals = { 'vim' },
-          --     --   },
-          --     --   workspace = {
-          --     --     checkThirdParty = false,
-          --     --     library = {
-          --     --       -- Make the server aware of Neovim runtime files
-          --     --       vim.env.VIMRUNTIME,
-          --     --       vim.fn.stdpath('config'),
-          --     --     },
-          --     --   },
-          --     -- }
-          --     --
-          --     -- client.config.settings.Lua = vim.tbl_deep_extend(
-          --     --   'force',
-          --     --   client.config.settings.Lua,
-          --     --   nvim_settings
-          --     -- )
-          --   end,
-          -- })
-        end,
+        -- lua_ls = function()
+        --   require('lazydev').setup({
+        --     library = {
+        --       -- See the configuration section for more details
+        --       -- Load luvit types when the `vim.uv` word is found
+        --       { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
+        --     },
+        --   })
+        -- end,
         pyright = function()
-          lspconfig.pyright.setup({
+          vim.lsp.config('pyright', {
             capabilities = capabilities,
-            on_init = on_init,
             fix = {
               function(bufnr, client)
                 client.request_sync('workspace/executeCommand', {
@@ -1303,9 +1210,8 @@ require('lazy').setup({
           })
         end,
         ruff = function()
-          lspconfig.ruff.setup({
+          vim.lsp.config('ruff', {
             capabilities = capabilities,
-            on_init = on_init,
             fix = {
               function(bufnr, client)
                 client.request_sync('workspace/executeCommand', {
@@ -1363,9 +1269,8 @@ require('lazy').setup({
             },
           }
 
-          lspconfig.ts_ls.setup({
+          vim.lsp.config('ts_ls', {
             capabilities = capabilities,
-            on_init = on_init,
             fix = {
               function(bufnr, client)
                 client.request_sync('workspace/executeCommand', {
@@ -1398,10 +1303,9 @@ require('lazy').setup({
               plugins = {
                 {
                   name = '@vue/typescript-plugin',
-                  location = mason
-                    .get_package('vue-language-server')
-                    :get_install_path()
-                    .. '/node_modules/@vue/language-server',
+                  location = vim.fn.expand(
+                    '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
+                  ),
                   languages = { 'vue', 'typescript' },
                 },
               },
@@ -1419,7 +1323,7 @@ require('lazy').setup({
           })
         end,
         eslint = function()
-          lspconfig.eslint.setup({
+          vim.lsp.config('eslint', {
             filetypes = {
               'astro',
               'javascript',
@@ -1438,7 +1342,6 @@ require('lazy').setup({
               'yaml.ansible',
             },
             capabilities = capabilities,
-            on_init = on_init,
             settings = {
               workingDirectories = { mode = 'location' },
               experimental = {
@@ -1470,18 +1373,22 @@ require('lazy').setup({
         end,
       }
 
-      local handler = function(server_name)
-        lsp_zero.default_setup()
+      vim.lsp.config('*', {
+        capabilities = capabilities,
+        -- root_markers = { '.git' },
+      })
 
-        if handlers[server_name] == nil then
-        else
-          handlers[server_name]()
+      for key, handler in pairs(handlers) do
+        local value = handler()
+        if value then
+          vim.lsp.config(key, value)
         end
       end
 
+      -- dockerls, terraformls, volar, taplo, glslls, bashls, cssls,
       require('mason-lspconfig').setup({
+        automatic_enable = true,
         ensure_installed = {},
-        handlers = { handler },
       })
     end,
   },
@@ -1562,7 +1469,7 @@ require('lazy').setup({
   {
     'stevearc/conform.nvim',
     cmd = { 'ConformInfo' },
-    dependencies = { 'neovim/nvim-lspconfig', 'williamboman/mason.nvim' },
+    dependencies = { 'neovim/nvim-lspconfig', 'mason-org/mason.nvim' },
     keys = {
       {
         '<leader>f',
@@ -1624,13 +1531,9 @@ require('lazy').setup({
       },
     },
     config = function()
-      -- Here is where you configure the autocompletion settings.
-      local lsp_zero = require('lsp-zero')
-      lsp_zero.extend_cmp()
-
       -- And you can configure cmp even more, if you want to.
       local cmp = require('cmp')
-      local cmp_action = lsp_zero.cmp_action()
+      -- local cmp_action = lsp_zero.cmp_action()
 
       local luasnip = require('luasnip')
       luasnip.config.setup()
@@ -1658,7 +1561,7 @@ require('lazy').setup({
         },
         snippet = {
           expand = function(args)
-            require('luasnip').lsp_expand(args.body, {})
+            luasnip.lsp_expand(args.body, {})
           end,
         },
         sources = cmp.config.sources({
@@ -1682,7 +1585,7 @@ require('lazy').setup({
           completion = cmp.config.window.bordered(),
           documentation = cmp.config.window.bordered(),
         },
-        formatting = lsp_zero.cmp_format({ details = true }),
+        -- formatting = lsp_zero.cmp_format({ details = true }),
         mapping = cmp.mapping.preset.insert({
           -- ['<C-e>'] = cmp.mapping(function( --[[ fallback ]]) if cmp.visible() then cmp.abort() else cmp.complete() end end),
           -- ['<C-f>'] = cmp.mapping.scroll_docs(5),
@@ -1701,8 +1604,30 @@ require('lazy').setup({
           ['<Down>'] = cmp.mapping.select_next_item({
             behavior = cmp.SelectBehavior.Insert,
           }),
-          ['<Tab>'] = cmp_action.luasnip_supertab(),
-          ['<S-Tab>'] = cmp_action.luasnip_shift_supertab(),
+          ['<Tab>'] = cmp.mapping(function(fallback)
+            local col = vim.fn.col('.') - 1
+
+            if cmp.visible() then
+              cmp.select_next_item()
+            elseif luasnip.expand_or_locally_jumpable() then
+              luasnip.expand_or_jump()
+            elseif
+              col == 0 or vim.fn.getline('.'):sub(col, col):match('%s')
+            then
+              fallback()
+            else
+              cmp.complete()
+            end
+          end, { 'i', 's' }),
+          ['<S-Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_prev_item()
+            elseif luasnip.locally_jumpable(-1) then
+              luasnip.jump(-1)
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
           -- ['<Tab>'] = cmp.mapping(function(fallback)
           --   if cmp.visible() then
           --     cmp.select_next_item()
@@ -1776,12 +1701,6 @@ require('lazy').setup({
         },
         indent = {
           enable = true,
-        },
-        autotag = {
-          enable = true,
-          enable_rename = true,
-          enable_close = true,
-          enable_close_on_slash = true,
         },
         playground = {
           enable = true,
@@ -1902,6 +1821,12 @@ require('lazy').setup({
   {
     'windwp/nvim-ts-autotag',
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
+    opts = {
+      enable = true,
+      enable_rename = true,
+      enable_close = true,
+      enable_close_on_slash = true,
+    },
     -- event = { 'VeryLazy' },
     ft = { 'html', 'vue' },
     event = { 'BufReadPre', 'BufNewFile' },
@@ -2194,7 +2119,6 @@ require('lazy').setup({
   {
     'folke/flash.nvim',
     event = 'VeryLazy',
-    ---@type Flash.Config
     opts = {
       -- search = {
       --   exclude = {
@@ -2364,14 +2288,12 @@ require('lazy').setup({
       delay = function(ctx)
         return ctx.plugin and 0 or 200
       end,
-      ---@param mapping wk.Mapping
-      filter = function(mapping)
+      filter = function( --[[ mapping ]])
         -- example to exclude mappings without a description
         -- return mapping.desc and mapping.desc ~= ""
         return true
       end,
       --- You can add any mappings here, or use `require('which-key').add()` later
-      ---@type wk.Spec
       spec = {},
       -- show a warning when issues were detected with your mappings
       notify = true,
@@ -2399,7 +2321,6 @@ require('lazy').setup({
           g = true, -- bindings for prefixed with g
         },
       },
-      ---@type wk.Win.opts
       win = {
         -- don't allow the popup to overlap with the cursor
         no_overlap = true,
@@ -2427,7 +2348,6 @@ require('lazy').setup({
         scroll_down = '<c-d>', -- binding to scroll down inside the popup
         scroll_up = '<c-u>', -- binding to scroll up inside the popup
       },
-      ---@type (string|wk.Sorter)[]
       --- Mappings are sorted using configured sorters and natural sort of the keys
       --- Available sorters:
       --- * local: buffer-local mappings first
@@ -2438,7 +2358,7 @@ require('lazy').setup({
       --- * manual: the order the mappings were added
       --- * case: lower-case first
       sort = { 'local', 'order', 'group', 'alphanum', 'mod' },
-      ---@type number|fun(node: wk.Node):boolean?
+      ---@type number|fun(node):boolean?
       expand = 0, -- expand groups when <= n mappings
       -- expand = function(node)
       --   return not node.desc -- expand all nodes without a description
@@ -2474,7 +2394,6 @@ require('lazy').setup({
         mappings = false,
         --- See `lua/which-key/icons.lua` for more details
         --- Set to `false` to disable keymap icons from rules
-        ---@type wk.IconRule[]|false
         rules = {},
         -- use the highlights from mini.icons
         -- When `false`, it will use `WhichKeyIcon` instead
@@ -2754,7 +2673,7 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('gtd').setup()
+      require('gtd').setup({})
     end,
   },
   {
@@ -2838,11 +2757,9 @@ require('lazy').setup({
     version = false, -- set this to "*" if you want to always pull the latest change, false to update on release
     opts = {
       debug = false,
-      ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "vertex" | "cohere" | "copilot" | string
       provider = 'openai', -- Only recommend using Claude
       auto_suggestions_provider = 'openai',
 
-      ---@type AvanteSupportedProvider
       openai = {
         endpoint = 'https://api.openai.com/v1',
         model = 'gpt-4o',
@@ -2918,7 +2835,6 @@ require('lazy').setup({
         },
       },
       windows = {
-        ---@alias AvantePosition "right" | "left" | "top" | "bottom" | "smart"
         position = 'right',
         wrap = true, -- similar to vim.o.wrap
         width = 30, -- default % based on available width in vertical layout
