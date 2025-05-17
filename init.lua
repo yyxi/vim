@@ -1038,22 +1038,6 @@ require('lazy').setup({
         dependencies = { 'mason-org/mason-lspconfig.nvim' },
         config = noop,
       },
-      {
-        'stevearc/dressing.nvim',
-        opts = {
-          select = {
-            enabled = true,
-            get_config = function(opts)
-              if opts.kind == nil then
-                return { enabled = false }
-              end
-
-              return nil
-            end,
-          },
-        },
-        dependencies = { 'nvim-telescope/telescope.nvim' },
-      },
     },
     config = function()
       vim.lsp.set_log_level('ERROR')
@@ -1546,7 +1530,6 @@ require('lazy').setup({
     version = '1.*',
     event = 'InsertEnter',
     dependencies = {
-      { 'xzbdmw/colorful-menu.nvim' },
       { 'rafamadriz/friendly-snippets' },
       {
         'L3MON4D3/LuaSnip',
@@ -1685,6 +1668,7 @@ require('lazy').setup({
             'sort_text',
           },
           implementation = 'prefer_rust_with_warning',
+          -- implementation = 'lua',
         },
         cmdline = {
           enabled = true,
@@ -2260,48 +2244,6 @@ require('lazy').setup({
   --     })
   --   end,
   -- },
-  {
-    'max397574/better-escape.nvim',
-    event = 'InsertEnter',
-    keys = { 'jj', mode = 'i', desc = 'Escape' },
-    config = function()
-      require('better_escape').setup({
-        -- timeout = 300,
-        default_mappings = false,
-        mappings = {
-          i = {
-            j = {
-              -- These can all also be functions
-              -- k = '<Esc>',
-              j = '<Esc>',
-            },
-          },
-          -- c = {
-          --   j = {
-          --     k = '<Esc>',
-          --     j = '<Esc>',
-          --   },
-          -- },
-          -- t = {
-          --   j = {
-          --     k = '<Esc>',
-          --     j = '<Esc>',
-          --   },
-          -- },
-          -- v = {
-          --   j = {
-          --     k = '<Esc>',
-          --   },
-          -- },
-          -- s = {
-          --   j = {
-          --     k = '<Esc>',
-          --   },
-          -- },
-        },
-      })
-    end,
-  },
   {
     'sQVe/sort.nvim',
     event = 'InsertEnter',
