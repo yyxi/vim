@@ -163,7 +163,6 @@ vim.o.fillchars = vim.o.fillchars .. 'fold: '
 vim.o.foldenable = true
 vim.o.foldlevelstart = 99
 vim.o.foldcolumn = '0'
-vim.o.foldtext = 'v:lua.custom_fold_text()'
 vim.o.formatoptions = 'jcroqln'
 vim.o.hidden = true
 vim.o.history = 5000
@@ -1549,6 +1548,15 @@ require('lazy').setup({
         exclude = { 'html', 'all' },
       })
 
+      local has_words_before = function()
+        local col = vim.api.nvim_win_get_cursor(0)[2]
+        if col == 0 then
+          return false
+        end
+        local line = vim.api.nvim_get_current_line()
+        return line:sub(col, col):match('%s') == nil
+      end
+
       ---@module 'blink.cmp'
       ---@type blink.cmp.Config
       cmp.setup({
@@ -1558,7 +1566,16 @@ require('lazy').setup({
           ['<Up>'] = { 'select_prev', 'fallback' },
           ['<Down>'] = { 'select_next', 'fallback' },
           ['<CR>'] = { 'accept', 'fallback' },
-          ['<Tab>'] = { 'select_next', 'snippet_forward', 'fallback' },
+          ['<Tab>'] = {
+            function(cmp)
+              if has_words_before() and not cmp.is_visible() then
+                return cmp.show()
+              end
+            end,
+            'select_next',
+            'snippet_forward',
+            'fallback',
+          },
           ['<S-Tab>'] = { 'select_prev', 'snippet_backward', 'fallback' },
           ['<Esc>'] = { 'fallback' },
         },
@@ -1588,12 +1605,15 @@ require('lazy').setup({
               -- preselect = function(ctx)
               --   return not cmp.snippet_active()
               -- end,
-              auto_insert = function(ctx)
+              auto_insert = function()
                 return not cmp.snippet_active()
               end,
+              -- auto_insert = false
             },
           },
-          ghost_text = { enabled = true },
+          ghost_text = {
+            enabled = false,
+          },
           menu = {
             border = 'rounded',
             winblend = 10,
@@ -1619,6 +1639,10 @@ require('lazy').setup({
 
                     if source_name == 'Path' then
                       return '☇'
+                    end
+
+                    if source_name == 'Buffer' then
+                      return '…'
                     end
 
                     return source_name
@@ -1668,7 +1692,6 @@ require('lazy').setup({
             'sort_text',
           },
           implementation = 'prefer_rust_with_warning',
-          -- implementation = 'lua',
         },
         cmdline = {
           enabled = true,
@@ -1678,18 +1701,23 @@ require('lazy').setup({
             ['<Down>'] = { 'select_next', 'fallback' },
             ['<CR>'] = { 'accept', 'fallback' },
             ['<Tab>'] = {
-              function(cmp)
+              function()
                 if
                   not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!')
                 then
                   return true
                 end
               end,
+              function(cmp)
+                if has_words_before() and not cmp.is_visible() then
+                  return cmp.show()
+                end
+              end,
               'show_and_insert',
               'select_next',
             },
             ['<S-Tab>'] = {
-              function(cmp)
+              function()
                 if
                   not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!')
                 then
@@ -1719,7 +1747,7 @@ require('lazy').setup({
                   { 'label' },
                 },
               },
-              auto_show = function(ctx)
+              auto_show = function()
                 return vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!'
               end,
             },
@@ -1757,6 +1785,13 @@ require('lazy').setup({
     -- end,
     -- lazy = false,
     build = ':TSUpdate',
+    init = function()
+      vim.wo.foldmethod = 'expr'
+      vim.wo.foldexpr = 'nvim_treesitter#foldexpr()'
+      vim.wo.foldtext = 'v:lua.custom_fold_text()'
+      -- vim.wo.foldtext = "nvim_treesitter#foldtext()"
+      vim.o.indentexpr = 'nvim_treesitter#indent()'
+    end,
     config = function()
       require('nvim-treesitter.configs').setup({
         highlight = {
@@ -1846,15 +1881,7 @@ require('lazy').setup({
           'wgsl',
           'yaml',
         },
-        lsp_interop = {
-          enable = true,
-        },
       })
-
-      vim.o.foldmethod = 'expr'
-      vim.o.foldexpr = 'nvim_treesitter#foldexpr()'
-      -- vim.o.foldtext = "nvim_treesitter#foldtext()"
-      vim.o.indentexpr = 'nvim_treesitter#indent()'
     end,
   },
   {
@@ -1877,9 +1904,6 @@ require('lazy').setup({
   },
   {
     'nvim-treesitter/nvim-treesitter-textobjects',
-    -- init = function(plugin)
-    --   require('lazy.core.loader').add_to_rtp(plugin)
-    -- end,
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
   },
   {
@@ -1979,26 +2003,11 @@ require('lazy').setup({
         preserve_cursor_position = {
           enabled = true,
         },
+        textobj = {
+          enabled = false,
+        },
       })
     end,
-  },
-  {
-    'jiaoshijie/undotree',
-    dependencies = 'nvim-lua/plenary.nvim',
-    opts = {
-      position = 'right',
-      float_diff = true,
-      window = {
-        winblend = 10,
-      },
-    },
-    keys = {
-      {
-        '<leader>u',
-        "<cmd>lua require('undotree').toggle()<cr>",
-        desc = 'Undo Tree',
-      },
-    },
   },
   {
     'nvim-telescope/telescope.nvim',
@@ -2706,64 +2715,12 @@ require('lazy').setup({
     'johmsalas/text-case.nvim',
     dependencies = { 'nvim-telescope/telescope.nvim' },
     event = { 'BufReadPre', 'BufNewFile' },
-    --     cmd = {
-    --   -- NOTE: The Subs command name can be customized via the option "substitude_command_name"
-    --   "Subs",
-    --   "TextCaseOpenTelescope",
-    --   "TextCaseOpenTelescopeQuickChange",
-    --   "TextCaseOpenTelescopeLSPChange",
-    --   "TextCaseStartReplacingCommand",
-    -- },
     config = function()
       require('textcase').setup({
         default_keymappings_enabled = true,
         prefix = '<leader>n',
       })
     end,
-  },
-  {
-    'aaronik/treewalker.nvim',
-    keys = {
-      -- Movement
-      {
-        '<C-S-k>',
-        '<cmd>Treewalker Up<cr>',
-        mode = { 'n', 'v' },
-        desc = 'Move up',
-        silent = true,
-      },
-      {
-        '<C-S-j>',
-        '<cmd>Treewalker Down<cr>',
-        mode = { 'n', 'v' },
-        desc = 'Move down',
-        silent = true,
-      },
-      {
-        '<C-S-l>',
-        '<cmd>Treewalker Right<cr>',
-        mode = { 'n', 'v' },
-        desc = 'Move right',
-        silent = true,
-      },
-      {
-        '<C-S-h>',
-        '<cmd>Treewalker Left<cr>',
-        mode = { 'n', 'v' },
-        desc = 'Move left',
-        silent = true,
-      },
-      -- Swapping
-      -- { '<C-S-j>', '<cmd>Treewalker SwapDown<cr>', mode = 'n', desc = 'Swap down', silent = true },
-      -- { '<C-S-k>', '<cmd>Treewalker SwapUp<cr>', mode = 'n', desc = 'Swap up', silent = true },
-      -- { '<C-S-l>', '<cmd>Treewalker SwapRight<CR>', mode = 'n', desc = 'Swap right', silent = true },
-      -- { '<C-S-h>', '<cmd>Treewalker SwapLeft<CR>', mode = 'n', desc = 'Swap left', silent = true },
-    },
-    opts = {
-      highlight = false,
-      highlight_duration = 250,
-      highlight_group = 'CursorLine',
-    },
   },
 }, {
   defaults = {
