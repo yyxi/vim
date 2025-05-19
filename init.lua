@@ -1,4 +1,4 @@
----@diagnostic disable: lowercase-global, missing-fields
+---@diagnostic disable: lowercase-global, missing-fields, redefined-local
 -- 'wincent/terminus'
 -- 'ojroques/vim-oscyank'
 
@@ -787,7 +787,6 @@ require('lazy').setup({
   },
   {
     'nvim-lualine/lualine.nvim',
-    dependencies = { 'echasnovski/mini.base16' },
     event = 'VimEnter',
     priority = 800,
     opts = {
@@ -831,7 +830,6 @@ require('lazy').setup({
     'lukas-reineke/indent-blankline.nvim',
     name = 'ibl',
     event = 'VeryLazy',
-    dependencies = { 'echasnovski/mini.base16' },
     config = function()
       require('ibl').setup({
         indent = {
@@ -872,37 +870,8 @@ require('lazy').setup({
     end,
   },
   {
-    'domharries/foldnav.nvim',
-    dependencies = { 'nvim-treesitter/nvim-treesitter' },
-    event = 'VeryLazy',
-    config = function()
-      vim.g.foldnav = {
-        flash = {
-          enabled = false,
-        },
-      }
-    end,
-
-    keys = {
-      -- { "<C-h>", function() require("foldnav").goto_start() end },
-      {
-        '<C-Right>',
-        function()
-          require('foldnav').goto_next()
-        end,
-      },
-      {
-        '<C-Left>',
-        function()
-          require('foldnav').goto_prev_start()
-        end,
-      },
-    },
-  },
-  {
     'echasnovski/mini.hipatterns',
     event = 'VeryLazy',
-    dependencies = { 'echasnovski/mini.base16' },
     config = function()
       local hipatterns = require('mini.hipatterns')
 
@@ -934,8 +903,6 @@ require('lazy').setup({
   },
   {
     'mason-org/mason.nvim',
-    dependencies = { 'echasnovski/mini.base16' },
-    -- lazy = false,
     cmd = {
       'Mason',
       'MasonInstall',
@@ -1009,32 +976,27 @@ require('lazy').setup({
     end,
   },
   {
+    'folke/lazydev.nvim',
+    ft = 'lua',
+    dependencies = { 'neovim/nvim-lspconfig' },
+    opts = {
+      library = {
+        { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
+      },
+    },
+  },
+  {
     'neovim/nvim-lspconfig',
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
-      { 'saghen/blink.cmp' },
       {
         'mason-org/mason-lspconfig.nvim',
         dependencies = { 'mason-org/mason.nvim' },
         config = noop,
       },
       {
-        'folke/lazydev.nvim',
-        ft = 'lua',
-        dependencies = { 'mason-org/mason-lspconfig.nvim' },
-        opts = {
-          library = {
-            -- See the configuration section for more details
-            -- Load luvit types when the `vim.uv` word is found
-            { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
-          },
-        },
-        -- config = noop,
-      },
-      {
         'b0o/schemastore.nvim',
-        dependencies = { 'mason-org/mason-lspconfig.nvim' },
         config = noop,
       },
     },
@@ -1048,28 +1010,7 @@ require('lazy').setup({
         'force',
         vim.lsp.protocol.make_client_capabilities(),
         require('blink.cmp').get_lsp_capabilities({}, false)
-        -- require('cmp_nvim_lsp').default_capabilities()
       )
-
-      -- if capabilities ~= nil then
-      --   capabilities.textDocument.completion.completionItem = {
-      --     documentationFormat = { 'markdown', 'plaintext' },
-      --     snippetSupport = true,
-      --     preselectSupport = true,
-      --     insertReplaceSupport = true,
-      --     labelDetailsSupport = true,
-      --     deprecatedSupport = true,
-      --     commitCharactersSupport = true,
-      --     tagSupport = { valueSet = { 1 } },
-      --     resolveSupport = {
-      --       properties = {
-      --         'documentation',
-      --         'detail',
-      --         'additionalTextEdits',
-      --       },
-      --     },
-      --   }
-      -- end
 
       local on_attach = function(client, bufnr)
         vim.api.nvim_buf_set_keymap(
@@ -1485,7 +1426,7 @@ require('lazy').setup({
   {
     'stevearc/conform.nvim',
     cmd = { 'ConformInfo' },
-    dependencies = { 'neovim/nvim-lspconfig', 'mason-org/mason.nvim' },
+    dependencies = { 'neovim/nvim-lspconfig' },
     keys = {
       {
         '<leader>f',
@@ -1529,6 +1470,7 @@ require('lazy').setup({
     version = '1.*',
     event = 'InsertEnter',
     dependencies = {
+      { 'neovim/nvim-lspconfig' },
       { 'rafamadriz/friendly-snippets' },
       {
         'L3MON4D3/LuaSnip',
@@ -1648,9 +1590,9 @@ require('lazy').setup({
                     return source_name
                   end,
                 },
-                label_description = {
-                  width = { fill = true, max = 60 },
-                },
+                -- label_description = {
+                --   width = { fill = true, max = 60 },
+                -- },
                 label = {
                   width = { fill = true, max = 60 },
                   text = function(ctx)
@@ -1817,17 +1759,6 @@ require('lazy').setup({
             node_decremental = '<Left>',
           },
         },
-        textobjects = {
-          swap = {
-            enable = false,
-          },
-          move = {
-            enable = false,
-          },
-          select = {
-            enable = false,
-          },
-        },
         ensure_installed = {
           'bash',
           'bibtex',
@@ -1888,23 +1819,22 @@ require('lazy').setup({
     'andymass/vim-matchup',
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
-      'echasnovski/mini.base16',
     },
     event = { 'BufReadPre', 'BufNewFile' },
     init = function()
       -- vim.g.matchup_matchparen_offscreen =
       --   { method = 'popup', syntax_hl = 1, border = 'rounded', highlight = 'Normal' }
+      -- vim.g.matchup_transmute_enabled = 1
       vim.g.matchup_matchparen_offscreen = {}
+      vim.g.matchup_matchparen_enabled = 1
+      vim.g.matchup_mouse_enabled = 0
       vim.g.matchup_matchparen_deferred = 1
       vim.g.matchup_matchparen_hi_surround_always = 0
-      vim.g.matchup_mouse_enabled = 1
       vim.g.matchup_motion_override_Npercent = 0
       vim.g.matchup_matchpref = { html = { nolists = 1, tagnameonly = 1 } }
+      vim.g.matchup_matchparen_nomode = 'i'
+      vim.g.matchup_motion_override_Npercent = 0
     end,
-  },
-  {
-    'nvim-treesitter/nvim-treesitter-textobjects',
-    dependencies = { 'nvim-treesitter/nvim-treesitter' },
   },
   {
     'windwp/nvim-ts-autotag',
@@ -2011,7 +1941,7 @@ require('lazy').setup({
   },
   {
     'nvim-telescope/telescope.nvim',
-    tag = '0.1.8',
+    commit = 'b4da76be54691e854d3e0e02c36b0245f945c2c7',
     dependencies = {
       'nvim-lua/plenary.nvim',
       {
@@ -2021,27 +1951,28 @@ require('lazy').setup({
           return vim.fn.executable('make') == 1
         end,
       },
+      'nvim-telescope/telescope-ui-select.nvim',
       'nvim-treesitter/nvim-treesitter',
       'neovim/nvim-lspconfig',
       'gbprod/yanky.nvim',
     },
     cmd = { 'Telescope' },
     keys = {
+      -- {
+      --   '<leader>Tt',
+      --   '<cmd>Telescope treesitter<cr>',
+      --   desc = 'Treesitter Symbols',
+      -- },
       {
-        '<leader>Tt',
-        '<cmd>Telescope treesitter<cr>',
-        desc = 'Treesitter Symbols',
-      },
-      {
-        '<leader>Td',
+        '<leader>S',
         '<cmd>Telescope lsp_document_symbols<cr>',
         desc = 'Document Symbols',
       },
-      {
-        '<leader>Tw',
-        '<cmd>Telescope lsp_workspace_symbols<cr>',
-        desc = 'Workspace Symbols',
-      },
+      -- {
+      --   '<leader>Tw',
+      --   '<cmd>Telescope lsp_workspace_symbols<cr>',
+      --   desc = 'Workspace Symbols',
+      -- },
       { '<leader>g', '<cmd>Telescope live_grep<cr>', desc = 'Grep' },
       { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
       { '<leader>e', '<cmd>Telescope find_files<cr>', desc = 'Edit' },
@@ -2070,14 +2001,18 @@ require('lazy').setup({
         defaults = {
           results_title = '',
           prompt_title = '',
-          layout_strategy = 'horizontal',
+          dynamic_preview_title = false,
+          layout_strategy = 'flex',
           mappings = {},
           winblend = 10,
           prompt_prefix = ' ',
           selection_caret = '  ',
           entry_prefix = '  ',
           initial_mode = 'insert',
-          path_display = { 'truncate' },
+          -- path_display = { 'truncate' },
+          path_display = {
+            'filename_first',
+          },
           set_env = { ['COLORTERM'] = 'truecolor' },
           vimgrep_arguments = {
             'rg',
@@ -2088,8 +2023,12 @@ require('lazy').setup({
             '--column',
             '--smart-case',
             '--hidden',
+            '--trim',
             '--glob',
             '!.git',
+          },
+          preview = {
+            filesize_limit = 1, -- MB
           },
         },
         pickers = {
@@ -2105,8 +2044,15 @@ require('lazy').setup({
               '!.git',
             },
           },
+          buffers = {
+            select_current = true,
+            sort_mru = true,
+          },
         },
         extensions = {
+          ['ui-select'] = {
+            layout_strategy = 'flex',
+          },
           fzf = {
             fuzzy = true, -- false will only do exact matching
             override_generic_sorter = true, -- override the generic sorter
@@ -2118,6 +2064,7 @@ require('lazy').setup({
 
       telescope.load_extension('fzf')
       telescope.load_extension('yank_history')
+      telescope.load_extension('ui-select')
     end,
   },
   {
@@ -2125,28 +2072,60 @@ require('lazy').setup({
     version = '*',
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
-      'nvim-treesitter/nvim-treesitter-textobjects',
+      'nvim-treesitter/nvim-treesitter',
     },
     config = function()
-      local gen_spec = require('mini.ai').gen_spec
+      local ai = require('mini.ai')
+      local ai_buffer = function(ai_type)
+        local start_line, end_line = 1, vim.fn.line('$')
+        if ai_type == 'i' then
+          -- Skip first and last blank lines for `i` textobject
+          local first_nonblank, last_nonblank =
+            vim.fn.nextnonblank(start_line), vim.fn.prevnonblank(end_line)
+          -- Do nothing for buffer with all blanks
+          if first_nonblank == 0 or last_nonblank == 0 then
+            return { from = { line = start_line, col = 1 } }
+          end
+          start_line, end_line = first_nonblank, last_nonblank
+        end
 
-      -- TODO: add more queries
+        local to_col = math.max(vim.fn.getline(end_line):len(), 1)
+        return {
+          from = { line = start_line, col = 1 },
+          to = { line = end_line, col = to_col },
+        }
+      end
+
       require('mini.ai').setup({
         n_lines = 1024,
         custom_textobjects = {
-          o = gen_spec.treesitter({
+          o = ai.gen_spec.treesitter({ -- code block
             a = { '@block.outer', '@conditional.outer', '@loop.outer' },
             i = { '@block.inner', '@conditional.inner', '@loop.inner' },
-          }, {}),
-          f = gen_spec.treesitter(
-            { a = '@function.outer', i = '@function.inner' },
-            {}
-          ),
-          c = gen_spec.treesitter(
-            { a = '@class.outer', i = '@class.inner' },
-            {}
-          ),
-          t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' },
+          }),
+          a = ai.gen_spec.treesitter({ -- code block
+            a = '@parameter.inner',
+            i ='@parameter.inner',
+          }),
+          f = ai.gen_spec.treesitter({
+            a = '@function.outer',
+            i = '@function.inner',
+          }), -- function
+          c = ai.gen_spec.treesitter({ a = '@class.outer', i = '@class.inner' }), -- class
+          t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' }, -- tags
+          d = { '%f[%d]%d+' }, -- digits
+          e = { -- Word with case
+            {
+              '%u[%l%d]+%f[^%l%d]',
+              '%f[%S][%l%d]+%f[^%l%d]',
+              '%f[%P][%l%d]+%f[^%l%d]',
+              '^[%l%d]+%f[^%l%d]',
+            },
+            '^().*()$',
+          },
+          g = ai_buffer, -- buffer
+          u = ai.gen_spec.function_call(), -- u for "Usage"
+          U = ai.gen_spec.function_call({ name_pattern = '[%w_]' }), -- without dot in function name
         },
         mappings = {
           around = 'a',
@@ -2167,7 +2146,7 @@ require('lazy').setup({
     -- event = { 'VeryLazy' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
-      'nvim-treesitter/nvim-treesitter-textobjects',
+      'nvim-treesitter/nvim-treesitter',
     },
     opts = {
       mappings = {
@@ -2240,19 +2219,6 @@ require('lazy').setup({
       },
     },
   },
-  -- {
-  --   'echasnovski/mini.jump2d',
-  --   dependencies = { 'echasnovski/mini.base16' },
-  --  keeys = { '<CR>', desc = 'Jump' },
-  --   config = function()
-  --     require('mini.jump2d').setup({
-  --       view = {
-  --         dim = false,
-  --         n_steps_ahead = 0,
-  --       },
-  --     })
-  --   end,
-  -- },
   {
     'sQVe/sort.nvim',
     event = 'InsertEnter',
@@ -2278,23 +2244,6 @@ require('lazy').setup({
           start = '',
           start_with_preview = '<leader>l',
         },
-        --  ['s'] = --<function: enter split pattern>,
-        --  ['j'] = --<function: choose justify side>,
-        --  ['m'] = --<function: enter merge delimiter>,
-        --
-        --  -- Modifiers adding pre-steps
-        --  ['f'] = --<function: filter parts by entering Lua expression>,
-        --  ['i'] = --<function: ignore some split matches>,
-        --  ['p'] = --<function: pair parts>,
-        --  ['t'] = --<function: trim parts>,
-        --
-        --  -- Delete some last pre-step
-        --  ['<BS>'] = --<function: delete some last pre-step>,
-        --
-        --  -- Special configurations for common splits
-        --  ['='] = --<function: enhanced setup for '='>,
-        --  [','] = --<function: enhanced setup for ','>,
-        --  [' '] = --<function: enhanced setup for ' '>,
       })
     end,
   },
@@ -2537,15 +2486,16 @@ require('lazy').setup({
         { '}', desc = '{} with ws' },
       }
 
+      ---@type wk.Spec[]
       local ret = { mode = { 'o', 'x' } }
       ---@type table<string, string>
       local mappings = vim.tbl_extend('force', {}, {
         around = 'a',
         inside = 'i',
-        around_last = 'aN',
         around_next = 'an',
-        inside_last = 'iN',
+        around_last = 'aN',
         inside_next = 'in',
+        inside_last = 'iN',
       }, opts.mappings or {})
       mappings.goto_left = nil
       mappings.goto_right = nil
@@ -2577,7 +2527,6 @@ require('lazy').setup({
       { '<Right>', '<Plug>(CybuNext)', desc = 'Next Buffer' },
       -- { '<C-Left>', '<Plug>(CybuLastusedPrev)', desc = 'Previous Buffer' },
       -- { '<C-Right>', '<Plug>(CybuLastusedNext)', desc = 'Next Buffer' },
-      -- vim.cmd [[nnoremap <leader><leader> :]]
       {
         '<leader><leader>',
         '<Plug>(CybuLastusedNext)',
@@ -2713,7 +2662,7 @@ require('lazy').setup({
   },
   {
     'johmsalas/text-case.nvim',
-    dependencies = { 'nvim-telescope/telescope.nvim' },
+    -- dependencies = { 'nvim-telescope/telescope.nvim' },
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
       require('textcase').setup({
@@ -2761,6 +2710,7 @@ require('lazy').setup({
         'getscriptPlugin',
         'logipat',
         'matchit',
+        'matchparen',
         'netrw',
         'netrwFileHandlers',
         'netrwPlugin',
