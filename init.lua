@@ -728,13 +728,6 @@ require('lazy').setup({
 
       hi('LazyH1', { force = true, link = 'Normal' })
 
-      hi('AvanteConflictCurrent', { force = true, link = 'Normal' })
-      hi('AvanteConflictIncoming', { force = true, link = 'Normal' })
-      hi('AvanteConflictCurrentLabel', { force = true, link = 'Normal' })
-      hi('AvanteConflictIncomingLabel', { force = true, link = 'Normal' })
-      hi('AvantePopupHint', { force = true, link = 'Normal' })
-      hi('AvanteInlineHint', { force = true, link = 'Normal' })
-
       hi('Pmenu', { fg = p.base05, bg = p.base00, sp = nil, force = true })
       hi('PmenuExtra', { fg = p.base05, bg = p.base00, sp = nil, force = true })
       hi('PmenuKind', { fg = p.base05, bg = p.base00, sp = nil, force = true })
@@ -999,6 +992,7 @@ require('lazy').setup({
         'b0o/schemastore.nvim',
         config = noop,
       },
+      { 'nvim-telescope/telescope.nvim' },
     },
     config = function()
       vim.lsp.set_log_level('ERROR')
@@ -1669,14 +1663,23 @@ require('lazy').setup({
               'show_and_insert',
               'select_prev',
             },
-            ['<Esc>'] = { 'fallback' },
+            ['<Esc>'] = {
+              function(cmp)
+                if cmp.is_menu_visible() then
+                  cmp.hide()
+                  -- return true
+                else
+                  vim.api.nvim_feedkeys(
+                    vim.api.nvim_replace_termcodes('<C-c>', true, false, true),
+                    'n',
+                    true
+                  )
+                end
+              end,
+            },
           },
           completion = {
             list = {
-              cycle = {
-                from_bottom = true,
-                from_top = true,
-              },
               selection = {
                 preselect = false,
                 auto_insert = true,
@@ -1684,7 +1687,6 @@ require('lazy').setup({
             },
             menu = {
               draw = {
-                padding = { 1, 1 },
                 columns = {
                   { 'label' },
                 },
@@ -1953,7 +1955,7 @@ require('lazy').setup({
       },
       'nvim-telescope/telescope-ui-select.nvim',
       'nvim-treesitter/nvim-treesitter',
-      'neovim/nvim-lspconfig',
+      -- 'neovim/nvim-lspconfig',
       'gbprod/yanky.nvim',
     },
     cmd = { 'Telescope' },
@@ -2105,7 +2107,7 @@ require('lazy').setup({
           }),
           a = ai.gen_spec.treesitter({ -- code block
             a = '@parameter.inner',
-            i ='@parameter.inner',
+            i = '@parameter.inner',
           }),
           f = ai.gen_spec.treesitter({
             a = '@function.outer',
@@ -2443,7 +2445,6 @@ require('lazy').setup({
         { '<leader>c', desc = 'Comment' },
         { '<leader>T', desc = 'Tags' },
         { '<leader>n', desc = 'Case', mode = { 'n', 'x' } },
-        { '<leader>a', desc = 'Avante', mode = { 'n', 'x' } },
         { '<leader>s', desc = 'Surround', mode = { 'n', 'x' } },
         { '<leader>sa', desc = 'Add surrounding', mode = { 'n', 'x' } },
         { '<leader>sd', desc = 'Delete surrounding', mode = 'n' },
