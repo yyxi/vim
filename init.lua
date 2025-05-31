@@ -2239,12 +2239,12 @@ require('lazy').setup({
   {
     'echasnovski/mini.align',
     version = '*',
-    keys = { { '<leader>l', mode = { 'n', 'x' }, desc = 'Align' } },
+    keys = { { '<leader>a', mode = { 'n', 'x' }, desc = 'Align' } },
     config = function()
       require('mini.align').setup({
         mappings = {
           start = '',
-          start_with_preview = '<leader>l',
+          start_with_preview = '<leader>a',
         },
       })
     end,
