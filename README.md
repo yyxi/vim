@@ -5,7 +5,7 @@ git clone --depth 1 --recursive https://github.com/yyxi/vim.git ~/.vim
 ~/.vim/manage install
 ```
 
-# Keybindings
+### Keybindings
 
 | Keybinding       | Description                             |
 | ---------------- | --------------------------------------- |
