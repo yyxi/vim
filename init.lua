@@ -27,6 +27,13 @@ vnoremap <silent><Up> N
 vnoremap <silent><expr> N (v:searchforward ? 'N' : 'n')
 ]])
 
+vim.diagnostic.config({
+  underline = true,
+  virtual_text = false,
+  virtual_lines = false,
+  signs = true
+})
+
 -- https://github.com/echasnovski/neovim/blob/master/runtime/lua/vim/_defaults.lua
 vim.keymap.del({ 'n', 'x' }, 'gc')
 vim.keymap.del('n', 'gcc')
