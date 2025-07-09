@@ -31,7 +31,7 @@ vim.diagnostic.config({
   underline = true,
   virtual_text = false,
   virtual_lines = false,
-  signs = true
+  signs = true,
 })
 
 -- https://github.com/echasnovski/neovim/blob/master/runtime/lua/vim/_defaults.lua
@@ -270,12 +270,12 @@ vim.diagnostic.config({
     -- end,
   },
   underline = {
-    severity = { min = vim.diagnostic.severity.WARN },
+    severity = { min = vim.diagnostic.severity.HINT },
   },
   virtual_text = false,
   signs = true,
   update_in_insert = false,
-  severity_sort = false,
+  severity_sort = true,
 })
 
 -- Bootstrap lazy.nvim
@@ -717,12 +717,19 @@ require('lazy').setup({
       hi('FloatBorder', { force = true, link = 'Normal' })
       hi('FloatBorder', { force = true, link = 'Normal' })
       hi('NormalFloat', { force = true, link = 'Normal' })
+
       hi('DiagnosticFloatingError', { force = true, link = 'Normal' })
       hi('DiagnosticFloatingHint', { force = true, link = 'Normal' })
       hi('DiagnosticFloatingInfo', { force = true, link = 'Normal' })
       hi('DiagnosticFloatingWarn', { force = true, link = 'Normal' })
       hi('DiagnosticUnnecessary',
         { force = true, fg = p.base04, bg = nil, nocombine = false })
+
+      hi('DiagnosticUnderlineError', { underline = true, sp = p.base08 })
+      hi('DiagnosticUnderlineWarn',  { underline = true, sp = p.base0D })
+      hi('DiagnosticUnderlineHint',  { underline = true, sp = p.base0A })
+      hi('DiagnosticUnderlineInfo',  { underline = true, sp = p.base09 })
+
       hi('WinSeparator', { force = true, link = 'Normal' })
       hi('WhichKeySeparator', { force = true, link = 'String' })
       hi('WhichKeyFloat', { force = true, link = 'Normal' })
@@ -1094,6 +1101,38 @@ require('lazy').setup({
       })
 
       local handlers = {
+        harper_ls = ternary(is_installed('harper-ls'), function()
+          vim.lsp.config('harper_ls', {
+            capabilities = capabilities,
+            filetypes = {
+              'gitcommit',
+              'markdown',
+              'text',
+            },
+            settings = {
+              ['harper-ls'] = {
+                userDictPath = '',
+                fileDictPath = '',
+                linters = {
+                  SentenceCapitalization = false,
+                  SpellCheck = true,
+                  SpelledNumbers = false,
+                  WrongQuotes = false,
+                },
+                codeActions = {
+                  ForceStable = false,
+                },
+                markdown = {
+                  IgnoreLinkTitle = false,
+                },
+                diagnosticSeverity = 'hint',
+                isolateEnglish = false,
+                dialect = 'American',
+                maxFileLength = 120000,
+              },
+            },
+          })
+        end),
         ansiblels = ternary(is_installed('ansible-config'), function()
           vim.lsp.config('ansiblels', {
             capabilities = capabilities,
