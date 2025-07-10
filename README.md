@@ -21,9 +21,11 @@ git clone --depth 1 --recursive https://github.com/yyxi/vim.git ~/.vim
 | `<space>A`       | Code Action                             |
 | `<space>C`       | Block comment                           |
 | `<space>F`       | Fix                                     |
+| `<space>Q`       | Quit Neovim                             |
 | `<space>R`       | References                              |
 | `<space>S`       | Document Symbols                        |
 | `<space>S`       | Sort (visual mode)                      |
+| `<space>W`       | Workspace Symbols                       |
 | `<space>a`       | Align                                   |
 | `<space>b`       | Buffers                                 |
 | `<space>cA`      | Add comment at end of line              |
@@ -39,6 +41,7 @@ git clone --depth 1 --recursive https://github.com/yyxi/vim.git ~/.vim
 | `<space>i`       | Implementations                         |
 | `<space>j`       | Join Toggle                             |
 | `<space>n`       | case conversion                         |
+| `<space>q`       | Delete buffer                           |
 | `<space>r`       | Rename symbol                           |
 | `<space>sF`      | Find surrounding (left)                 |
 | `<space>sa`      | Add surrounding                         |
