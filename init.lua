@@ -33,6 +33,12 @@ nnoremap <expr> ^ (&wrap) ? 'g^' : '^'
 nnoremap <expr> $ (&wrap) ? 'g$' : '$'
 ]])
 
+require('editorconfig').properties.quote_type = function(bufnr, value, opts)
+  if value == 'single' or value == 'double' then
+    vim.b[bufnr].quote_type = value
+  end
+end
+
 local list_eol_namespace = vim.api.nvim_create_namespace('list_eol')
 
 local function list_eol_refresh(bufnr)
@@ -413,18 +419,20 @@ require('lazy').setup({
           base02 = '#504945',
           base03 = '#665c54',
           base04 = '#bdae93',
-          base07 = '#d5c4a1',
-          base05 = '#ebdbb2',
-          base06 = '#fbf1c7',
-          base08 = '#fb4934',
-          base09 = '#83a598',
-          base0A = '#fabd2f',
-          base0B = '#b8bb26',
-          base0C = '#8ec07c', -- underused
+          base05 = '#d5c4a1',
+          base06 = '#ebdbb2',
+          base07 = '#fbf1c7',
+          base0C = '#fb4833',
+          base0E = '#d3859a',
+          base0A = '#fabc2e',
           base0D = '#fe8019',
-          base0E = '#d3869b',
-          base0F = '#d65d0e',
+          base09 = '#d65d0e',
+          base0B = '#83a597',
+
+          base08 = '#8ec07b',
+          base0F = '#b8ba25',
         },
+
         use_cterm = not vim.o.termguicolors,
         plugins = {
           default = false,
@@ -461,10 +469,8 @@ require('lazy').setup({
         { force = true, fg = p.base03, bg = nil, attr = nil, sp = nil, nocombine = false, })
       hi('Delimiter',
         { force = true, fg = p.base09, bg = nil, attr = nil, sp = nil, nocombine = false, })
-      hi('Delimiter',
-        { force = true, fg = p.base09, bg = nil, attr = nil, sp = nil, nocombine = false, })
       hi('Boolean',
-        { force = true, fg = p.base0F, bg = nil, attr = nil, sp = nil, nocombine = false, })
+        { force = true, fg = p.base08, bg = nil, attr = nil, sp = nil, nocombine = false, })
       hi('Float',
         { force = true, fg = p.base0B, bg = nil, attr = nil, sp = nil, nocombine = false, italic = true })
       hi('Number',
@@ -777,10 +783,10 @@ require('lazy').setup({
       hi('DiagnosticUnnecessary',
         { force = true, fg = p.base04, bg = nil, nocombine = false })
 
-      hi('DiagnosticUnderlineError', { underline = true, sp = p.base08 })
+      hi('DiagnosticUnderlineError', { underline = true, sp = p.base0C })
       hi('DiagnosticUnderlineWarn', { underline = true, sp = p.base0D })
-      hi('DiagnosticUnderlineHint', { underline = true, sp = p.base0A })
-      hi('DiagnosticUnderlineInfo', { underline = true, sp = p.base09 })
+      hi('DiagnosticUnderlineHint', { underline = true, sp = p.base0F })
+      hi('DiagnosticUnderlineInfo', { underline = true, sp = p.base0B })
 
       hi('WinSeparator', { force = true, link = 'Normal' })
       hi('WhichKeySeparator', { force = true, link = 'String' })
@@ -886,6 +892,31 @@ require('lazy').setup({
     },
   },
   {
+    'echasnovski/mini.bufremove',
+    event = 'VimEnter',
+    keys = {
+      {
+        '<leader>q',
+        function()
+          require('mini.bufremove').delete()
+        end,
+        desc = 'Delete buffer',
+      },
+      {
+        '<leader>Q',
+        '<cmd>qa<cr>',
+        desc = 'Quit Neovim',
+      },
+      -- {
+      --   '<leader>Q',
+      --   function()
+      --     require('mini.bufremove').wipeout()
+      --   end,
+      --   desc = 'Wipeout buffer',
+      -- },
+    },
+  },
+  {
     'lukas-reineke/indent-blankline.nvim',
     name = 'ibl',
     event = 'VeryLazy',
@@ -930,6 +961,7 @@ require('lazy').setup({
   },
   {
     'echasnovski/mini.hipatterns',
+    branch = 'stable',
     event = 'VeryLazy',
     config = function()
       local hipatterns = require('mini.hipatterns')
@@ -1071,6 +1103,27 @@ require('lazy').setup({
         vim.lsp.protocol.make_client_capabilities(),
         require('blink.cmp').get_lsp_capabilities({}, false)
       )
+
+      local function unanimous_var_for_root(root_path, varname)
+        local candidate ---@type any|nil
+
+        for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_is_loaded(bufnr) then
+            local path = vim.api.nvim_buf_get_name(bufnr)
+            if path:sub(1, #root_path) == root_path then
+              local val = vim.b[bufnr][varname]
+              if val then -- ignore nils
+                if candidate and candidate ~= val then
+                  return nil -- mismatch → not unanimous
+                end
+                candidate = candidate or val -- remember first non-nil value
+              end
+            end
+          end
+        end
+
+        return candidate -- may be nil
+      end
 
       local on_attach = function(client, bufnr)
         vim.api.nvim_buf_set_keymap(
@@ -1292,9 +1345,9 @@ require('lazy').setup({
 
           local tsWorkspaceConfiguration = {
             format = {
-              indentSize = vim.o.shiftwidth,
-              convertTabsToSpaces = vim.o.expandtab,
-              tabSize = vim.o.tabstop,
+              indentSize = vim.opt_local.shiftwidth:get(),
+              convertTabsToSpaces = vim.opt_local.expandtab:get(),
+              tabSize = vim.opt_local.tabstop:get(),
               indentStyle = 'Smart',
               semicolons = 'remove',
               trimTrailingWhitespace = false,
@@ -1318,6 +1371,33 @@ require('lazy').setup({
             },
           }
 
+          local init_options = vim.tbl_deep_extend('force', {
+            hostInfo = 'neovim',
+            disableAutomaticTypingAcquisition = true,
+            preferences = {
+              -- Supported values 'auto', 'double', 'single'
+              quotePreference = 'auto',
+              organizeImportsIgnoreCase = false,
+              organizeImportsCollation = 'unicode',
+              organizeImportsCollationLocale = 'en',
+              organizeImportsNumericCollation = true,
+              organizeImportsAccentCollation = false,
+              organizeImportsCaseFirst = false,
+              importModuleSpecifierPreference = 'relative',
+              interactiveInlayHints = false,
+            },
+          }, hasVolar and {
+            plugins = {
+              {
+                name = '@vue/typescript-plugin',
+                location = vim.fn.expand(
+                  '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
+                ),
+                languages = { 'vue', 'typescript' },
+              },
+            },
+          } or {})
+
           vim.lsp.config('ts_ls', {
             capabilities = capabilities,
             fix = {
@@ -1334,31 +1414,6 @@ require('lazy').setup({
               'javascriptreact',
               'typescriptreact',
             }, hasVolar and { 'vue' } or {}),
-            init_options = vim.tbl_deep_extend('force', {
-              hostInfo = 'neovim',
-              preferences = {
-                -- Supported values 'auto', 'double', 'single'
-                quotePreference = 'auto',
-                organizeImportsIgnoreCase = false,
-                organizeImportsCollation = 'unicode',
-                organizeImportsCollationLocale = 'en',
-                organizeImportsNumericCollation = true,
-                organizeImportsAccentCollation = false,
-                organizeImportsCaseFirst = false,
-                importModuleSpecifierPreference = 'relative',
-                interactiveInlayHints = false,
-              },
-            }, hasVolar and {
-              plugins = {
-                {
-                  name = '@vue/typescript-plugin',
-                  location = vim.fn.expand(
-                    '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
-                  ),
-                  languages = { 'vue', 'typescript' },
-                },
-              },
-            } or {}),
             settings = {
               typescript = tsWorkspaceConfiguration,
               javascript = tsWorkspaceConfiguration,
@@ -1369,6 +1424,18 @@ require('lazy').setup({
                 ignoredCodes = { 80006 },
               },
             },
+            init_options = init_options,
+            before_init = function(params, config)
+              if params.rootUri then
+                local root_path = vim.uri_to_fname(params.rootUri)
+                local quotePreference =
+                  unanimous_var_for_root(root_path, 'quote_type') or 'auto'
+
+                -- :lua local client = vim.lsp.get_clients({name = 'ts_ls'})[1]; if client then print(client.config.init_options.preferences.quotePreference) else print("ts_ls not found") end
+                config.init_options.preferences.quotePreference =
+                  quotePreference
+              end
+            end,
           })
         end,
         eslint = function()
@@ -1422,23 +1489,25 @@ require('lazy').setup({
         end,
       }
 
-      vim.lsp.config('*', {
-        capabilities = capabilities,
-        -- root_markers = { '.git' },
-      })
+      vim.schedule(function()
+        vim.lsp.config('*', {
+          capabilities = capabilities,
+          -- root_markers = { '.git' },
+        })
 
-      for key, handler in pairs(handlers) do
-        local value = handler()
-        if value then
-          vim.lsp.config(key, value)
+        for key, handler in pairs(handlers) do
+          local value = handler()
+          if value then
+            vim.lsp.config(key, value)
+          end
         end
-      end
 
-      -- dockerls, terraformls, volar, taplo, glslls, bashls, cssls,
-      require('mason-lspconfig').setup({
-        automatic_enable = true,
-        ensure_installed = {},
-      })
+        -- dockerls, terraformls, volar, taplo, glslls, bashls, cssls,
+        require('mason-lspconfig').setup({
+          automatic_enable = true,
+          ensure_installed = {},
+        })
+      end)
     end,
   },
   {
@@ -1821,6 +1890,10 @@ require('lazy').setup({
       'TSInstallSync',
       'TSInstallFromGrammar',
     },
+    dependencies = {
+      -- :lua print(vim.inspect(vim.treesitter.query.get_files('typescript', 'textobjects')))
+      { 'nvim-treesitter/nvim-treesitter-textobjects', config = noop },
+    },
     -- init = function(plugin)
     --   require('lazy.core.loader').add_to_rtp(plugin)
     --   require('nvim-treesitter.query_predicates')
@@ -2074,11 +2147,11 @@ require('lazy').setup({
         '<cmd>Telescope lsp_document_symbols<cr>',
         desc = 'Document Symbols',
       },
-      -- {
-      --   '<leader>Tw',
-      --   '<cmd>Telescope lsp_workspace_symbols<cr>',
-      --   desc = 'Workspace Symbols',
-      -- },
+      {
+        '<leader>W',
+        '<cmd>Telescope lsp_workspace_symbols<cr>',
+        desc = 'Workspace Symbols',
+      },
       { '<leader>g', '<cmd>Telescope live_grep<cr>', desc = 'Grep' },
       { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
       { '<leader>e', '<cmd>Telescope find_files<cr>', desc = 'Edit' },
@@ -2175,6 +2248,7 @@ require('lazy').setup({
   },
   {
     'echasnovski/mini.ai',
+    branch = 'stable',
     version = '*',
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
@@ -2217,7 +2291,8 @@ require('lazy').setup({
             a = '@function.outer',
             i = '@function.inner',
           }), -- function
-          c = ai.gen_spec.treesitter({ a = '@class.outer', i = '@class.inner' }), -- class
+          C = ai.gen_spec.treesitter({ a = '@class.outer', i = '@class.inner' }), -- class
+          c = ai.gen_spec.treesitter({ a = '@call.outer', i = '@call.inner' }),
           t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' }, -- tags
           d = { '%f[%d]%d+' }, -- digits
           e = { -- Word with case
@@ -2248,6 +2323,7 @@ require('lazy').setup({
   },
   {
     'echasnovski/mini.surround',
+    branch = 'stable',
     -- event = 'InsertEnter',
     -- event = { 'VeryLazy' },
     event = { 'BufReadPre', 'BufNewFile' },
@@ -2342,7 +2418,7 @@ require('lazy').setup({
   },
   {
     'echasnovski/mini.align',
-    version = '*',
+    branch = 'stable',
     keys = { { '<leader>a', mode = { 'n', 'x' }, desc = 'Align' } },
     config = function()
       require('mini.align').setup({
@@ -2577,7 +2653,8 @@ require('lazy').setup({
         { '`', desc = '` string' },
         { 'a', desc = 'argument' },
         { 'b', desc = ')]} block' },
-        { 'c', desc = 'class' },
+        { 'C', desc = 'class' },
+        { 'c', desc = 'call' },
         { 'd', desc = 'digit(s)' },
         { 'e', desc = 'CamelCase / snake_case' },
         { 'f', desc = 'function' },
