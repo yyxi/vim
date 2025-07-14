@@ -1219,8 +1219,11 @@ require('lazy').setup({
                 userDictPath = '',
                 fileDictPath = '',
                 linters = {
+                  EllipsisLength = false,
+                  LongSentences = false,
+                  PhrasalVerbAsCompoundNoun = false,
                   SentenceCapitalization = false,
-                  SpellCheck = true,
+                  SpellCheck = false,
                   SpelledNumbers = false,
                   WrongQuotes = false,
                 },
