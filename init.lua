@@ -1861,9 +1861,10 @@ require('lazy').setup({
                   { 'label' },
                 },
               },
-              auto_show = function()
-                return vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!'
-              end,
+              -- auto_show = function()
+              --   return vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!'
+              -- end,
+              auto_show = false,
             },
             ghost_text = {
               enabled = false,
@@ -2008,7 +2009,7 @@ require('lazy').setup({
       --   { method = 'popup', syntax_hl = 1, border = 'rounded', highlight = 'Normal' }
       -- vim.g.matchup_transmute_enabled = 1
       vim.g.matchup_matchparen_offscreen = {}
-      vim.g.matchup_matchparen_enabled = 1
+      vim.g.matchup_matchparen_enabled = 0
       vim.g.matchup_mouse_enabled = 0
       vim.g.matchup_matchparen_deferred = 1
       vim.g.matchup_matchparen_hi_surround_always = 0
