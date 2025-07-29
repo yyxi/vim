@@ -1929,10 +1929,10 @@ require('lazy').setup({
         playground = {
           enable = true,
         },
-        matchup = {
-          enable = true,
-          disable_virtual_text = true,
-        },
+        -- matchup = {
+        --   enable = true,
+        --   disable_virtual_text = true,
+        -- },
         incremental_selection = {
           enable = false,
           keymaps = {
@@ -2008,8 +2008,9 @@ require('lazy').setup({
       -- vim.g.matchup_matchparen_offscreen =
       --   { method = 'popup', syntax_hl = 1, border = 'rounded', highlight = 'Normal' }
       -- vim.g.matchup_transmute_enabled = 1
+      vim.g.matchup_treesitter_disable_virtual_text = 1
       vim.g.matchup_matchparen_offscreen = {}
-      vim.g.matchup_matchparen_enabled = 0
+      vim.g.matchup_matchparen_enabled = 1
       vim.g.matchup_mouse_enabled = 0
       vim.g.matchup_matchparen_deferred = 1
       vim.g.matchup_matchparen_hi_surround_always = 0
