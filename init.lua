@@ -138,7 +138,7 @@ local function python3_path()
 end
 
 local function mason_path()
-  local directory = vim.fn.expand(vim.fn.stdpath('data') .. 'mason/bin')
+  local directory = vim.fn.expand(vim.fn.stdpath('data') .. '/mason/bin')
   ---@diagnostic disable-next-line: undefined-field
   local stat = vim.uv.fs_stat(directory)
   if not stat then
@@ -1240,6 +1240,8 @@ require('lazy').setup({
               },
             },
           })
+
+          return true
         end),
         ansiblels = ternary(is_installed('ansible-config'), function()
           vim.lsp.config('ansiblels', {
@@ -1265,6 +1267,8 @@ require('lazy').setup({
               },
             },
           })
+
+          return true
         end),
         yamlls = function()
           vim.lsp.config('yamlls', {
@@ -1280,6 +1284,8 @@ require('lazy').setup({
               },
             },
           })
+
+          return true
         end,
         jsonls = function()
           vim.lsp.config('jsonls', {
@@ -1291,6 +1297,8 @@ require('lazy').setup({
               },
             },
           })
+
+          return true
         end,
         -- lua_ls = function()
         --   require('lazydev').setup({
@@ -1313,6 +1321,8 @@ require('lazy').setup({
               end,
             },
           })
+
+          return true
         end,
         ruff = function()
           vim.lsp.config('ruff', {
@@ -1342,16 +1352,27 @@ require('lazy').setup({
               end,
             },
           })
+
+          return true
         end,
-        ts_ls = function()
+        vtsls = ternary(is_installed('vtsls'), function()
           local hasVolar = mason.is_installed('vue-language-server')
 
+          -- https://github.com/yioneko/vtsls/blob/main/packages/service/configuration.schema.json
           local tsWorkspaceConfiguration = {
+            inlayHints = {
+              parameterNames = { enabled = 'literals' },
+              parameterTypes = { enabled = true },
+              variableTypes = { enabled = true },
+              propertyDeclarationTypes = { enabled = true },
+              functionLikeReturnTypes = { enabled = true },
+              enumMemberValues = { enabled = true },
+            },
             format = {
               indentSize = vim.opt_local.shiftwidth:get(),
               convertTabsToSpaces = vim.opt_local.expandtab:get(),
               tabSize = vim.opt_local.tabstop:get(),
-              indentStyle = 'Smart',
+              indentStyle = 2, -- 'Smart',
               semicolons = 'remove',
               trimTrailingWhitespace = false,
               insertSpaceAfterCommaDelimiter = true,
@@ -1372,41 +1393,43 @@ require('lazy').setup({
               insertSpaceBeforeFunctionParenthesis = false,
               insertSpaceBeforeTypeAnnotation = false,
             },
-          }
-
-          local init_options = vim.tbl_deep_extend('force', {
-            hostInfo = 'neovim',
-            disableAutomaticTypingAcquisition = true,
             preferences = {
               -- Supported values 'auto', 'double', 'single'
-              quotePreference = 'auto',
-              organizeImportsIgnoreCase = false,
-              organizeImportsCollation = 'unicode',
-              organizeImportsCollationLocale = 'en',
-              organizeImportsNumericCollation = true,
-              organizeImportsAccentCollation = false,
-              organizeImportsCaseFirst = false,
-              importModuleSpecifierPreference = 'relative',
-              interactiveInlayHints = false,
-            },
-          }, hasVolar and {
-            plugins = {
-              {
-                name = '@vue/typescript-plugin',
-                location = vim.fn.expand(
-                  '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
-                ),
-                languages = { 'vue', 'typescript' },
+              quoteStyle = 'auto',
+              importModuleSpecifier = 'relative',
+              importModuleSpecifierEnding = 'minimal',
+              organizeImports = {
+                caseSensitivity = 'caseSensitive',
+                typeOrder = 'last',
+                unicodeCollation = 'unicode',
+                locale = 'en-US',
+                accentCollation = 'false',
+                numericCollation = 'true',
+                caseFirst = 'upper',
               },
             },
-          } or {})
+            suggest = {
+              completeJSDocs = false,
+              jsdoc = {
+                generateReturns = false,
+              },
+            },
+            check = { npmIsInstalled = false },
+            disableAutomaticTypeAcquisition = true,
+            updateImportsOnFileMove = 'always',
+          }
 
-          vim.lsp.config('ts_ls', {
+          vim.lsp.config('vtsls', {
             capabilities = capabilities,
             fix = {
               function(bufnr, client)
                 client.request_sync('workspace/executeCommand', {
-                  command = '_typescript.organizeImports',
+                  command = 'typescript.organizeImports',
+                  arguments = { vim.api.nvim_buf_get_name(bufnr) },
+                }, 3000, bufnr)
+
+                client.request_sync('workspace/executeCommand', {
+                  command = 'typescript.sortImportsImports',
                   arguments = { vim.api.nvim_buf_get_name(bufnr) },
                 }, 3000, bufnr)
               end,
@@ -1417,30 +1440,60 @@ require('lazy').setup({
               'javascriptreact',
               'typescriptreact',
             }, hasVolar and { 'vue' } or {}),
+            -- init_options = {},
             settings = {
               typescript = tsWorkspaceConfiguration,
               javascript = tsWorkspaceConfiguration,
-              completions = {
-                completeFunctionCalls = true,
+              vtsls = {
+                typescript = tsWorkspaceConfiguration,
+                javascript = tsWorkspaceConfiguration,
+                autoUseWorkspaceTsdk = false,
+                tsserver = vim.tbl_deep_extend(
+                  'force',
+                  { useSyntaxServer = 'always' },
+                  hasVolar
+                      and {
+
+                        globalPlugins = {
+                          {
+                            name = '@vue/typescript-plugin',
+                            location = vim.fn.expand(
+                              '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
+                            ),
+                            languages = { 'vue', 'typescript' },
+                            configNamespace = 'typescript',
+                          },
+                        },
+                      }
+                    or {}
+                ),
               },
-              diagnostics = {
-                ignoredCodes = { 80006 },
-              },
+              -- completions = {
+              --   completeFunctionCalls = true,
+              -- },
+              -- diagnostics = {
+              --   ignoredCodes = { 80006 },
+              -- },
             },
-            init_options = init_options,
             before_init = function(params, config)
               if params.rootUri then
                 local root_path = vim.uri_to_fname(params.rootUri)
-                local quotePreference =
-                  unanimous_var_for_root(root_path, 'quote_type') or 'auto'
+                local quotePreference = unanimous_var_for_root(
+                  root_path,
+                  'quote_type'
+                ) or 'auto'
 
-                -- :lua local client = vim.lsp.get_clients({name = 'ts_ls'})[1]; if client then print(client.config.init_options.preferences.quotePreference) else print("ts_ls not found") end
-                config.init_options.preferences.quotePreference =
+                -- :lua local client = vim.lsp.get_clients({name = 'vtsls'})[1]; if client then print(client.config.settings.javascript.preferences.quoteStyle) else print("vtsls not found") end
+                config.settings.javascript.preferences.quoteStyle =
+                  quotePreference
+                config.settings.typescript.preferences.quoteStyle =
                   quotePreference
               end
             end,
           })
-        end,
+
+          return true
+        end),
         eslint = function()
           vim.lsp.config('eslint', {
             filetypes = {
@@ -1489,6 +1542,8 @@ require('lazy').setup({
               end,
             },
           })
+
+          return true
         end,
       }
 
@@ -1501,13 +1556,13 @@ require('lazy').setup({
         for key, handler in pairs(handlers) do
           local value = handler()
           if value then
-            vim.lsp.config(key, value)
+            vim.lsp.enable(key)
           end
         end
 
         -- dockerls, terraformls, volar, taplo, glslls, bashls, cssls,
         require('mason-lspconfig').setup({
-          automatic_enable = true,
+          automatic_enable = false,
           ensure_installed = {},
         })
       end)
@@ -1558,6 +1613,7 @@ require('lazy').setup({
         typescript = {
           order = {
             'ts_ls',
+            'vtsls',
             'eslint',
           },
         },
