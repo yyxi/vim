@@ -57,6 +57,38 @@ local function list_eol_refresh(bufnr)
   end
 end
 
+local diagnostic_group = vim.api.nvim_create_augroup('DiagnosticGroup', {})
+
+local function create_diagnostic_autocmd(typ, pattern, callback)
+  if type(callback) == 'function' then
+    vim.api.nvim_create_autocmd(
+      typ,
+      { pattern = pattern, callback = callback, group = diagnostic_group }
+    )
+  else
+    vim.api.nvim_create_autocmd(
+      typ,
+      { pattern = pattern, command = callback, group = diagnostic_group }
+    )
+  end
+end
+
+create_diagnostic_autocmd({ 'CursorHold', 'InsertLeave' }, nil, function()
+  vim.diagnostic.open_float(nil, {
+    focusable = false,
+    scope = 'cursor',
+    close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' },
+  })
+end)
+
+create_diagnostic_autocmd('InsertEnter', nil, function()
+  vim.diagnostic.enable(false)
+end)
+
+create_diagnostic_autocmd('InsertLeave', nil, function()
+  vim.diagnostic.enable(true)
+end)
+
 -- update on most edits & when the window scrolls
 
 local prose_group =
@@ -88,6 +120,12 @@ vim.diagnostic.config({
   virtual_text = false,
   virtual_lines = false,
   signs = false,
+  float = {
+    source = 'always',
+    focusable = false,
+    style = 'minimal',
+    border = 'rounded',
+  },
 })
 
 -- https://github.com/echasnovski/neovim/blob/master/runtime/lua/vim/_defaults.lua
@@ -1137,7 +1175,7 @@ require('lazy').setup({
           bufnr,
           'n',
           'K',
-          '<cmd>lua vim.lsp.buf.hover({ border = "rounded" })<cr>',
+          "<cmd>lua vim.lsp.buf.hover({ border = 'rounded', close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' } })<cr>",
           { noremap = true, silent = true, desc = 'Hover' }
         )
         vim.api.nvim_buf_set_keymap(
@@ -1169,7 +1207,7 @@ require('lazy').setup({
           bufnr,
           'n',
           '<C-Up>',
-          '<cmd>lua vim.diagnostic.goto_prev()<cr>',
+          "<cmd>lua vim.diagnostic.jump({ count = -1, float = true, focus = false, focusable = false, scope = 'cursor', close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' } })<cr>",
           { noremap = true, silent = true, desc = 'Previous Diagnostic' }
         )
 
@@ -1177,7 +1215,7 @@ require('lazy').setup({
           bufnr,
           'n',
           '<C-Down>',
-          '<cmd>lua vim.diagnostic.goto_next()<cr>',
+          "<cmd>lua vim.diagnostic.jump({ count = 1, float = true, focus = false, focusable = false, scope = 'cursor', close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' } })<cr>",
           { noremap = true, silent = true, desc = 'Next Diagnostic' }
         )
 
@@ -1562,7 +1600,11 @@ require('lazy').setup({
 
         -- dockerls, terraformls, volar, taplo, glslls, bashls, cssls,
         require('mason-lspconfig').setup({
-          automatic_enable = false,
+          automatic_enable = {
+            exclude = {
+              'ts_ls',
+            },
+          },
           ensure_installed = {},
         })
       end)
