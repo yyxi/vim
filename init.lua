@@ -1175,7 +1175,7 @@ require('lazy').setup({
           bufnr,
           'n',
           'K',
-          "<cmd>lua vim.lsp.buf.hover({ border = 'rounded', close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' } })<cr>",
+          "<cmd>lua vim.lsp.buf.hover({ border = 'rounded', focus = false, focusable = false, close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' } })<cr>",
           { noremap = true, silent = true, desc = 'Hover' }
         )
         vim.api.nvim_buf_set_keymap(
