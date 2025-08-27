@@ -57,37 +57,37 @@ local function list_eol_refresh(bufnr)
   end
 end
 
-local diagnostic_group = vim.api.nvim_create_augroup('DiagnosticGroup', {})
-
-local function create_diagnostic_autocmd(typ, pattern, callback)
-  if type(callback) == 'function' then
-    vim.api.nvim_create_autocmd(
-      typ,
-      { pattern = pattern, callback = callback, group = diagnostic_group }
-    )
-  else
-    vim.api.nvim_create_autocmd(
-      typ,
-      { pattern = pattern, command = callback, group = diagnostic_group }
-    )
-  end
-end
-
-create_diagnostic_autocmd({ 'CursorHold', 'InsertLeave' }, nil, function()
-  vim.diagnostic.open_float(nil, {
-    focusable = false,
-    scope = 'cursor',
-    close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' },
-  })
-end)
-
-create_diagnostic_autocmd('InsertEnter', nil, function()
-  vim.diagnostic.enable(false)
-end)
-
-create_diagnostic_autocmd('InsertLeave', nil, function()
-  vim.diagnostic.enable(true)
-end)
+-- local diagnostic_group = vim.api.nvim_create_augroup('DiagnosticGroup', {})
+--
+-- local function create_diagnostic_autocmd(typ, pattern, callback)
+--   if type(callback) == 'function' then
+--     vim.api.nvim_create_autocmd(
+--       typ,
+--       { pattern = pattern, callback = callback, group = diagnostic_group }
+--     )
+--   else
+--     vim.api.nvim_create_autocmd(
+--       typ,
+--       { pattern = pattern, command = callback, group = diagnostic_group }
+--     )
+--   end
+-- end
+--
+-- create_diagnostic_autocmd({ 'CursorHold', 'InsertLeave' }, nil, function()
+--   vim.diagnostic.open_float(nil, {
+--     focusable = false,
+--     scope = 'cursor',
+--     close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' },
+--   })
+-- end)
+--
+-- create_diagnostic_autocmd('InsertEnter', nil, function()
+--   vim.diagnostic.enable(false)
+-- end)
+--
+-- create_diagnostic_autocmd('InsertLeave', nil, function()
+--   vim.diagnostic.enable(true)
+-- end)
 
 -- update on most edits & when the window scrolls
 
@@ -116,16 +116,23 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 vim.diagnostic.config({
-  underline = true,
   virtual_text = false,
   virtual_lines = false,
   signs = false,
+  -- signs = true,
   float = {
-    source = 'always',
+    -- source = 'always',
+    close_events = { 'BufHidden', 'CursorMoved', 'InsertEnter' },
     focusable = false,
     style = 'minimal',
     border = 'rounded',
   },
+  underline = {
+    severity = { min = vim.diagnostic.severity.HINT },
+  },
+  -- underline = true,
+  update_in_insert = false,
+  severity_sort = true,
 })
 
 -- https://github.com/echasnovski/neovim/blob/master/runtime/lua/vim/_defaults.lua
@@ -353,26 +360,6 @@ vim.g.clipboard = {
   },
 }
 
-vim.diagnostic.config({
-  float = {
-    border = 'rounded',
-    -- focusable = true,
-    -- header = '',
-    -- prefix = '',
-    -- source = 'always',
-    -- style = 'minimal',
-    -- format = function(diagnostic)
-    --   return string.format('%s: %s', diagnostic.source, diagnostic.message)
-    -- end,
-  },
-  underline = {
-    severity = { min = vim.diagnostic.severity.HINT },
-  },
-  virtual_text = false,
-  signs = true,
-  update_in_insert = false,
-  severity_sort = true,
-})
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
@@ -1175,7 +1162,7 @@ require('lazy').setup({
           bufnr,
           'n',
           'K',
-          "<cmd>lua vim.lsp.buf.hover({ border = 'rounded', focus = false, focusable = false, close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' } })<cr>",
+          "<cmd>lua vim.lsp.buf.hover({ border = 'rounded', focus = false, focusable = true, close_events = { 'LspDetach', 'BufHidden', 'CursorMoved' } })<cr>",
           { noremap = true, silent = true, desc = 'Hover' }
         )
         vim.api.nvim_buf_set_keymap(
