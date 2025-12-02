@@ -33,7 +33,9 @@ nnoremap <expr> ^ (&wrap) ? 'g^' : '^'
 nnoremap <expr> $ (&wrap) ? 'g$' : '$'
 ]])
 
-require('editorconfig').properties.quote_type = function(bufnr, value, opts)
+local dotenv = require('dotenv')
+
+require('editorconfig').properties.quote_type = function(bufnr, value)
   if value == 'single' or value == 'double' then
     vim.b[bufnr].quote_type = value
   end
@@ -56,40 +58,6 @@ local function list_eol_refresh(bufnr)
     end
   end
 end
-
--- local diagnostic_group = vim.api.nvim_create_augroup('DiagnosticGroup', {})
---
--- local function create_diagnostic_autocmd(typ, pattern, callback)
---   if type(callback) == 'function' then
---     vim.api.nvim_create_autocmd(
---       typ,
---       { pattern = pattern, callback = callback, group = diagnostic_group }
---     )
---   else
---     vim.api.nvim_create_autocmd(
---       typ,
---       { pattern = pattern, command = callback, group = diagnostic_group }
---     )
---   end
--- end
---
--- create_diagnostic_autocmd({ 'CursorHold', 'InsertLeave' }, nil, function()
---   vim.diagnostic.open_float(nil, {
---     focusable = false,
---     scope = 'cursor',
---     close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' },
---   })
--- end)
---
--- create_diagnostic_autocmd('InsertEnter', nil, function()
---   vim.diagnostic.enable(false)
--- end)
---
--- create_diagnostic_autocmd('InsertLeave', nil, function()
---   vim.diagnostic.enable(true)
--- end)
-
--- update on most edits & when the window scrolls
 
 local prose_group =
   vim.api.nvim_create_augroup('ProseSettings', { clear = true })
@@ -360,7 +328,6 @@ vim.g.clipboard = {
   },
 }
 
-
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 ---@diagnostic disable-next-line: undefined-field
@@ -513,6 +480,8 @@ require('lazy').setup({
 
       hi('TelescopeBorder',
         { force = true, fg = p.base01, bg = p.base00 })
+
+      hi('SignColumn', { force = true, bg = p.base00 })
 
       hi('TelescopeTitle',
         { force = true, fg = p.base03, bg = p.base00 })
@@ -853,6 +822,60 @@ require('lazy').setup({
 
       hi('BlinkCmpLabelDescription', { force = true, link = 'Comment' })
 
+      -- Avante.nvim highlights remapped to base16 palette using `hm`
+
+      -- Titles / subtitles ----------------------------------------------------
+      hm('AvanteTitle', { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base08 })
+      hm('AvanteReversedTitle', { link = 'NormalFloat', force = true, fg = p.base08 })
+      hm('AvanteSubtitle', { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0B })
+      hm('AvanteReversedSubtitle', { link = 'NormalFloat', force = true, fg = p.base0B })
+      hm('AvanteThirdTitle', { link = 'NormalFloat', force = true, fg = p.base05, bg = p.base00 })
+      hm('AvanteReversedThirdTitle', { link = 'NormalFloat', force = true, fg = p.base01 })
+      hm('AvanteSuggestion', { link = 'Comment', force = true })
+      hm('AvanteAnnotation', { link = 'Comment', force = true })
+      hm('AvantePopupHint', { link = 'NormalFloat', force = true })
+      hm('AvanteInlineHint', { link = 'Keyword', force = true })
+      hm('AvanteToBeDeleted', { link = 'Error', force = true, strikethrough = true })
+      hm('AvanteToBeDeletedWOStrikethrough', { link = 'DiffDelete', force = true })
+      hm('AvanteConfirmTitle', { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0C })
+      hm('AvanteButtonDefault', { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base02 })
+      hm('AvanteButtonDefaultHover', { link = 'AvanteButtonDefault', force = true, bg = p.base08 })
+      hm('AvanteButtonPrimary', { link = 'AvanteButtonDefault', force = true })
+      hm('AvanteButtonPrimaryHover', { link = 'AvanteButtonDefault', force = true, bg = p.base0B })
+      hm('AvanteButtonDanger', { link = 'AvanteButtonDefault', force = true })
+      hm('AvanteButtonDangerHover', { link = 'AvanteButtonDefault', force = true, bg = p.base0C })
+      hm('AvantePromptInput', { link = 'NormalFloat', force = true })
+      hi('AvantePromptInputBorder', { fg = nil, bg = nil, force = true })
+      hi('AvanteSidebarWinSeparator', { fg = nil, bg = nil, force = true })
+      hm('AvanteSidebarWinHorizontalSeparator', { link = 'WinSeparator', force = true })
+      hm('AvanteSidebarNormal', { link = 'NormalFloat', force = true })
+      hm('AvanteCommentFg', { link = 'Comment', force = true })
+      hm('AvanteReversedNormal', { link = 'Normal', force = true, fg = p.base00, bg = p.base05 })
+      hm('AvanteStateSpinnerGenerating',
+        { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0D })
+      hm('AvanteStateSpinnerToolCalling',
+        { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0B })
+      hm('AvanteStateSpinnerFailed',
+        { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0C })
+      hm('AvanteStateSpinnerSucceeded',
+        { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base08 })
+      hm('AvanteStateSpinnerSearching',
+        { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0E })
+      hm('AvanteStateSpinnerThinking',
+        { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0E })
+      hm('AvanteStateSpinnerCompacting',
+        { link = 'NormalFloat', force = true, fg = p.base00, bg = p.base0E })
+      hm('AvanteTaskRunning', { link = 'Normal', force = true, fg = p.base0E })
+      hm('AvanteTaskCompleted', { link = 'Normal', force = true, fg = p.base08 })
+      hm('AvanteTaskFailed', { link = 'Normal', force = true, fg = p.base0C })
+      hm('AvanteThinking', { link = 'Normal', force = true, fg = p.base0E })
+      hm('AvanteConflictCurrent', { link = 'DiffDelete', force = true, bold = true })
+      hm('AvanteConflictCurrentLabel',
+        { link = 'AvanteConflictCurrent', force = true, bold = false, italic = true })
+      hm('AvanteConflictIncoming', { link = 'DiffAdd', force = true, bold = true })
+      hm('AvanteConflictIncomingLabel',
+        { link = 'AvanteConflictIncoming', force = true, bold = false, italic = true })
+
       -- hi('MasonHeader', { force = true, fg = p.base00, bg = nil, nocombine = true })
 
       -- hi('@conditional',                      { force = true,     link = 'Conditional' })
@@ -914,6 +937,28 @@ require('lazy').setup({
         lualine_y = {},
         lualine_z = {},
       },
+    },
+  },
+  {
+    'folke/snacks.nvim',
+    priority = 1000,
+    lazy = false,
+    opts = {
+      input = {
+        enabled = true,
+        icon = '',
+      },
+      notifier = { enabled = false },
+      bigfile = { enabled = true },
+      dashboard = { enabled = false },
+      explorer = { enabled = false },
+      indent = { enabled = false },
+      picker = { enabled = false },
+      quickfile = { enabled = true },
+      scope = { enabled = false },
+      scroll = { enabled = false },
+      statuscolumn = { enabled = false },
+      words = { enabled = false },
     },
   },
   {
@@ -1169,7 +1214,6 @@ require('lazy').setup({
           bufnr,
           'n',
           '<leader>r',
-          -- ':Rename ',
           '<cmd>lua vim.lsp.buf.rename()<cr>',
           { noremap = true, silent = true, desc = 'Rename' }
         )
@@ -1728,6 +1772,7 @@ require('lazy').setup({
         config = noop,
         dependencies = { { 'rafamadriz/friendly-snippets' } },
       },
+      'Kaiser-Yang/blink-cmp-avante',
     },
     config = function()
       local cmp = require('blink.cmp')
@@ -1873,7 +1918,16 @@ require('lazy').setup({
           },
         },
         sources = {
-          default = { 'lsp', 'path', 'snippets', 'buffer' },
+          providers = {
+            avante = {
+              module = 'blink-cmp-avante',
+              name = 'Avante',
+              opts = {
+                -- options for blink-cmp-avante
+              },
+            },
+          },
+          default = { 'avante', 'lsp', 'path', 'snippets', 'buffer' },
         },
         fuzzy = {
           sorts = {
@@ -2108,15 +2162,17 @@ require('lazy').setup({
   {
     'windwp/nvim-ts-autotag',
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
-    opts = {
-      enable = true,
-      enable_rename = true,
-      enable_close = true,
-      enable_close_on_slash = true,
-    },
-    -- event = { 'VeryLazy' },
     ft = { 'html', 'vue' },
     event = { 'BufReadPre', 'BufNewFile' },
+    config = function()
+      require('nvim-ts-autotag').setup({
+        opts = {
+          enable_rename = true,
+          enable_close = true,
+          enable_close_on_slash = true,
+        },
+      })
+    end,
   },
   {
     'numToStr/Comment.nvim',
@@ -2941,6 +2997,170 @@ require('lazy').setup({
         default_keymappings_enabled = true,
         prefix = '<leader>n',
       })
+    end,
+  },
+  {
+    'danymat/neogen',
+    dependencies = { 'saghen/blink.cmp' },
+    cmd = 'Neogen',
+    keys = {
+      {
+        '<leader>D',
+        mode = { 'n' },
+        desc = 'Documentation Comment',
+        function()
+          require('neogen').generate()
+        end,
+      },
+    },
+    config = function()
+      require('neogen').setup({ snippet_engine = 'luasnip' })
+    end,
+  },
+  {
+    'yetone/avante.nvim',
+    version = '4d9d2de6fe9325a11aea7fed653478cb5b2b728b',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'MunifTanjim/nui.nvim',
+      'saghen/blink.cmp',
+    },
+    build = 'make',
+    event = 'VeryLazy',
+    config = function()
+      local utils = require('avante.utils')
+
+      utils.uuid = function()
+        local chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+        local t = {}
+        for i = 1, 9 do
+          local idx = math.random(1, #chars)
+          t[i] = chars:sub(idx, idx)
+        end
+        return table.concat(t)
+      end
+
+      require('avante').setup({
+        auto_set_highlight_group = true,
+        instructions_file = 'AGENTS.md',
+        provider = 'mistral',
+        providers = {
+          mistral = {
+            __inherited_from = 'openai',
+            api_key_name = { "echo", dotenv.MISTRAL_API_KEY },
+            endpoint = 'https://api.mistral.ai/v1',
+            model = 'mistral-large-2512',
+            extra_request_body = { max_tokens = 8192 },
+          },
+          -- codestral = {
+          --   __inherited_from = 'openai',
+          --   api_key_name = dotenv.CODESTRAL_API_KEY,
+          --   endpoint = 'https://codestral.mistral.ai/v1',
+          --   model = 'codestral-2501',
+          --   extra_request_body = { max_tokens = 8192 },
+          --   mode = 'legacy',
+          --   disable_tools = true,
+          -- },
+        },
+        selector = {
+          provider = 'telescope',
+        },
+        input = {
+          provider = 'snacks',
+        },
+        windows = {
+          wrap = true,
+          width = 38,
+          sidebar_header = {
+            enabled = false,
+          },
+          edit = {
+            border = 'rounded',
+          },
+          input = {
+            prefix = '>',
+          },
+        },
+        prompt_logger = {
+          enabled = false,
+        },
+        selection = {
+          enabled = true,
+          hint_display = 'none',
+        },
+        mappings = {
+          diff = {
+            ours = 'co',
+            theirs = 'ct',
+            all_theirs = 'ca',
+            both = 'cb',
+            cursor = 'cc',
+            next = ']x',
+            prev = '[x',
+          },
+          suggestion = {
+            accept = '<M-l>',
+            next = '<M-]>',
+            prev = '<M-[>',
+            dismiss = '<C-]>',
+          },
+          jump = {
+            next = ']]',
+            prev = '[[',
+          },
+          submit = {
+            normal = '<CR>',
+            insert = '<C-s>',
+          },
+          cancel = {
+            normal = { '<C-c>', '<Esc>', 'q' },
+            insert = { '<C-c>' },
+          },
+          ask = "<leader>'a",
+          new_ask = "<leader>'n",
+          zen_mode = nil,
+          edit = nil,
+          refresh = "<leader>'r",
+          focus = "<leader>'f",
+          stop = "<leader>'S",
+          toggle = {
+            default = "<leader>'t",
+            debug = "<leader>'d",
+            selection = "<leader>'C",
+            suggestion = "<leader>'s",
+            repomap = "<leader>'R",
+          },
+          sidebar = {
+            expand_tool_use = '<S-Tab>',
+            next_prompt = ']p',
+            prev_prompt = '[p',
+            apply_all = 'A',
+            apply_cursor = 'a',
+            retry_user_request = 'r',
+            edit_user_request = 'e',
+            switch_windows = '<Tab>',
+            reverse_switch_windows = '<S-Tab>',
+            toggle_code_window = 'x',
+            remove_file = 'd',
+            add_file = '@',
+            close = { 'q' },
+          },
+          files = {
+            add_current = "<leader>'c", -- Add current buffer to selected files
+            add_all_buffers = "<leader>'B", -- Add all buffer files to selected files
+          },
+          select_model = "<leader>'?", -- Select model command
+          select_history = "<leader>'h", -- Select history command
+          confirm = {
+            focus_window = '<C-w>f',
+            code = 'c',
+            resp = 'r',
+            input = 'i',
+          },
+        },
+      })
+
+      vim.api.nvim_del_user_command('AvanteEdit')
     end,
   },
 }, {

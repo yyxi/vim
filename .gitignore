@@ -1,3 +1,5 @@
+.env.*
+
 vimrc
 .python-version
 /.ready
