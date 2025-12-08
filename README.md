@@ -20,6 +20,7 @@ git clone --depth 1 --recursive https://github.com/yyxi/vim.git ~/.vim
 | `<space>?`       | Which-Key popup                         |
 | `<space>A`       | Code Action                             |
 | `<space>C`       | Block comment                           |
+| `<space>D`       | Documentation comment                   |
 | `<space>F`       | Fix                                     |
 | `<space>Q`       | Quit Neovim                             |
 | `<space>R`       | References                              |
