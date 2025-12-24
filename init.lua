@@ -9,7 +9,7 @@ endif
 
 filetype plugin on
 filetype plugin indent on
-syntax off
+syntax manual
 au FileType help,qf setl nowrap nofen nospell nocul nolist
 
 cmap WQ wq
@@ -2136,6 +2136,28 @@ require('lazy').setup({
         },
       })
     end,
+  },
+  {
+    'Julian/lean.nvim',
+    event = { 'BufReadPre *.lean', 'BufNewFile *.lean' },
+    ft = 'lean',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-treesitter/nvim-treesitter',
+      'saghen/blink.cmp',
+    },
+    opts = { -- see below for full configuration options
+      mappings = false,
+      infoview = {
+        autoopen = false,
+      },
+      progress_bars = {
+        enable = false
+      },
+      stderr = {
+        enable = false
+      }
+    }
   },
   {
     'andymass/vim-matchup',
