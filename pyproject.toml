@@ -4,9 +4,6 @@ version = "0.1.0"
 dependencies = ["pynvim>=0.5.2", "pip>=25.1.1"]
 requires-python = ">=3.12,<3.13"
 
-
-# [tool.uv]
-# no-build = true
 [tool.uv]
 managed = true
 

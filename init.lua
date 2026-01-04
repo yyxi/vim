@@ -1736,7 +1736,7 @@ require('lazy').setup({
           json = { 'prettier' },
           json5 = { 'prettier' },
           jsonc = { 'prettier' },
-          lua = { 'stylua' },
+          -- lua = { 'stylua' },
           tex = { 'latexindent' },
           markdown = { 'prettier' },
           sh = { 'shfmt' },
@@ -2152,12 +2152,12 @@ require('lazy').setup({
         autoopen = false,
       },
       progress_bars = {
-        enable = false
+        enable = false,
       },
       stderr = {
-        enable = false
-      }
-    }
+        enable = false,
+      },
+    },
   },
   {
     'andymass/vim-matchup',
@@ -3069,7 +3069,7 @@ require('lazy').setup({
         providers = {
           mistral = {
             __inherited_from = 'openai',
-            api_key_name = { "echo", dotenv.MISTRAL_API_KEY },
+            api_key_name = { 'echo', dotenv.MISTRAL_API_KEY },
             endpoint = 'https://api.mistral.ai/v1',
             model = 'mistral-large-2512',
             extra_request_body = { max_tokens = 8192 },
