@@ -1,6 +1,4 @@
 ---@diagnostic disable: lowercase-global, missing-fields, redefined-local
--- 'wincent/terminus'
--- 'ojroques/vim-oscyank'
 
 vim.cmd([[
 if !empty(&viminfo)
@@ -36,9 +34,7 @@ nnoremap <expr> $ (&wrap) ? 'g$' : '$'
 local dotenv = require('dotenv')
 
 require('editorconfig').properties.quote_type = function(bufnr, value)
-  if value == 'single' or value == 'double' then
-    vim.b[bufnr].quote_type = value
-  end
+  if value == 'single' or value == 'double' then vim.b[bufnr].quote_type = value end
 end
 
 local list_eol_namespace = vim.api.nvim_create_namespace('list_eol')
@@ -59,8 +55,7 @@ local function list_eol_refresh(bufnr)
   end
 end
 
-local prose_group =
-  vim.api.nvim_create_augroup('ProseSettings', { clear = true })
+local prose_group = vim.api.nvim_create_augroup('ProseSettings', { clear = true })
 
 vim.api.nvim_create_autocmd('FileType', {
   group = prose_group,
@@ -70,16 +65,11 @@ vim.api.nvim_create_autocmd('FileType', {
     -- vim.opt_local.conceallevel = 2
     -- vim.opt_local.concealcursor = ''
 
-    vim.api.nvim_create_autocmd(
-      { 'BufWinEnter', 'TextChanged', 'TextChangedI', 'WinScrolled' },
-      {
-        group = prose_group,
-        buffer = args.buf,
-        callback = function(args)
-          list_eol_refresh(args.buf)
-        end,
-      }
-    )
+    vim.api.nvim_create_autocmd({ 'BufWinEnter', 'TextChanged', 'TextChangedI', 'WinScrolled' }, {
+      group = prose_group,
+      buffer = args.buf,
+      callback = function(args) list_eol_refresh(args.buf) end,
+    })
   end,
 })
 
@@ -108,9 +98,7 @@ vim.keymap.del({ 'n', 'x' }, 'gc')
 vim.keymap.del('n', 'gcc')
 vim.keymap.del({ 'o' }, 'gc')
 
-function custom_fold_text()
-  return vim.fn.getline(vim.v.foldstart)
-end
+function custom_fold_text() return vim.fn.getline(vim.v.foldstart) end
 
 local function concat(t1, t2)
   for _, v in ipairs(t2) do
@@ -128,9 +116,7 @@ local function dirname(path)
   local last_slash = normalized_path:match('.*()/')
 
   -- If no slash is found, return "."
-  if not last_slash then
-    return '.'
-  end
+  if not last_slash then return '.' end
 
   -- Return the part of the string before the last slash
   return normalized_path:sub(1, last_slash - 1)
@@ -139,13 +125,9 @@ end
 local function python3_path()
   ---@diagnostic disable-next-line: undefined-field
   local stat = vim.uv.fs_stat(vim.fn.expand('~/.vim/.venv/bin'))
-  if not stat then
-    return nil
-  end
+  if not stat then return nil end
 
-  if stat.type == 'directory' then
-    return vim.fn.expand('~/.vim/.venv/bin/python3')
-  end
+  if stat.type == 'directory' then return vim.fn.expand('~/.vim/.venv/bin/python3') end
 
   return nil
 end
@@ -154,9 +136,7 @@ local function mason_path()
   local directory = vim.fn.expand(vim.fn.stdpath('data') .. '/mason/bin')
   ---@diagnostic disable-next-line: undefined-field
   local stat = vim.uv.fs_stat(directory)
-  if not stat then
-    return nil
-  end
+  if not stat then return nil end
 
   if stat.type == 'directory' then
     vim.env.PATH = vim.env.PATH .. ':' .. vim.fn.expand(directory)
@@ -168,14 +148,10 @@ mason_path()
 vim.g.python3_host_prog = python3_path()
 
 if vim.g.python3_host_prog then
-  vim.env.PATH = vim.env.PATH
-    .. ':'
-    .. dirname(vim.fn.expand(vim.g.python3_host_prog))
+  vim.env.PATH = vim.env.PATH .. ':' .. dirname(vim.fn.expand(vim.g.python3_host_prog))
 end
 
-if vim.loader then
-  vim.loader.enable()
-end
+if vim.loader then vim.loader.enable() end
 
 local function is_installed(binary)
   -- Split PATH into individual directories
@@ -184,9 +160,7 @@ local function is_installed(binary)
   for _, dir in ipairs(path_dirs) do
     local full_path = dir .. package.config:sub(1, 1) .. binary
     ---@diagnostic disable-next-line: undefined-field
-    if vim.uv.fs_stat(full_path) then
-      return true
-    end
+    if vim.uv.fs_stat(full_path) then return true end
   end
 
   return false
@@ -302,7 +276,7 @@ vim.o.virtualedit = 'onemore'
 vim.o.visualbell = false
 vim.o.whichwrap = 'b,s,<,>,h,l'
 vim.o.wildignore =
-  '*/.git/*,*/.hg/*,*/.svn/*,*.aux,*.out,*.toc,*.jpg,*.bmp,*.gif,*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]'
+'*/.git/*,*/.hg/*,*/.svn/*,*.aux,*.out,*.toc,*.jpg,*.bmp,*.gif,*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]'
 vim.o.wildmenu = true
 vim.o.wildmode = 'longest:full,full'
 vim.o.winblend = 10
@@ -319,12 +293,8 @@ vim.g.clipboard = {
     ['*'] = require('vim.ui.clipboard.osc52').copy('*'),
   },
   paste = {
-    ['+'] = function()
-      return 0
-    end,
-    ['*'] = function()
-      return 0
-    end,
+    ['+'] = function() return 0 end,
+    ['*'] = function() return 0 end,
   },
 }
 
@@ -344,7 +314,7 @@ if not vim.uv.fs_stat(lazypath) then
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
       { 'Failed to clone lazy.nvim:\n', 'ErrorMsg' },
-      { out, 'WarningMsg' },
+      { out,                            'WarningMsg' },
       { '\nPress any key to exit...' },
     }, true, {})
     vim.fn.getchar()
@@ -400,7 +370,7 @@ require('lazy').setup({
   },
   {
     'echasnovski/mini.base16',
-    lazy = false, -- make sure we load this during startup if it is your main colorscheme
+    lazy = false,    -- make sure we load this during startup if it is your main colorscheme
     branch = 'stable',
     priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
@@ -967,9 +937,7 @@ require('lazy').setup({
     keys = {
       {
         '<leader>q',
-        function()
-          require('mini.bufremove').delete()
-        end,
+        function() require('mini.bufremove').delete() end,
         desc = 'Delete buffer',
       },
       {
@@ -1019,14 +987,8 @@ require('lazy').setup({
       })
 
       local hooks = require('ibl.hooks')
-      hooks.register(
-        hooks.type.WHITESPACE,
-        hooks.builtin.hide_first_space_indent_level
-      )
-      hooks.register(
-        hooks.type.WHITESPACE,
-        hooks.builtin.hide_first_tab_indent_level
-      )
+      hooks.register(hooks.type.WHITESPACE, hooks.builtin.hide_first_space_indent_level)
+      hooks.register(hooks.type.WHITESPACE, hooks.builtin.hide_first_tab_indent_level)
     end,
   },
   {
@@ -1072,9 +1034,7 @@ require('lazy').setup({
       'MasonLog',
     },
     build = function()
-      pcall(function()
-        require('mason-registry').refresh()
-      end)
+      pcall(function() require('mason-registry').refresh() end)
     end,
     opts = {
       PATH = 'append',
@@ -1118,19 +1078,13 @@ require('lazy').setup({
         sources = {
           -- https://github.com/nvimtools/none-ls.nvim/blob/main/doc/BUILTINS.md
           null_ls.builtins.diagnostics.actionlint.with({
-            condition = function()
-              return is_installed('actionlint')
-            end,
+            condition = function() return is_installed('actionlint') end,
           }),
           null_ls.builtins.diagnostics.fish.with({
-            condition = function()
-              return is_installed('fish')
-            end,
+            condition = function() return is_installed('fish') end,
           }),
           null_ls.builtins.diagnostics.hadolint.with({
-            condition = function()
-              return is_installed('hadolint')
-            end,
+            condition = function() return is_installed('hadolint') end,
           }),
         },
       })
@@ -1182,9 +1136,9 @@ require('lazy').setup({
             local path = vim.api.nvim_buf_get_name(bufnr)
             if path:sub(1, #root_path) == root_path then
               local val = vim.b[bufnr][varname]
-              if val then -- ignore nils
+              if val then                    -- ignore nils
                 if candidate and candidate ~= val then
-                  return nil -- mismatch → not unanimous
+                  return nil                 -- mismatch → not unanimous
                 end
                 candidate = candidate or val -- remember first non-nil value
               end
@@ -1252,22 +1206,16 @@ require('lazy').setup({
 
         require('lsp-fix').on_attach(client, bufnr)
 
-        if client.name == 'ruff' then
-          client.server_capabilities.hoverProvider = false
-        end
+        if client.name == 'ruff' then client.server_capabilities.hoverProvider = false end
 
-        if client.name == 'cssls' then
-          client.server_capabilities.diagnosticProvider = false
-        end
+        if client.name == 'cssls' then client.server_capabilities.diagnosticProvider = false end
       end
 
       vim.api.nvim_create_autocmd('LspAttach', {
         desc = 'LSP actions',
         callback = function(event)
           local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if not client then
-            return
-          end
+          if not client then return end
 
           local bufnr = event.buf
           on_attach(client, bufnr)
@@ -1521,20 +1469,20 @@ require('lazy').setup({
                   'force',
                   { useSyntaxServer = 'always' },
                   hasVolar
-                      and {
+                  and {
 
-                        globalPlugins = {
-                          {
-                            name = '@vue/typescript-plugin',
-                            location = vim.fn.expand(
-                              '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
-                            ),
-                            languages = { 'vue', 'typescript' },
-                            configNamespace = 'typescript',
-                          },
-                        },
-                      }
-                    or {}
+                    globalPlugins = {
+                      {
+                        name = '@vue/typescript-plugin',
+                        location = vim.fn.expand(
+                          '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
+                        ),
+                        languages = { 'vue', 'typescript' },
+                        configNamespace = 'typescript',
+                      },
+                    },
+                  }
+                  or {}
                 ),
               },
               -- completions = {
@@ -1547,16 +1495,11 @@ require('lazy').setup({
             before_init = function(params, config)
               if params.rootUri then
                 local root_path = vim.uri_to_fname(params.rootUri)
-                local quotePreference = unanimous_var_for_root(
-                  root_path,
-                  'quote_type'
-                ) or 'auto'
+                local quotePreference = unanimous_var_for_root(root_path, 'quote_type') or 'auto'
 
                 -- :lua local client = vim.lsp.get_clients({name = 'vtsls'})[1]; if client then print(client.config.settings.javascript.preferences.quoteStyle) else print("vtsls not found") end
-                config.settings.javascript.preferences.quoteStyle =
-                  quotePreference
-                config.settings.typescript.preferences.quoteStyle =
-                  quotePreference
+                config.settings.javascript.preferences.quoteStyle = quotePreference
+                config.settings.typescript.preferences.quoteStyle = quotePreference
               end
             end,
           })
@@ -1602,12 +1545,7 @@ require('lazy').setup({
                   },
                 }
 
-                client.request_sync(
-                  'workspace/executeCommand',
-                  params,
-                  3000,
-                  bufnr
-                )
+                client.request_sync('workspace/executeCommand', params, 3000, bufnr)
               end,
             },
           })
@@ -1624,9 +1562,7 @@ require('lazy').setup({
 
         for key, handler in pairs(handlers) do
           local value = handler()
-          if value then
-            vim.lsp.enable(key)
-          end
+          if value then vim.lsp.enable(key) end
         end
 
         -- dockerls, terraformls, volar, taplo, glslls, bashls, cssls,
@@ -1647,9 +1583,7 @@ require('lazy').setup({
     keys = {
       {
         '<leader>F',
-        function()
-          require('lsp-fix').fix()
-        end,
+        function() require('lsp-fix').fix() end,
         desc = 'Fix',
       },
     },
@@ -1723,9 +1657,7 @@ require('lazy').setup({
     keys = {
       {
         '<leader>f',
-        function()
-          require('conform').format({ async = true, lsp_format = 'first' })
-        end,
+        function() require('conform').format({ async = true, lsp_format = 'first' }) end,
         desc = 'Format',
       },
     },
@@ -1786,9 +1718,7 @@ require('lazy').setup({
 
       local has_words_before = function()
         local col = vim.api.nvim_win_get_cursor(0)[2]
-        if col == 0 then
-          return false
-        end
+        if col == 0 then return false end
         local line = vim.api.nvim_get_current_line()
         return line:sub(col, col):match('%s') == nil
       end
@@ -1804,9 +1734,7 @@ require('lazy').setup({
           ['<CR>'] = { 'accept', 'fallback' },
           ['<Tab>'] = {
             function(cmp)
-              if has_words_before() and not cmp.is_visible() then
-                return cmp.show()
-              end
+              if has_words_before() and not cmp.is_visible() then return cmp.show() end
             end,
             'select_next',
             'snippet_forward',
@@ -1841,9 +1769,7 @@ require('lazy').setup({
               -- preselect = function(ctx)
               --   return not cmp.snippet_active()
               -- end,
-              auto_insert = function()
-                return not cmp.snippet_active()
-              end,
+              auto_insert = function() return not cmp.snippet_active() end,
               -- auto_insert = false
             },
           },
@@ -1865,21 +1791,13 @@ require('lazy').setup({
                   text = function(ctx)
                     local source_name = ctx.source_name
 
-                    if source_name == 'Snippets' then
-                      return '∫'
-                    end
+                    if source_name == 'Snippets' then return '∫' end
 
-                    if source_name == 'LSP' then
-                      return '∴'
-                    end
+                    if source_name == 'LSP' then return '∴' end
 
-                    if source_name == 'Path' then
-                      return '☇'
-                    end
+                    if source_name == 'Path' then return '☇' end
 
-                    if source_name == 'Buffer' then
-                      return '…'
-                    end
+                    if source_name == 'Buffer' then return '…' end
 
                     return source_name
                   end,
@@ -1889,17 +1807,14 @@ require('lazy').setup({
                 -- },
                 label = {
                   width = { fill = true, max = 60 },
-                  text = function(ctx)
-                    return ctx.label .. ctx.label_detail
-                  end,
+                  text = function(ctx) return ctx.label .. ctx.label_detail end,
                   highlight = function(ctx)
                     -- label and label details
                     local highlights = {
                       {
                         0,
                         #ctx.label,
-                        group = ctx.deprecated and 'BlinkCmpLabelDeprecated'
-                          or 'BlinkCmpLabel',
+                        group = ctx.deprecated and 'BlinkCmpLabelDeprecated' or 'BlinkCmpLabel',
                       },
                     }
                     if ctx.label_detail then
@@ -1947,25 +1862,19 @@ require('lazy').setup({
             ['<CR>'] = { 'accept', 'fallback' },
             ['<Tab>'] = {
               function()
-                if
-                  not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!')
-                then
+                if not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!') then
                   return true
                 end
               end,
               function(cmp)
-                if has_words_before() and not cmp.is_visible() then
-                  return cmp.show()
-                end
+                if has_words_before() and not cmp.is_visible() then return cmp.show() end
               end,
               'show_and_insert',
               'select_next',
             },
             ['<S-Tab>'] = {
               function()
-                if
-                  not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!')
-                then
+                if not (vim.fn.getcmdtype() == ':' or vim.fn.getcmdtype() == '!') then
                   return true
                 end
               end,
@@ -2223,9 +2132,7 @@ require('lazy').setup({
           basic = true,
           extra = true,
         },
-        pre_hook = require(
-          'ts_context_commentstring.integrations.comment_nvim'
-        ).create_pre_hook(),
+        pre_hook = require('ts_context_commentstring.integrations.comment_nvim').create_pre_hook(),
       })
     end,
   },
@@ -2294,9 +2201,7 @@ require('lazy').setup({
       {
         'nvim-telescope/telescope-fzf-native.nvim',
         build = 'make',
-        cond = function()
-          return vim.fn.executable('make') == 1
-        end,
+        cond = function() return vim.fn.executable('make') == 1 end,
       },
       'nvim-telescope/telescope-ui-select.nvim',
       'nvim-treesitter/nvim-treesitter',
@@ -2320,10 +2225,10 @@ require('lazy').setup({
         '<cmd>Telescope lsp_workspace_symbols<cr>',
         desc = 'Workspace Symbols',
       },
-      { '<leader>g', '<cmd>Telescope live_grep<cr>', desc = 'Grep' },
+      { '<leader>g', '<cmd>Telescope live_grep<cr>',    desc = 'Grep' },
       { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
-      { '<leader>e', '<cmd>Telescope find_files<cr>', desc = 'Edit' },
-      { '<leader>b', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
+      { '<leader>e', '<cmd>Telescope find_files<cr>',   desc = 'Edit' },
+      { '<leader>b', '<cmd>Telescope buffers<cr>',      desc = 'Buffers' },
       {
         '<leader>d',
         '<cmd>Telescope lsp_definitions<cr>',
@@ -2401,10 +2306,10 @@ require('lazy').setup({
             layout_strategy = 'flex',
           },
           fzf = {
-            fuzzy = true, -- false will only do exact matching
+            fuzzy = true,                   -- false will only do exact matching
             override_generic_sorter = true, -- override the generic sorter
-            override_file_sorter = true, -- override the file sorter
-            case_mode = 'smart_case', -- or "ignore_case" or "respect_case"
+            override_file_sorter = true,    -- override the file sorter
+            case_mode = 'smart_case',       -- or "ignore_case" or "respect_case"
           },
         },
       })
@@ -2429,7 +2334,7 @@ require('lazy').setup({
         if ai_type == 'i' then
           -- Skip first and last blank lines for `i` textobject
           local first_nonblank, last_nonblank =
-            vim.fn.nextnonblank(start_line), vim.fn.prevnonblank(end_line)
+              vim.fn.nextnonblank(start_line), vim.fn.prevnonblank(end_line)
           -- Do nothing for buffer with all blanks
           if first_nonblank == 0 or last_nonblank == 0 then
             return { from = { line = start_line, col = 1 } }
@@ -2458,12 +2363,12 @@ require('lazy').setup({
           f = ai.gen_spec.treesitter({
             a = '@function.outer',
             i = '@function.inner',
-          }), -- function
+          }),                                                                     -- function
           C = ai.gen_spec.treesitter({ a = '@class.outer', i = '@class.inner' }), -- class
           c = ai.gen_spec.treesitter({ a = '@call.outer', i = '@call.inner' }),
-          t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' }, -- tags
-          d = { '%f[%d]%d+' }, -- digits
-          e = { -- Word with case
+          t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' },     -- tags
+          d = { '%f[%d]%d+' },                                                    -- digits
+          e = {                                                                   -- Word with case
             {
               '%u[%l%d]+%f[^%l%d]',
               '%f[%S][%l%d]+%f[^%l%d]',
@@ -2472,8 +2377,8 @@ require('lazy').setup({
             },
             '^().*()$',
           },
-          g = ai_buffer, -- buffer
-          u = ai.gen_spec.function_call(), -- u for "Usage"
+          g = ai_buffer,                                             -- buffer
+          u = ai.gen_spec.function_call(),                           -- u for "Usage"
           U = ai.gen_spec.function_call({ name_pattern = '[%w_]' }), -- without dot in function name
         },
         mappings = {
@@ -2500,15 +2405,15 @@ require('lazy').setup({
     },
     opts = {
       mappings = {
-        add = '<leader>sa', -- Add surrounding in Normal and Visual modes
-        delete = '<leader>sd', -- Delete surrounding
-        find = '<leader>sf', -- Find surrounding (to the right)
-        find_left = '<leader>sF', -- Find surrounding (to the left)
-        highlight = '', -- Highlight surrounding
-        replace = '<leader>sr', -- Replace surrounding
+        add = '<leader>sa',            -- Add surrounding in Normal and Visual modes
+        delete = '<leader>sd',         -- Delete surrounding
+        find = '<leader>sf',           -- Find surrounding (to the right)
+        find_left = '<leader>sF',      -- Find surrounding (to the left)
+        highlight = '',                -- Highlight surrounding
+        replace = '<leader>sr',        -- Replace surrounding
         update_n_lines = '<leader>sn', -- Update `n_lines`
-        suffix_last = '', -- Suffix to search with "prev" method
-        suffix_next = '', -- Suffix to search with "next" method
+        suffix_last = '',              -- Suffix to search with "prev" method
+        suffix_next = '',              -- Suffix to search with "next" method
       },
       n_lines = 500,
     },
@@ -2554,17 +2459,13 @@ require('lazy').setup({
       {
         '<c-s>',
         mode = { 'c' },
-        function()
-          require('flash').toggle()
-        end,
+        function() require('flash').toggle() end,
         desc = 'Toggle Flash Search',
       },
       {
         'vv',
         mode = { 'n', 'x', 'o' },
-        function()
-          require('flash').treesitter()
-        end,
+        function() require('flash').treesitter() end,
         desc = 'Treesitter Visual',
       },
     },
@@ -2604,9 +2505,7 @@ require('lazy').setup({
     keys = {
       {
         '<leader>?',
-        function()
-          require('which-key').show({ global = true })
-        end,
+        function() require('which-key').show({ global = true }) end,
         desc = 'Which Key',
       },
     },
@@ -2615,9 +2514,7 @@ require('lazy').setup({
       preset = 'classic',
       -- Delay before showing the popup. Can be a number or a function that returns a number.
       ---@type number | fun(ctx: { keys: string, mode: string, plugin?: string }):number
-      delay = function(ctx)
-        return ctx.plugin and 0 or 200
-      end,
+      delay = function(ctx) return ctx.plugin and 0 or 200 end,
       filter = function( --[[ mapping ]])
         -- example to exclude mappings without a description
         -- return mapping.desc and mapping.desc ~= ""
@@ -2630,11 +2527,9 @@ require('lazy').setup({
       -- Start hidden and wait for a key to be pressed before showing the popup
       -- Only used by enabled xo mapping modes.
       ---@param ctx { mode: string, operator: string }
-      defer = function(ctx)
-        return ctx.mode == 'V' or ctx.mode == '<C-V>'
-      end,
+      defer = function(ctx) return ctx.mode == 'V' or ctx.mode == '<C-V>' end,
       plugins = {
-        marks = true, -- shows a list of your marks on ' and `
+        marks = true,     -- shows a list of your marks on ' and `
         registers = true, -- shows your registers on " in NORMAL or <C-r> in INSERT mode
         -- the presets plugin, adds help for a bunch of default keybindings in Neovim
         -- No actual key bindings are created
@@ -2642,13 +2537,13 @@ require('lazy').setup({
           enabled = false,
         },
         presets = {
-          operators = true, -- adds help for operators like d, y, ...
-          motions = true, -- adds help for motions
+          operators = true,    -- adds help for operators like d, y, ...
+          motions = true,      -- adds help for motions
           text_objects = true, -- help for text objects triggered after entering an operator
-          windows = true, -- default bindings on <c-w>
-          nav = true, -- misc bindings to work with windows
-          z = true, -- bindings for folds, spelling and others prefixed with z
-          g = true, -- bindings for prefixed with g
+          windows = true,      -- default bindings on <c-w>
+          nav = true,          -- misc bindings to work with windows
+          z = true,            -- bindings for folds, spelling and others prefixed with z
+          g = true,            -- bindings for prefixed with g
         },
       },
       win = {
@@ -2671,12 +2566,12 @@ require('lazy').setup({
       },
       layout = {
         width = { min = 10, max = 30 }, -- min and max width of the columns
-        spacing = 2, -- spacing between columns
-        align = 'center', -- align columns left, center or right
+        spacing = 2,                    -- spacing between columns
+        align = 'center',               -- align columns left, center or right
       },
       keys = {
         scroll_down = '<c-d>', -- binding to scroll down inside the popup
-        scroll_up = '<c-u>', -- binding to scroll up inside the popup
+        scroll_up = '<c-u>',   -- binding to scroll up inside the popup
       },
       --- Mappings are sorted using configured sorters and natural sort of the keys
       --- Available sorters:
@@ -2697,20 +2592,18 @@ require('lazy').setup({
       ---@type table<string, ({[1]:string, [2]:string}|fun(str:string):string)[]>
       replace = {
         key = {
-          function(key)
-            return require('which-key.view').format(key)
-          end,
+          function(key) return require('which-key.view').format(key) end,
           -- { "<Space>", "SPC" },
         },
         desc = {
           { '<Plug>%(?(.*)%)?', '%1' },
-          { '^%+', '' },
-          { '<[cC]md>', '' },
-          { '<[cC][rR]>', '' },
-          { '<[sS]ilent>', '' },
-          { '^lua%s+', '' },
-          { '^call%s+', '' },
-          { '^:%s*', '' },
+          { '^%+',              '' },
+          { '<[cC]md>',         '' },
+          { '<[cC][rR]>',       '' },
+          { '<[sS]ilent>',      '' },
+          { '^lua%s+',          '' },
+          { '^call%s+',         '' },
+          { '^:%s*',            '' },
         },
       },
       icons = {
@@ -2790,19 +2683,19 @@ require('lazy').setup({
       wk.setup(opts)
 
       wk.add({
-        { '<leader>c', desc = 'Comment' },
-        { '<leader>T', desc = 'Tags' },
-        { '<leader>n', desc = 'Case', mode = { 'n', 'x' } },
-        { '<leader>s', desc = 'Surround', mode = { 'n', 'x' } },
-        { '<leader>sa', desc = 'Add surrounding', mode = { 'n', 'x' } },
-        { '<leader>sd', desc = 'Delete surrounding', mode = 'n' },
-        { '<leader>sf', desc = 'Find surrounding', mode = 'n' },
-        { '<leader>sF', desc = 'Find surrounding', mode = 'n' },
+        { '<leader>c',  desc = 'Comment' },
+        { '<leader>T',  desc = 'Tags' },
+        { '<leader>n',  desc = 'Case',                mode = { 'n', 'x' } },
+        { '<leader>s',  desc = 'Surround',            mode = { 'n', 'x' } },
+        { '<leader>sa', desc = 'Add surrounding',     mode = { 'n', 'x' } },
+        { '<leader>sd', desc = 'Delete surrounding',  mode = 'n' },
+        { '<leader>sf', desc = 'Find surrounding',    mode = 'n' },
+        { '<leader>sF', desc = 'Find surrounding',    mode = 'n' },
         { '<leader>sr', desc = 'Replace surrounding', mode = 'n' },
-        { 'n', desc = 'Next', mode = { 'n', 'x' } },
-        { 'N', desc = 'Previous', mode = { 'n', 'x' } },
-        { 'n', desc = 'Down', mode = { 'n', 'x' } },
-        { 'N', desc = 'Up', mode = { 'n', 'x' } },
+        { 'n',          desc = 'Next',                mode = { 'n', 'x' } },
+        { 'N',          desc = 'Previous',            mode = { 'n', 'x' } },
+        { 'n',          desc = 'Down',                mode = { 'n', 'x' } },
+        { 'N',          desc = 'Up',                  mode = { 'n', 'x' } },
       })
 
       local objects = {
@@ -2855,9 +2748,7 @@ require('lazy').setup({
         ret[#ret + 1] = { prefix, group = name }
         for _, obj in ipairs(objects) do
           local desc = obj.desc
-          if prefix:sub(1, 1) == 'i' then
-            desc = desc:gsub(' with ws', '')
-          end
+          if prefix:sub(1, 1) == 'i' then desc = desc:gsub(' with ws', '') end
           ret[#ret + 1] = { prefix .. obj[1], desc = obj.desc }
         end
       end
@@ -2873,7 +2764,7 @@ require('lazy').setup({
   {
     'ghillb/cybu.nvim',
     keys = {
-      { '<Left>', '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
+      { '<Left>',  '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
       { '<Right>', '<Plug>(CybuNext)', desc = 'Next Buffer' },
       -- { '<C-Left>', '<Plug>(CybuLastusedPrev)', desc = 'Previous Buffer' },
       -- { '<C-Right>', '<Plug>(CybuLastusedNext)', desc = 'Next Buffer' },
@@ -2906,11 +2797,11 @@ require('lazy').setup({
           mode = {
             default = {
               switch = 'immediate', -- immediate, on_close
-              view = 'rolling', -- paging, rolling
+              view = 'rolling',     -- paging, rolling
             },
             last_used = {
               switch = 'immediate', -- immediate, on_close
-              view = 'rolling', -- paging, rolling
+              view = 'rolling',     -- paging, rolling
             },
             auto = {
               view = 'rolling',
@@ -2918,8 +2809,8 @@ require('lazy').setup({
           },
           show_on_autocmd = false, -- event to trigger cybu (eg. "BufEnter")
         },
-        display_time = 500, -- time the cybu window is displayed
-        exclude = { -- filetypes, cybu will not be active
+        display_time = 500,        -- time the cybu window is displayed
+        exclude = {                -- filetypes, cybu will not be active
           'cmp_menu',
           'flash_prompt',
           'fugitive',
@@ -2941,9 +2832,7 @@ require('lazy').setup({
     keys = {
       {
         '<leader>z',
-        function()
-          require('zen-mode').toggle({})
-        end,
+        function() require('zen-mode').toggle({}) end,
         desc = 'Zen Mode',
       },
     },
@@ -2984,12 +2873,8 @@ require('lazy').setup({
         },
       },
 
-      on_open = function()
-        require('ibl').update({ enabled = false })
-      end,
-      on_close = function()
-        require('ibl').update({ enabled = true })
-      end,
+      on_open = function() require('ibl').update({ enabled = false }) end,
+      on_close = function() require('ibl').update({ enabled = true }) end,
     },
   },
   {
@@ -3001,14 +2886,10 @@ require('lazy').setup({
         'gf',
         mode = { 'n', 'v' },
         desc = 'Go to file',
-        function()
-          require('gtd').exec({ command = 'edit' })
-        end,
+        function() require('gtd').exec({ command = 'edit' }) end,
       },
     },
-    config = function()
-      require('gtd').setup({})
-    end,
+    config = function() require('gtd').setup({}) end,
   },
   {
     'johmsalas/text-case.nvim',
@@ -3030,14 +2911,10 @@ require('lazy').setup({
         '<leader>D',
         mode = { 'n' },
         desc = 'Documentation Comment',
-        function()
-          require('neogen').generate()
-        end,
+        function() require('neogen').generate() end,
       },
     },
-    config = function()
-      require('neogen').setup({ snippet_engine = 'luasnip' })
-    end,
+    config = function() require('neogen').setup({ snippet_engine = 'luasnip' }) end,
   },
   {
     'yetone/avante.nvim',
@@ -3168,11 +3045,11 @@ require('lazy').setup({
             close = { 'q' },
           },
           files = {
-            add_current = "<leader>'c", -- Add current buffer to selected files
+            add_current = "<leader>'c",     -- Add current buffer to selected files
             add_all_buffers = "<leader>'B", -- Add all buffer files to selected files
           },
-          select_model = "<leader>'?", -- Select model command
-          select_history = "<leader>'h", -- Select history command
+          select_model = "<leader>'?",      -- Select model command
+          select_history = "<leader>'h",    -- Select history command
           confirm = {
             focus_window = '<C-w>f',
             code = 'c',
