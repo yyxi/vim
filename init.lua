@@ -1243,6 +1243,7 @@ require('lazy').setup({
                   SpellCheck = false,
                   SpelledNumbers = false,
                   WrongQuotes = false,
+                  UseTitleCase = false,
                 },
                 codeActions = {
                   ForceStable = false,
@@ -1300,6 +1301,16 @@ require('lazy').setup({
                 validate = { enable = true },
               },
             },
+            before_init = function(params, config)
+              if params.rootUri then
+                local root_path = vim.uri_to_fname(params.rootUri)
+                local quotePreference = unanimous_var_for_root(root_path, 'quote_type') or 'auto'
+
+                if quotePreference ~= 'auto' then
+                  config.settings.yaml.format.singleQuote = quotePreference == 'single'
+                end
+              end
+            end,
           })
 
           return true
