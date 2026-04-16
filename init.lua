@@ -1485,9 +1485,9 @@ require('lazy').setup({
             capabilities = capabilities,
             settings = {
               workingDirectories = { mode = 'location' },
-              experimental = {
-                useFlatConfig = true,
-              },
+              -- experimental = {
+              --   useFlatConfig = true,
+              -- },
               useFlatConfig = true,
             },
             fix = {
