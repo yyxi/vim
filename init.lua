@@ -29,6 +29,9 @@ nnoremap <expr> k (v:count == 0 && &wrap) ? 'gk' : 'k'
 nnoremap <expr> 0 (&wrap) ? 'g0' : '0'
 nnoremap <expr> ^ (&wrap) ? 'g^' : '^'
 nnoremap <expr> $ (&wrap) ? 'g$' : '$'
+
+aunmenu PopUp
+autocmd! nvim.popupmenu
 ]])
 
 local dotenv = require('dotenv')
