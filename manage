@@ -11,7 +11,7 @@ from typing import Dict, Mapping, Optional, Sequence
 LOCAL_BIN_PARTS = ((".neovim-dist", "bin"),)
 UV_SYNC_CHECK = ("sync", "--check", "--locked")
 UV_SYNC_PRODUCTION = ("sync", "--locked", "--no-dev")
-NVIM_PLUGIN_SYNC = ("--headless", "+Lazy! sync", "+qa")
+NVIM_PLUGIN_SYNC = ("--headless", "+Lazy! restore", "+qa")
 
 
 def info(message: str) -> None:
