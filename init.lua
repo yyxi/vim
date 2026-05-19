@@ -1898,6 +1898,7 @@ require('lazy').setup({
   },
   {
     'nvim-treesitter/nvim-treesitter',
+    branch = 'master',
     event = { 'BufReadPre', 'BufNewFile' },
     cmd = {
       'TSInstall',
