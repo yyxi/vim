@@ -1,9 +1,11 @@
 .env.*
+.firecrawl/
+.ruff_cache/
 
 vimrc
 .python-version
 /.ready
-.manage_modules
+.manage_modules/
 .ropeproject
 .netrwhist
 /bundle

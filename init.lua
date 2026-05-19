@@ -1286,6 +1286,21 @@ require('lazy').setup({
         --     },
         --   })
         -- end,
+        ty = function()
+          vim.lsp.config('ty', {
+            capabilities = capabilities,
+            -- fix = {
+            --   function(bufnr, client)
+            --     client.request_sync('workspace/executeCommand', {
+            --       command = 'pyright.organizeimports',
+            --       arguments = { vim.uri_from_bufnr(bufnr) },
+            --     }, 3000, bufnr)
+            --   end,
+            -- },
+          })
+
+          return true
+        end,
         pyright = function()
           vim.lsp.config('pyright', {
             capabilities = capabilities,
@@ -1591,6 +1606,7 @@ require('lazy').setup({
         },
         python = {
           order = {
+            'ty',
             'pyright',
             'ruff',
           },

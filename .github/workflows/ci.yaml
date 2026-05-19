@@ -1,4 +1,4 @@
-name: Test
+name: test
 on:
   push:
     branches:
@@ -14,8 +14,18 @@ jobs:
         # os: [macos-latest, ubuntu-latest]
         os: [ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
-      - name: Dependencies
+      - uses: actions/checkout@v6
+      - name: install the latest version of uv
+        uses: astral-sh/setup-uv@v8
+        with:
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+            **/pyproject.toml
+          enable-cache: true
+          ignore-nothing-to-cache: true
+          version: 'latest'
+      - name: dependencies
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             sudo apt-get install zsh bc
@@ -32,7 +42,7 @@ jobs:
             # tar xzvf nvim-macos.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
             # rm -f nvim-macos.tar.gz
           fi
-      - name: Test
+      - name: test
         run: |
           ln -s $(pwd) ~/.vim
           ~/.vim/manage install

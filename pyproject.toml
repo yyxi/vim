@@ -12,3 +12,14 @@ members = []
 
 [tool.setuptools]
 py-modules = []
+
+# Development checks:
+# uv run ruff format manage
+# uv run ruff check manage
+# uv run ty check manage
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.13",
+    "ty>=0.0.37",
+]
