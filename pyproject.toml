@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 
 [tool.uv]
 managed = true
+exclude-newer = "10 days"
 
 [tool.uv.workspace]
 members = []
@@ -20,6 +21,6 @@ py-modules = []
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.13",
-    "ty>=0.0.37",
+    "ruff>=0.15.12",
+    "ty>=0.0.34",
 ]
