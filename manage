@@ -29,6 +29,7 @@ PNPM_INSTALL_PRODUCTION = (
 )
 NVIM_PLUGIN_SYNC = ("--headless", "+Lazy! restore", "+qa")
 LUA_CHECK_PATH = "lua/yyxi"
+LUA_CHECK_TARGETS = ("init.lua", LUA_CHECK_PATH)
 VENDOR_DIR_NAME = "vendor"
 PLENARY_PLUGIN_NAME = "plenary.nvim"
 ENV_VARIABLE_PATTERN = re.compile(r"\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -439,6 +440,17 @@ def check(fix: bool) -> int:
         warn("no Lua spec files found under {0}".format(LUA_CHECK_PATH))
         return 1
 
+    lua_language_server_commands = [
+        [
+            lua_language_server,
+            "--check=" + target,
+            "--checklevel=Warning",
+            "--check_format=pretty",
+            "--configpath=" + os.path.join(repository, ".luarc.json"),
+        ]
+        for target in LUA_CHECK_TARGETS
+    ]
+
     ruff_format = [uv, *UV_RUN_CHECK, "ruff", "format"]
     if not fix:
         ruff_format.append("--check")
@@ -452,20 +464,14 @@ def check(fix: bool) -> int:
     stylua_check = [stylua]
     if not fix:
         stylua_check.append("--check")
-    stylua_check.append(LUA_CHECK_PATH)
+    stylua_check.extend(LUA_CHECK_TARGETS)
 
     commands = [
         ruff_format,
         ruff_check,
         [uv, *UV_RUN_CHECK, "ty", "check", "manage"],
         stylua_check,
-        [
-            lua_language_server,
-            "--check=" + LUA_CHECK_PATH,
-            "--checklevel=Warning",
-            "--check_format=pretty",
-            "--configpath=" + os.path.join(repository, ".luarc.json"),
-        ],
+        *lua_language_server_commands,
     ]
 
     runtimepath_command = (

@@ -1,4 +1,4 @@
----@diagnostic disable: lowercase-global, missing-fields, redefined-local
+---@diagnostic disable: lowercase-global
 
 vim.cmd([[
 if !empty(&viminfo)
@@ -44,6 +44,7 @@ end
 
 local list_eol_namespace = vim.api.nvim_create_namespace('list_eol')
 
+---@param bufnr integer
 local function list_eol_refresh(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, list_eol_namespace, 0, -1)
   local topline = vim.fn.line('w0') - 1
@@ -103,6 +104,7 @@ vim.keymap.del({ 'n', 'x' }, 'gc')
 vim.keymap.del('n', 'gcc')
 vim.keymap.del({ 'o' }, 'gc')
 
+---@return string
 function custom_fold_text() return vim.fn.getline(vim.v.foldstart) end
 
 if vim.loader then vim.loader.enable() end
@@ -210,13 +212,14 @@ vim.o.virtualedit = 'onemore'
 vim.o.visualbell = false
 vim.o.whichwrap = 'b,s,<,>,h,l'
 vim.o.wildignore =
-'*/.git/*,*/.hg/*,*/.svn/*,*.aux,*.out,*.toc,*.jpg,*.bmp,*.gif,*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]'
+  '*/.git/*,*/.hg/*,*/.svn/*,*.aux,*.out,*.toc,*.jpg,*.bmp,*.gif,*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]'
 vim.o.wildmenu = true
 vim.o.wildmode = 'longest:full,full'
 vim.o.winblend = 10
 vim.o.wrap = false
 vim.o.wrapscan = false
 
+---@return nil
 local noop = function() end
 
 vim.g.clipboard = {
@@ -236,6 +239,7 @@ vim.g.clipboard = {
 local plugin_root = environment.vendor_root()
 local plugin_manager_path = environment.plugin_manager_path()
 
+---@return string
 local function plugin_manager_revision()
   local lockfile = environment.repository_path({ 'lazy-lock.json' })
   local plugins = vim.json.decode(table.concat(vim.fn.readfile(lockfile), '\n'))
@@ -259,7 +263,7 @@ if not vim.uv.fs_stat(plugin_manager_path) then
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
       { 'Failed to clone lazy.nvim:\n', 'ErrorMsg' },
-      { out,                            'WarningMsg' },
+      { out, 'WarningMsg' },
       { '\nPress any key to exit...' },
     }, true, {})
     vim.fn.getchar()
@@ -307,7 +311,8 @@ vim.filetype.add({
   },
 })
 
-require('lazy').setup({
+---@type LazySpec
+local plugin_specs = {
   {
     'farmergreg/vim-lastplace',
     lazy = false,
@@ -320,28 +325,22 @@ require('lazy').setup({
   },
   {
     'echasnovski/mini.base16',
-    lazy = false,    -- make sure we load this during startup if it is your main colorscheme
+    lazy = false, -- make sure we load this during startup if it is your main colorscheme
     branch = 'stable',
     priority = 1000, -- make sure to load this before all the other start plugins
-    config = function()
-      require('yyxi.plugins.colorscheme').setup()
-    end,
+    config = function() require('yyxi.plugins.colorscheme').setup() end,
   },
   {
     'nvim-lualine/lualine.nvim',
     event = 'VimEnter',
     priority = 800,
-    config = function()
-      require('yyxi.plugins.interface').lualine()
-    end,
+    config = function() require('yyxi.plugins.interface').lualine() end,
   },
   {
     'folke/snacks.nvim',
     priority = 1000,
     lazy = false,
-    config = function()
-      require('yyxi.plugins.interface').snacks()
-    end,
+    config = function() require('yyxi.plugins.interface').snacks() end,
   },
   {
     'echasnovski/mini.bufremove',
@@ -370,17 +369,13 @@ require('lazy').setup({
     'lukas-reineke/indent-blankline.nvim',
     name = 'ibl',
     event = 'VeryLazy',
-    config = function()
-      require('yyxi.plugins.interface').indent_blankline()
-    end,
+    config = function() require('yyxi.plugins.interface').indent_blankline() end,
   },
   {
     'echasnovski/mini.hipatterns',
     branch = 'stable',
     event = 'VeryLazy',
-    config = function()
-      require('yyxi.plugins.syntax').mini_hipatterns()
-    end,
+    config = function() require('yyxi.plugins.syntax').mini_hipatterns() end,
   },
   {
     'nvimtools/none-ls.nvim',
@@ -389,9 +384,7 @@ require('lazy').setup({
       'neovim/nvim-lspconfig',
     },
     event = { 'BufReadPre', 'BufNewFile' },
-    config = function()
-      require('yyxi.plugins.language_tools').none_ls()
-    end,
+    config = function() require('yyxi.plugins.language_tools').none_ls() end,
   },
   {
     'neovim/nvim-lspconfig',
@@ -404,9 +397,7 @@ require('lazy').setup({
       },
       { 'nvim-telescope/telescope.nvim' },
     },
-    config = function()
-      require('yyxi.plugins.language_tools').lsp()
-    end,
+    config = function() require('yyxi.plugins.language_tools').lsp() end,
   },
   {
     dir = '~/.vim/local/lsp-fix',
@@ -418,9 +409,7 @@ require('lazy').setup({
         desc = 'Fix',
       },
     },
-    config = function()
-      require('yyxi.plugins.language_tools').lsp_fix()
-    end,
+    config = function() require('yyxi.plugins.language_tools').lsp_fix() end,
   },
   {
     'stevearc/conform.nvim',
@@ -433,9 +422,7 @@ require('lazy').setup({
         desc = 'Format',
       },
     },
-    config = function()
-      require('yyxi.plugins.language_tools').conform()
-    end,
+    config = function() require('yyxi.plugins.language_tools').conform() end,
     init = function()
       -- If you want the formatexpr, here is the place to set it
       vim.o.formatexpr = "v:lua.require'conform'.formatexpr()"
@@ -454,11 +441,9 @@ require('lazy').setup({
         build = 'make install_jsregexp',
         config = noop,
         dependencies = { { 'rafamadriz/friendly-snippets' } },
-      }
+      },
     },
-    config = function()
-      require('yyxi.plugins.completion').setup()
-    end,
+    config = function() require('yyxi.plugins.completion').setup() end,
   },
   {
     'Wansmer/treesj',
@@ -466,9 +451,7 @@ require('lazy').setup({
       { '<leader>j', '<cmd>TSJToggle<cr>', desc = 'Join Toggle' },
     },
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
-    config = function()
-      require('yyxi.plugins.editing').treesj()
-    end,
+    config = function() require('yyxi.plugins.editing').treesj() end,
   },
   {
     'nvim-treesitter/nvim-treesitter',
@@ -500,9 +483,7 @@ require('lazy').setup({
       -- vim.wo.foldtext = "nvim_treesitter#foldtext()"
       vim.o.indentexpr = 'nvim_treesitter#indent()'
     end,
-    config = function()
-      require('yyxi.plugins.syntax').treesitter()
-    end,
+    config = function() require('yyxi.plugins.syntax').treesitter() end,
   },
   {
     'Julian/lean.nvim',
@@ -513,9 +494,7 @@ require('lazy').setup({
       'nvim-treesitter/nvim-treesitter',
       'saghen/blink.cmp',
     },
-    config = function()
-      require('yyxi.plugins.language_tools').lean()
-    end,
+    config = function() require('yyxi.plugins.language_tools').lean() end,
   },
   {
     'andymass/vim-matchup',
@@ -544,9 +523,7 @@ require('lazy').setup({
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
     ft = { 'html', 'vue' },
     event = { 'BufReadPre', 'BufNewFile' },
-    config = function()
-      require('yyxi.plugins.syntax').ts_autotag()
-    end,
+    config = function() require('yyxi.plugins.syntax').ts_autotag() end,
   },
   {
     'numToStr/Comment.nvim',
@@ -556,16 +533,12 @@ require('lazy').setup({
       'nvim-treesitter/nvim-treesitter',
       'JoosepAlviste/nvim-ts-context-commentstring',
     },
-    config = function()
-      require('yyxi.plugins.editing').comment()
-    end,
+    config = function() require('yyxi.plugins.editing').comment() end,
   },
   {
     'windwp/nvim-autopairs',
     event = 'InsertEnter',
-    config = function()
-      require('yyxi.plugins.editing').autopairs()
-    end,
+    config = function() require('yyxi.plugins.editing').autopairs() end,
   },
   {
     'gbprod/yanky.nvim',
@@ -574,9 +547,7 @@ require('lazy').setup({
       { 'Y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
       { 'y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
     },
-    config = function()
-      require('yyxi.plugins.editing').yanky()
-    end,
+    config = function() require('yyxi.plugins.editing').yanky() end,
   },
   {
     'nvim-telescope/telescope.nvim',
@@ -610,10 +581,10 @@ require('lazy').setup({
         '<cmd>Telescope lsp_workspace_symbols<cr>',
         desc = 'Workspace Symbols',
       },
-      { '<leader>g', '<cmd>Telescope live_grep<cr>',    desc = 'Grep' },
+      { '<leader>g', '<cmd>Telescope live_grep<cr>', desc = 'Grep' },
       { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
-      { '<leader>e', '<cmd>Telescope find_files<cr>',   desc = 'Edit' },
-      { '<leader>b', '<cmd>Telescope buffers<cr>',      desc = 'Buffers' },
+      { '<leader>e', '<cmd>Telescope find_files<cr>', desc = 'Edit' },
+      { '<leader>b', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
       {
         '<leader>d',
         '<cmd>Telescope lsp_definitions<cr>',
@@ -631,9 +602,7 @@ require('lazy').setup({
       },
       { '<leader>R', '<cmd>Telescope lsp_references<cr>', desc = 'References' },
     },
-    config = function()
-      require('yyxi.plugins.interface').telescope()
-    end,
+    config = function() require('yyxi.plugins.interface').telescope() end,
   },
   {
     'echasnovski/mini.ai',
@@ -643,9 +612,7 @@ require('lazy').setup({
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
     },
-    config = function()
-      require('yyxi.plugins.editing').mini_ai()
-    end,
+    config = function() require('yyxi.plugins.editing').mini_ai() end,
   },
   {
     'echasnovski/mini.surround',
@@ -656,16 +623,12 @@ require('lazy').setup({
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
     },
-    config = function()
-      require('yyxi.plugins.editing').mini_surround()
-    end,
+    config = function() require('yyxi.plugins.editing').mini_surround() end,
   },
   {
     'folke/flash.nvim',
     event = 'VeryLazy',
-    config = function()
-      require('yyxi.plugins.interface').flash()
-    end,
+    config = function() require('yyxi.plugins.interface').flash() end,
     keys = {
       {
         '<c-s>',
@@ -700,9 +663,7 @@ require('lazy').setup({
     'echasnovski/mini.align',
     branch = 'stable',
     keys = { { '<leader>a', mode = { 'n', 'x' }, desc = 'Align' } },
-    config = function()
-      require('yyxi.plugins.editing').mini_align()
-    end,
+    config = function() require('yyxi.plugins.editing').mini_align() end,
   },
   {
     'folke/which-key.nvim',
@@ -715,9 +676,7 @@ require('lazy').setup({
         desc = 'Which Key',
       },
     },
-    config = function()
-      require('yyxi.plugins.interface').which_key()
-    end,
+    config = function() require('yyxi.plugins.interface').which_key() end,
   },
   {
     'BranimirE/fix-auto-scroll.nvim',
@@ -727,7 +686,7 @@ require('lazy').setup({
   {
     'ghillb/cybu.nvim',
     keys = {
-      { '<Left>',  '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
+      { '<Left>', '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
       { '<Right>', '<Plug>(CybuNext)', desc = 'Next Buffer' },
       -- { '<C-Left>', '<Plug>(CybuLastusedPrev)', desc = 'Previous Buffer' },
       -- { '<C-Right>', '<Plug>(CybuLastusedNext)', desc = 'Next Buffer' },
@@ -737,9 +696,7 @@ require('lazy').setup({
         desc = 'Switch Buffer',
       },
     },
-    config = function()
-      require('yyxi.plugins.interface').cybu()
-    end,
+    config = function() require('yyxi.plugins.interface').cybu() end,
   },
   {
     'folke/zen-mode.nvim',
@@ -750,9 +707,7 @@ require('lazy').setup({
         desc = 'Zen Mode',
       },
     },
-    config = function()
-      require('yyxi.plugins.interface').zen_mode()
-    end,
+    config = function() require('yyxi.plugins.interface').zen_mode() end,
   },
   {
     'hrsh7th/nvim-gtd',
@@ -766,17 +721,13 @@ require('lazy').setup({
         function() require('gtd').exec({ command = 'edit' }) end,
       },
     },
-    config = function()
-      require('yyxi.plugins.interface').gtd()
-    end,
+    config = function() require('yyxi.plugins.interface').gtd() end,
   },
   {
     'johmsalas/text-case.nvim',
     -- dependencies = { 'nvim-telescope/telescope.nvim' },
     event = { 'BufReadPre', 'BufNewFile' },
-    config = function()
-      require('yyxi.plugins.editing').text_case()
-    end,
+    config = function() require('yyxi.plugins.editing').text_case() end,
   },
   {
     'danymat/neogen',
@@ -790,11 +741,12 @@ require('lazy').setup({
         function() require('neogen').generate() end,
       },
     },
-    config = function()
-      require('yyxi.plugins.editing').neogen()
-    end,
+    config = function() require('yyxi.plugins.editing').neogen() end,
   },
-}, {
+}
+
+---@type LazyConfig
+local lazy_options = {
   root = plugin_root,
   defaults = {
     lazy = true,
@@ -853,4 +805,6 @@ require('lazy').setup({
       },
     },
   },
-})
+}
+
+require('lazy').setup(plugin_specs, lazy_options)

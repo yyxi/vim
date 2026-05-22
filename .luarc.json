@@ -10,6 +10,7 @@
     "${env:HOME}/.vim/vendor/conform.nvim/lua",
     "${env:HOME}/.vim/vendor/cybu.nvim/lua",
     "${env:HOME}/.vim/vendor/flash.nvim/lua",
+    "${env:HOME}/.vim/vendor/lazy.nvim/lua",
     "${env:HOME}/.vim/vendor/lean.nvim/lua",
     "${env:HOME}/.vim/vendor/nvim-ts-autotag/lua",
     "${env:HOME}/.vim/vendor/plenary.nvim/lua",
