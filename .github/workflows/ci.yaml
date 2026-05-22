@@ -39,11 +39,12 @@ jobs:
       - name: dependencies
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get install zsh bc
-            curl -sLO https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
-            chmod u+x nvim.appimage
-            mkdir -p "$HOME/.neovim-dist/bin"
-            mv ./nvim.appimage "$HOME/.neovim-dist/bin/nvim"
+            sudo apt-get update
+            sudo apt-get install -y zsh bc
+            mkdir -p "$HOME/.neovim-dist"
+            curl -fsSL -o nvim-linux-x86_64.tar.gz https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz
+            tar xzf nvim-linux-x86_64.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
+            rm -f nvim-linux-x86_64.tar.gz
           elif [ "$RUNNER_OS" == "macOS" ]; then
             brew install bash zsh bc gnu-sed
             brew install neovim --HEAD
