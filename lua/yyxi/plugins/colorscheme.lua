@@ -32,7 +32,6 @@ function M.setup()
       ['lukas-reineke/indent-blankline.nvim'] = true,
       ['nvim-lualine/lualine.nvim'] = true,
       ['nvim-telescope/telescope.nvim'] = true,
-      ['mason-org/mason.nvim'] = true,
     },
   }
 

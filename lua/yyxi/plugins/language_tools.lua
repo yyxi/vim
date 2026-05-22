@@ -1,18 +1,145 @@
 local M = {}
 
----@class yyxi.plugins.lsp.Context
----@field concat fun(first: table, second: table): table
----@field is_installed fun(binary: string): boolean
----@field ternary fun(condition: any, true_value: any, false_value?: any): any
+local environment = require('yyxi.utilities.environment')
 
----@param context yyxi.plugins.lsp.Context
-function M.setup(context)
-  local concat = context.concat
-  local is_installed = context.is_installed
-  local ternary = context.ternary
+function M.conform()
+  ---@type conform.setupOpts
+  local opts = {
+    formatters_by_ft = {
+      javascript = { 'prettier' },
+      json = { 'prettier' },
+      json5 = { 'prettier' },
+      jsonc = { 'prettier' },
+      -- lua = { 'stylua' },
+      tex = { 'latexindent' },
+      markdown = { 'prettier' },
+      sh = { 'shfmt' },
+      typescript = { 'prettier' },
+      typescriptreact = { 'prettier' },
+      css = { 'prettier' },
+      vue = { 'prettier' },
+      yaml = { 'prettier' },
+    },
+    formatters = {
+      shfmt = {
+        prepend_args = { '-i', '2' },
+      },
+    },
+  }
 
-  vim.lsp.set_log_level('ERROR')
-  local mason = require('mason-registry')
+  require('conform').setup(opts)
+end
+
+local function configure_lua_ls_workspace(_, config)
+  local root_dir = config.root_dir
+  if not root_dir then return end
+
+  local config_root = environment.normalize_path(environment.repository_root())
+  if not environment.is_path_within(root_dir, config_root) then return end
+
+  config.settings = vim.tbl_deep_extend('force', config.settings or {}, {
+    Lua = {
+      workspace = {
+        library = environment.luarc_workspace_libraries(config_root),
+      },
+    },
+  })
+end
+
+function M.lsp_fix()
+  local fix = require('lsp-fix')
+
+  fix.setup({
+    json5 = {
+      order = {
+        'eslint',
+      },
+    },
+    jsonc = {
+      order = {
+        'eslint',
+      },
+    },
+    toml = {
+      order = {
+        'taplo',
+        'eslint',
+      },
+    },
+    json = {
+      order = {
+        'eslint',
+      },
+    },
+    yaml = {
+      order = {
+        'eslint',
+      },
+    },
+    typescript = {
+      order = {
+        'ts_ls',
+        'vtsls',
+        'eslint',
+      },
+    },
+    dockerfile = {
+      order = {
+        'dockerls',
+      },
+    },
+    python = {
+      order = {
+        'ty',
+        'pyright',
+        'ruff',
+      },
+    },
+    vue = {
+      order = {
+        'volar',
+        'eslint',
+      },
+    },
+    -- css = {
+    --   order = { 'stylelint_lsp' },
+    --   tab_width = function()
+    --     return vim.opt.shiftwidth:get()
+    --   end,
+    -- }
+  })
+end
+
+function M.none_ls()
+  local is_installed = environment.has_executable
+
+  local null_ls = require('null-ls')
+  null_ls.setup({
+    sources = {
+      -- https://github.com/nvimtools/none-ls.nvim/blob/main/doc/BUILTINS.md
+      null_ls.builtins.diagnostics.actionlint.with({
+        condition = function() return is_installed('actionlint') end,
+      }),
+      null_ls.builtins.diagnostics.fish.with({
+        condition = function() return is_installed('fish') end,
+      }),
+      null_ls.builtins.diagnostics.hadolint.with({
+        condition = function() return is_installed('hadolint') end,
+      }),
+    },
+  })
+end
+
+local function concat(first, second) return vim.list_extend(first, second) end
+
+local function ternary(condition, true_value, false_value)
+  return condition and true_value or false_value
+end
+
+function M.lsp()
+  local is_installed = environment.has_executable
+
+  vim.lsp.log.set_level('ERROR')
 
   require('lspconfig.ui.windows').default_options.border = 'rounded'
 
@@ -155,34 +282,37 @@ function M.setup(context)
 
       return true
     end),
-    ansiblels = ternary(is_installed('ansible-config'), function()
-      vim.lsp.config('ansiblels', {
-        capabilities = capabilities,
-        settings = {
-          ansible = {
-            python = {
-              interpreterPath = 'python',
-            },
+    ansiblels = ternary(
+      is_installed('ansible-language-server') and is_installed('ansible-config'),
+      function()
+        vim.lsp.config('ansiblels', {
+          capabilities = capabilities,
+          settings = {
             ansible = {
-              path = 'ansible',
-            },
-            executionEnvironment = {
-              enabled = false,
-            },
-            validation = {
-              enabled = true,
-              lint = {
-                enabled = is_installed('ansible-lint'),
-                path = 'ansible-lint',
+              python = {
+                interpreterPath = 'python3',
+              },
+              ansible = {
+                path = 'ansible',
+              },
+              executionEnvironment = {
+                enabled = false,
+              },
+              validation = {
+                enabled = true,
+                lint = {
+                  enabled = is_installed('ansible-lint'),
+                  path = 'ansible-lint',
+                },
               },
             },
           },
-        },
-      })
+        })
 
-      return true
-    end),
-    yamlls = function()
+        return true
+      end
+    ),
+    yamlls = ternary(is_installed('yaml-language-server'), function()
       vim.lsp.config('yamlls', {
         capabilities = capabilities,
         settings = {
@@ -208,8 +338,8 @@ function M.setup(context)
       })
 
       return true
-    end,
-    jsonls = function()
+    end),
+    jsonls = ternary(is_installed('vscode-json-language-server'), function()
       vim.lsp.config('jsonls', {
         capabilities = capabilities,
         settings = {
@@ -221,17 +351,16 @@ function M.setup(context)
       })
 
       return true
-    end,
-    -- lua_ls = function()
-    --   require('lazydev').setup({
-    --     library = {
-    --       -- See the configuration section for more details
-    --       -- Load luvit types when the `vim.uv` word is found
-    --       { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
-    --     },
-    --   })
-    -- end,
-    ty = function()
+    end),
+    lua_ls = ternary(is_installed('lua-language-server'), function()
+      vim.lsp.config('lua_ls', {
+        capabilities = capabilities,
+        before_init = configure_lua_ls_workspace,
+      })
+
+      return true
+    end),
+    ty = ternary(is_installed('ty'), function()
       vim.lsp.config('ty', {
         capabilities = capabilities,
         -- fix = {
@@ -245,8 +374,8 @@ function M.setup(context)
       })
 
       return true
-    end,
-    pyright = function()
+    end),
+    pyright = ternary(is_installed('pyright-langserver'), function()
       vim.lsp.config('pyright', {
         capabilities = capabilities,
         fix = {
@@ -260,8 +389,8 @@ function M.setup(context)
       })
 
       return true
-    end,
-    ruff = function()
+    end),
+    ruff = ternary(is_installed('ruff'), function()
       vim.lsp.config('ruff', {
         capabilities = capabilities,
         fix = {
@@ -291,9 +420,11 @@ function M.setup(context)
       })
 
       return true
-    end,
+    end),
     vtsls = ternary(is_installed('vtsls'), function()
-      local hasVolar = mason.is_installed('vue-language-server')
+      local vue_language_server_path =
+        environment.node_package_path('@vue/language-server', environment.repository_root())
+      local hasVolar = is_installed('vue-language-server') and vue_language_server_path ~= nil
 
       -- https://github.com/yioneko/vtsls/blob/main/packages/service/configuration.schema.json
       local tsWorkspaceConfiguration = {
@@ -390,9 +521,7 @@ function M.setup(context)
               globalPlugins = {
                 {
                   name = '@vue/typescript-plugin',
-                  location = vim.fn.expand(
-                    '$MASON/packages/vue-language-server/node_modules/@vue/language-server'
-                  ),
+                  location = vue_language_server_path,
                   languages = { 'vue', 'typescript' },
                   configNamespace = 'typescript',
                 },
@@ -420,7 +549,7 @@ function M.setup(context)
 
       return true
     end),
-    eslint = function()
+    eslint = ternary(is_installed('vscode-eslint-language-server'), function()
       vim.lsp.config('eslint', {
         filetypes = {
           'astro',
@@ -465,7 +594,21 @@ function M.setup(context)
       })
 
       return true
-    end,
+    end),
+    cssls = ternary(is_installed('vscode-css-language-server'), function()
+      vim.lsp.config('cssls', {
+        capabilities = capabilities,
+      })
+
+      return true
+    end),
+    html = ternary(is_installed('vscode-html-language-server'), function()
+      vim.lsp.config('html', {
+        capabilities = capabilities,
+      })
+
+      return true
+    end),
   }
 
   vim.schedule(function()
@@ -478,17 +621,25 @@ function M.setup(context)
       local value = handler()
       if value then vim.lsp.enable(key) end
     end
-
-    -- dockerls, terraformls, volar, taplo, glslls, bashls, cssls,
-    require('mason-lspconfig').setup({
-      automatic_enable = {
-        exclude = {
-          'ts_ls',
-        },
-      },
-      ensure_installed = {},
-    })
   end)
+end
+
+function M.lean()
+  ---@type lean.Config
+  local opts = { -- see below for full configuration options
+    mappings = false,
+    infoview = {
+      autoopen = false,
+    },
+    progress_bars = {
+      enable = false,
+    },
+    stderr = {
+      enable = false,
+    },
+  }
+
+  require('lean').setup(opts)
 end
 
 return M

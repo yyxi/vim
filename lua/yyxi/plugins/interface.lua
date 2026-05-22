@@ -1,6 +1,250 @@
 local M = {}
 
-function M.setup()
+local exclusions = require('yyxi.utilities.exclusions')
+
+function M.cybu()
+  ---@type CybuConfig
+  local opts = {
+    position = {
+      relative_to = 'win',
+      anchor = 'center',
+    },
+    style = {
+      path = 'relative',
+      path_abbreviation = 'none',
+      border = 'rounded',
+      separator = ' ',
+      prefix = '…',
+      padding = 1,
+      hide_buffer_id = true,
+      devicons = {
+        enabled = false, -- enable or disable web dev icons
+        colored = false, -- enable color for web dev icons
+      },
+    },
+    behavior = { -- set behavior for different modes
+      mode = {
+        default = {
+          switch = 'immediate', -- immediate, on_close
+          view = 'rolling', -- paging, rolling
+        },
+        last_used = {
+          switch = 'immediate', -- immediate, on_close
+          view = 'rolling', -- paging, rolling
+        },
+        auto = {
+          view = 'rolling',
+        },
+      },
+      show_on_autocmd = false, -- event to trigger cybu (eg. "BufEnter")
+    },
+    display_time = 500, -- time the cybu window is displayed
+    exclude = exclusions.cybu_excluded_filetypes(),
+    filter = {
+      unlisted = true, -- filter & fallback for unlisted buffers
+    },
+  }
+
+  require('cybu').setup(opts)
+  -- vim.keymap.set('n', 'K', '<Plug>(CybuPrev)')
+  -- vim.keymap.set('n', 'J', '<Plug>(CybuNext)')
+end
+
+function M.flash()
+  ---@type Flash.Config
+  local opts = {
+    search = {
+      exclude = exclusions.flash_search_exclusions(),
+    },
+    modes = {
+      search = {
+        enabled = true,
+      },
+      char = {
+        enabled = false,
+      },
+      prompt = {
+        enabled = false,
+      },
+    },
+    highlight = {
+      backdrop = false,
+      matches = true,
+    },
+  }
+
+  require('flash').setup(opts)
+end
+
+function M.gtd()
+  ---@diagnostic disable-next-line: missing-fields
+  require('gtd').setup({})
+end
+
+function M.indent_blankline()
+  require('ibl').setup({
+    indent = {
+      smart_indent_cap = true,
+      highlight = { 'IndentBlanklineChar' },
+      char = {
+        '╎',
+        '╏',
+        '┆',
+        '┇',
+        '┊',
+        '┋',
+      },
+    },
+    exclude = { filetypes = {} },
+    whitespace = {
+      --highlight = highlight,
+      remove_blankline_trail = false,
+    },
+    scope = {
+      highlight = { 'IndentBlanklineCharScope' },
+      enabled = true,
+      show_start = false,
+      show_end = false,
+      show_exact_scope = false,
+    },
+  })
+
+  local hooks = require('ibl.hooks')
+  hooks.register(hooks.type.WHITESPACE, hooks.builtin.hide_first_space_indent_level)
+  hooks.register(hooks.type.WHITESPACE, hooks.builtin.hide_first_tab_indent_level)
+end
+
+function M.lualine()
+  local opts = {
+    extensions = { 'lazy', 'man' },
+    options = {
+      always_divide_middle = true,
+      component_separators = '',
+      globalstatus = true,
+      icons_enabled = false,
+      section_separators = '',
+      -- theme = 'gruvbox',
+      disabled_filetypes = exclusions.lualine_disabled_filetypes(),
+    },
+
+    sections = {
+      lualine_a = { 'mode' },
+      lualine_b = { 'branch' },
+      lualine_c = { { 'filename', path = 1 } },
+      lualine_x = { 'encoding', 'fileformat', 'filetype' },
+      lualine_y = { 'progress' },
+      lualine_z = { 'location' },
+    },
+    inactive_sections = {
+      lualine_a = {},
+      lualine_b = {},
+      lualine_c = { 'filename' },
+      lualine_x = { 'location' },
+      lualine_y = {},
+      lualine_z = {},
+    },
+  }
+
+  require('lualine').setup(opts)
+end
+
+function M.snacks()
+  ---@type snacks.Config
+  local opts = {
+    input = {
+      enabled = true,
+      icon = '',
+    },
+    notifier = { enabled = false },
+    bigfile = { enabled = true },
+    dashboard = { enabled = false },
+    explorer = { enabled = false },
+    indent = { enabled = false },
+    picker = { enabled = false },
+    quickfile = { enabled = true },
+    scope = { enabled = false },
+    scroll = { enabled = false },
+    statuscolumn = { enabled = false },
+    words = { enabled = false },
+  }
+
+  require('snacks').setup(opts)
+end
+
+function M.telescope()
+  local telescope = require('telescope')
+
+  telescope.setup({
+    defaults = {
+      results_title = '',
+      prompt_title = '',
+      dynamic_preview_title = false,
+      layout_strategy = 'flex',
+      mappings = {},
+      winblend = 10,
+      prompt_prefix = ' ',
+      selection_caret = '  ',
+      entry_prefix = '  ',
+      initial_mode = 'insert',
+      -- path_display = { 'truncate' },
+      path_display = {
+        'filename_first',
+      },
+      set_env = { ['COLORTERM'] = 'truecolor' },
+      vimgrep_arguments = {
+        'rg',
+        '--color=never',
+        '--no-heading',
+        '--with-filename',
+        '--line-number',
+        '--column',
+        '--smart-case',
+        '--hidden',
+        '--trim',
+        '--glob',
+        '!.git',
+      },
+      preview = {
+        filesize_limit = 1, -- MB
+      },
+    },
+    pickers = {
+      find_files = {
+        find_command = {
+          'rg',
+          '--color=never',
+          '--no-heading',
+          '-L',
+          '--files',
+          '--hidden',
+          '--glob',
+          '!.git',
+        },
+      },
+      buffers = {
+        select_current = true,
+        sort_mru = true,
+      },
+    },
+    extensions = {
+      ['ui-select'] = {
+        layout_strategy = 'flex',
+      },
+      fzf = {
+        fuzzy = true, -- false will only do exact matching
+        override_generic_sorter = true, -- override the generic sorter
+        override_file_sorter = true, -- override the file sorter
+        case_mode = 'smart_case', -- or "ignore_case" or "respect_case"
+      },
+    },
+  })
+
+  telescope.load_extension('fzf')
+  telescope.load_extension('yank_history')
+  telescope.load_extension('ui-select')
+end
+
+function M.which_key()
   ---@type wk.Opts
   local opts = {
     ---@type false | "classic" | "modern" | "helix"
@@ -154,15 +398,8 @@ function M.setup()
     -- triggers = true, -- automatically setup triggers
     disable = {
       -- disable WhichKey for certain buf types and file types.
-      ft = { 'mason', 'lazy', 'TelescopePrompt' },
-      bt = {
-        'help',
-        'nofile',
-        'nowrite',
-        'quickfix',
-        'terminal',
-        'prompt',
-      },
+      ft = exclusions.which_key_disabled_filetypes(),
+      bt = exclusions.non_editing_buftypes(),
       -- -- disable a trigger for a certain context by returning true
       -- ---@type fun(ctx: { keys: string, mode: string, plugin?: string }):boolean?
       -- trigger = function(ctx)
@@ -247,6 +484,52 @@ function M.setup()
   end
 
   wk.add(ret, { notify = false })
+end
+
+function M.zen_mode()
+  ---@type ZenOptions
+  local opts = {
+    window = {
+      backdrop = 1,
+      width = 100,
+      height = 1,
+    },
+    options = {
+      signcolumn = 'no',
+      number = false,
+      relativenumber = false,
+      cursorline = false,
+      cursorcolumn = false,
+      foldcolumn = '0',
+      list = false,
+    },
+    plugins = {
+      options = {
+        enabled = true,
+        ruler = false,
+        showcmd = false,
+        laststatus = 0,
+        cmdheight = 0,
+      },
+      twilight = { enabled = false },
+      gitsigns = { enabled = false },
+      tmux = { enabled = false },
+      kitty = {
+        enabled = false,
+      },
+      alacritty = {
+        enabled = false,
+      },
+      wezterm = {
+        enabled = false,
+      },
+    },
+
+    on_open = function() require('ibl').update({ enabled = false }) end,
+    on_close = function() require('ibl').update({ enabled = true }) end,
+  }
+
+  require('zen-mode').setup(opts)
 end
 
 return M

@@ -9,7 +9,8 @@ vimrc
 .manage_modules/
 .ropeproject
 .netrwhist
-/bundle
+/vendor/*
+!/vendor/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

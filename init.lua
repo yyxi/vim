@@ -34,7 +34,9 @@ aunmenu PopUp
 autocmd! nvim.popupmenu
 ]])
 
-local dotenv = require('yyxi.utilities.dotenv')
+local environment = require('yyxi.utilities.environment')
+
+environment.configure()
 
 require('editorconfig').properties.quote_type = function(bufnr, value)
   if value == 'single' or value == 'double' then vim.b[bufnr].quote_type = value end
@@ -103,78 +105,7 @@ vim.keymap.del({ 'o' }, 'gc')
 
 function custom_fold_text() return vim.fn.getline(vim.v.foldstart) end
 
-local function concat(t1, t2)
-  for _, v in ipairs(t2) do
-    table.insert(t1, v)
-  end
-  return t1
-end
-
--- Function to get the directory name from a file path
-local function dirname(path)
-  -- Normalize the path by removing trailing slashes
-  local normalized_path = path:gsub('/*$', '')
-
-  -- Find the last slash in the normalized path
-  local last_slash = normalized_path:match('.*()/')
-
-  -- If no slash is found, return "."
-  if not last_slash then return '.' end
-
-  -- Return the part of the string before the last slash
-  return normalized_path:sub(1, last_slash - 1)
-end
-
-local function python3_path()
-  ---@diagnostic disable-next-line: undefined-field
-  local stat = vim.uv.fs_stat(vim.fn.expand('~/.vim/.venv/bin'))
-  if not stat then return nil end
-
-  if stat.type == 'directory' then return vim.fn.expand('~/.vim/.venv/bin/python3') end
-
-  return nil
-end
-
-local function mason_path()
-  local directory = vim.fn.expand(vim.fn.stdpath('data') .. '/mason/bin')
-  ---@diagnostic disable-next-line: undefined-field
-  local stat = vim.uv.fs_stat(directory)
-  if not stat then return nil end
-
-  if stat.type == 'directory' then
-    vim.env.PATH = vim.env.PATH .. ':' .. vim.fn.expand(directory)
-  end
-end
-
-mason_path()
-
-vim.g.python3_host_prog = python3_path()
-
-if vim.g.python3_host_prog then
-  vim.env.PATH = vim.env.PATH .. ':' .. dirname(vim.fn.expand(vim.g.python3_host_prog))
-end
-
 if vim.loader then vim.loader.enable() end
-
-local function is_installed(binary)
-  -- Split PATH into individual directories
-  local path_dirs = vim.split(vim.env.PATH or '', ':', { trimempty = true })
-  -- Check each directory for the binary
-  for _, dir in ipairs(path_dirs) do
-    local full_path = dir .. package.config:sub(1, 1) .. binary
-    ---@diagnostic disable-next-line: undefined-field
-    if vim.uv.fs_stat(full_path) then return true end
-  end
-
-  return false
-end
-
--- Define the ternary function
-local function ternary(condition, true_value, false_value)
-  true_value = true_value or nil
-  false_value = false_value or nil
-  return condition and true_value or false_value
-end
 
 -- vim.api.nvim_set_keymap('n', '<c-w>j', { noremap = true, silent = true, desc = 'Go to the down window' })
 -- vim.api.nvim_set_keymap('n', '<c-w>k', { noremap = true, silent = true, desc = 'Go to the up window' })
@@ -302,9 +233,11 @@ vim.g.clipboard = {
 }
 
 -- Bootstrap lazy.nvim
-local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
+local plugin_root = environment.vendor_root()
+local plugin_manager_path = environment.plugin_manager_path()
 ---@diagnostic disable-next-line: undefined-field
-if not vim.uv.fs_stat(lazypath) then
+if not vim.uv.fs_stat(plugin_manager_path) then
+  vim.fn.mkdir(plugin_root, 'p')
   local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
   local out = vim.fn.system({
     'git',
@@ -312,7 +245,7 @@ if not vim.uv.fs_stat(lazypath) then
     '--filter=blob:none',
     '--branch=stable',
     lazyrepo,
-    lazypath,
+    plugin_manager_path,
   })
   if vim.v.shell_error ~= 0 then
     vim.api.nvim_echo({
@@ -324,11 +257,11 @@ if not vim.uv.fs_stat(lazypath) then
     os.exit(1)
   end
 end
-vim.opt.rtp:prepend(lazypath)
+vim.opt.rtp:prepend(plugin_manager_path)
 
 vim.keymap.set('n', ' ', '<Nop>', { silent = true, remap = false })
 vim.g.mapleader = ' '
-vim.opt.rtp:prepend(lazypath)
+vim.opt.rtp:prepend(plugin_manager_path)
 vim.g.editorconfig = true
 
 vim.filetype.add({
@@ -382,7 +315,7 @@ require('lazy').setup({
     branch = 'stable',
     priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
-      require('yyxi.plugins.mini_base16').setup()
+      require('yyxi.plugins.colorscheme').setup()
     end,
   },
   {
@@ -390,7 +323,7 @@ require('lazy').setup({
     event = 'VimEnter',
     priority = 800,
     config = function()
-      require('yyxi.plugins.lualine').setup()
+      require('yyxi.plugins.interface').lualine()
     end,
   },
   {
@@ -398,7 +331,7 @@ require('lazy').setup({
     priority = 1000,
     lazy = false,
     config = function()
-      require('yyxi.plugins.snacks').setup()
+      require('yyxi.plugins.interface').snacks()
     end,
   },
   {
@@ -429,7 +362,7 @@ require('lazy').setup({
     name = 'ibl',
     event = 'VeryLazy',
     config = function()
-      require('yyxi.plugins.indent_blankline').setup()
+      require('yyxi.plugins.interface').indent_blankline()
     end,
   },
   {
@@ -437,23 +370,7 @@ require('lazy').setup({
     branch = 'stable',
     event = 'VeryLazy',
     config = function()
-      require('yyxi.plugins.mini_hipatterns').setup()
-    end,
-  },
-  {
-    'mason-org/mason.nvim',
-    cmd = {
-      'Mason',
-      'MasonInstall',
-      'MasonUninstall',
-      'MasonUninstallAll',
-      'MasonLog',
-    },
-    build = function()
-      pcall(function() require('mason-registry').refresh() end)
-    end,
-    config = function()
-      require('yyxi.plugins.mason').setup()
+      require('yyxi.plugins.syntax').mini_hipatterns()
     end,
   },
   {
@@ -464,17 +381,7 @@ require('lazy').setup({
     },
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
-      require('yyxi.plugins.none_ls').setup({
-        is_installed = is_installed,
-      })
-    end,
-  },
-  {
-    'folke/lazydev.nvim',
-    ft = 'lua',
-    dependencies = { 'neovim/nvim-lspconfig' },
-    config = function()
-      require('yyxi.plugins.lazydev').setup()
+      require('yyxi.plugins.language_tools').none_ls()
     end,
   },
   {
@@ -483,22 +390,13 @@ require('lazy').setup({
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
       {
-        'mason-org/mason-lspconfig.nvim',
-        dependencies = { 'mason-org/mason.nvim' },
-        config = noop,
-      },
-      {
         'b0o/schemastore.nvim',
         config = noop,
       },
       { 'nvim-telescope/telescope.nvim' },
     },
     config = function()
-      require('yyxi.plugins.lsp').setup({
-        concat = concat,
-        is_installed = is_installed,
-        ternary = ternary,
-      })
+      require('yyxi.plugins.language_tools').lsp()
     end,
   },
   {
@@ -512,7 +410,7 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('yyxi.plugins.lsp_fix').setup()
+      require('yyxi.plugins.language_tools').lsp_fix()
     end,
   },
   {
@@ -527,7 +425,7 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('yyxi.plugins.conform').setup()
+      require('yyxi.plugins.language_tools').conform()
     end,
     init = function()
       -- If you want the formatexpr, here is the place to set it
@@ -550,7 +448,7 @@ require('lazy').setup({
       }
     },
     config = function()
-      require('yyxi.plugins.blink_cmp').setup()
+      require('yyxi.plugins.completion').setup()
     end,
   },
   {
@@ -560,7 +458,7 @@ require('lazy').setup({
     },
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
     config = function()
-      require('yyxi.plugins.treesj').setup()
+      require('yyxi.plugins.editing').treesj()
     end,
   },
   {
@@ -594,7 +492,7 @@ require('lazy').setup({
       vim.o.indentexpr = 'nvim_treesitter#indent()'
     end,
     config = function()
-      require('yyxi.plugins.treesitter').setup()
+      require('yyxi.plugins.syntax').treesitter()
     end,
   },
   {
@@ -607,7 +505,7 @@ require('lazy').setup({
       'saghen/blink.cmp',
     },
     config = function()
-      require('yyxi.plugins.lean').setup()
+      require('yyxi.plugins.language_tools').lean()
     end,
   },
   {
@@ -638,7 +536,7 @@ require('lazy').setup({
     ft = { 'html', 'vue' },
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
-      require('yyxi.plugins.ts_autotag').setup()
+      require('yyxi.plugins.syntax').ts_autotag()
     end,
   },
   {
@@ -650,14 +548,14 @@ require('lazy').setup({
       'JoosepAlviste/nvim-ts-context-commentstring',
     },
     config = function()
-      require('yyxi.plugins.comment').setup()
+      require('yyxi.plugins.editing').comment()
     end,
   },
   {
     'windwp/nvim-autopairs',
     event = 'InsertEnter',
     config = function()
-      require('yyxi.plugins.autopairs').setup()
+      require('yyxi.plugins.editing').autopairs()
     end,
   },
   {
@@ -668,7 +566,7 @@ require('lazy').setup({
       { 'y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
     },
     config = function()
-      require('yyxi.plugins.yanky').setup()
+      require('yyxi.plugins.editing').yanky()
     end,
   },
   {
@@ -725,7 +623,7 @@ require('lazy').setup({
       { '<leader>R', '<cmd>Telescope lsp_references<cr>', desc = 'References' },
     },
     config = function()
-      require('yyxi.plugins.telescope').setup()
+      require('yyxi.plugins.interface').telescope()
     end,
   },
   {
@@ -737,7 +635,7 @@ require('lazy').setup({
       'nvim-treesitter/nvim-treesitter',
     },
     config = function()
-      require('yyxi.plugins.mini_ai').setup()
+      require('yyxi.plugins.editing').mini_ai()
     end,
   },
   {
@@ -750,14 +648,14 @@ require('lazy').setup({
       'nvim-treesitter/nvim-treesitter',
     },
     config = function()
-      require('yyxi.plugins.mini_surround').setup()
+      require('yyxi.plugins.editing').mini_surround()
     end,
   },
   {
     'folke/flash.nvim',
     event = 'VeryLazy',
     config = function()
-      require('yyxi.plugins.flash').setup()
+      require('yyxi.plugins.interface').flash()
     end,
     keys = {
       {
@@ -794,7 +692,7 @@ require('lazy').setup({
     branch = 'stable',
     keys = { { '<leader>a', mode = { 'n', 'x' }, desc = 'Align' } },
     config = function()
-      require('yyxi.plugins.mini_align').setup()
+      require('yyxi.plugins.editing').mini_align()
     end,
   },
   {
@@ -809,7 +707,7 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('yyxi.plugins.which_key').setup()
+      require('yyxi.plugins.interface').which_key()
     end,
   },
   {
@@ -831,7 +729,7 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('yyxi.plugins.cybu').setup()
+      require('yyxi.plugins.interface').cybu()
     end,
   },
   {
@@ -844,7 +742,7 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('yyxi.plugins.zen_mode').setup()
+      require('yyxi.plugins.interface').zen_mode()
     end,
   },
   {
@@ -860,7 +758,7 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('yyxi.plugins.gtd').setup()
+      require('yyxi.plugins.interface').gtd()
     end,
   },
   {
@@ -868,7 +766,7 @@ require('lazy').setup({
     -- dependencies = { 'nvim-telescope/telescope.nvim' },
     event = { 'BufReadPre', 'BufNewFile' },
     config = function()
-      require('yyxi.plugins.text_case').setup()
+      require('yyxi.plugins.editing').text_case()
     end,
   },
   {
@@ -884,10 +782,11 @@ require('lazy').setup({
       },
     },
     config = function()
-      require('yyxi.plugins.neogen').setup()
+      require('yyxi.plugins.editing').neogen()
     end,
   },
 }, {
+  root = plugin_root,
   defaults = {
     lazy = true,
   },
