@@ -1,7 +1,7 @@
 [project]
 name = "vim"
 version = "0.1.0"
-dependencies = ["pynvim>=0.5.2", "pip>=25.1.1"]
+dependencies = ["pynvim>=0.5.2", "pip>=25.1.1", "ruff>=0.15.12", "ty>=0.0.34"]
 requires-python = ">=3.12,<3.13"
 
 [tool.uv]
@@ -15,12 +15,5 @@ members = []
 py-modules = []
 
 # Development checks:
-# uv run ruff format manage
-# uv run ruff check manage
-# uv run ty check manage
-
-[dependency-groups]
-dev = [
-    "ruff>=0.15.12",
-    "ty>=0.0.34",
-]
+# ./manage check
+# ./manage check --fix

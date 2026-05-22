@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "LuaJIT",
+  "runtime.path": ["lua/?.lua", "lua/?/init.lua"],
+  "workspace.library": [
+    "${env:VIMRUNTIME}/lua",
+    "${3rd}/luv/library",
+    "${env:XDG_DATA_HOME}/nvim/lazy/blink.cmp/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/Comment.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/conform.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/cybu.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/flash.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/lazydev.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/lean.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/mason.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/nvim-ts-autotag/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/plenary.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/snacks.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/treesj/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/which-key.nvim/lua",
+    "${env:XDG_DATA_HOME}/nvim/lazy/zen-mode.nvim/lua"
+  ],
+  "workspace.ignoreDir": [".firecrawl", ".git", ".venv", "tmp"],
+  "diagnostics.globals": ["vim", "describe", "it", "pending", "before_each", "after_each", "assert"],
+  "diagnostics.disable": ["deprecated"],
+  "telemetry.enable": false
+}

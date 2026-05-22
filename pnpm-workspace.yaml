@@ -1,0 +1,10 @@
+packages:
+  - .
+
+allowBuilds:
+  core-js: false
+blockExoticSubdeps: true
+childConcurrency: 1
+minimumReleaseAge: 10080
+strictDepBuilds: true
+trustPolicy: no-downgrade

@@ -25,6 +25,17 @@ jobs:
           enable-cache: true
           ignore-nothing-to-cache: true
           version: 'latest'
+      - name: install node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          package-manager-cache: false
+      - name: install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: true
+          cache_dependency_path: pnpm-lock.yaml
+          run_install: false
       - name: dependencies
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then

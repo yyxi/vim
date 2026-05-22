@@ -3,7 +3,7 @@ revision = 3
 requires-python = "==3.12.*"
 
 [options]
-exclude-newer = "2026-05-09T08:00:16.90880971Z"
+exclude-newer = "2026-05-12T02:48:54.222134921Z"
 exclude-newer-span = "P10D"
 
 [[package]]
@@ -119,10 +119,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "pip" },
     { name = "pynvim" },
-]
-
-[package.dev-dependencies]
-dev = [
     { name = "ruff" },
     { name = "ty" },
 ]
@@ -131,10 +127,6 @@ dev = [
 requires-dist = [
     { name = "pip", specifier = ">=25.1.1" },
     { name = "pynvim", specifier = ">=0.5.2" },
-]
-
-[package.metadata.requires-dev]
-dev = [
     { name = "ruff", specifier = ">=0.15.12" },
     { name = "ty", specifier = ">=0.0.34" },
 ]

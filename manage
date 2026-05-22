@@ -2,20 +2,39 @@
 """Small management CLI for this Neovim configuration."""
 
 import argparse
+import json
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
 from typing import Dict, Mapping, Optional, Sequence
 
-LOCAL_BIN_PARTS = ((".neovim-dist", "bin"),(".dotfiles", "bin"))
+LOCAL_BIN_PARTS = ((".neovim-dist", "bin"), (".dotfiles", "bin"))
 UV_SYNC_CHECK = ("sync", "--check", "--locked")
 UV_SYNC_PRODUCTION = ("sync", "--locked", "--no-dev")
+UV_RUN_CHECK = ("run", "--frozen", "--no-sync")
+PNPM_INSTALL_PRODUCTION = (
+    "install",
+    "--prod",
+    "--frozen-lockfile",
+    "--workspace-root",
+    "--ignore-pnpmfile",
+    "--ignore-scripts",
+    "--strict-peer-dependencies",
+    "--verify-store-integrity",
+    "--reporter",
+    "append-only",
+)
 NVIM_PLUGIN_SYNC = ("--headless", "+Lazy! restore", "+qa")
+LUA_CHECK_PATH = "lua/yyxi"
+PLENARY_PLUGIN_NAME = "plenary.nvim"
+ENV_VARIABLE_PATTERN = re.compile(r"\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
 def info(message: str) -> None:
-    print(message)
+    print(message, flush=True)
 
 
 def warn(message: str) -> None:
@@ -89,63 +108,75 @@ def uv_environment_synced(
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    if return_code is None:
-        return True
-
     return return_code == 0
 
 
-def sync_uv_production_if_needed(env: Mapping[str, str], repository: str) -> None:
+def sync_uv_production_if_needed(env: Mapping[str, str], repository: str) -> bool:
     uv = shutil.which("uv", path=env.get("PATH"))
     if not uv:
-        return
+        return True
 
     if not os.path.exists(os.path.join(repository, "pyproject.toml")):
-        return
+        return True
 
     if uv_environment_synced(uv, env, repository, include_dev=False):
-        return
+        return True
 
     # A dev-synced environment is already usable; avoid removing dev tools unnecessarily.
     if uv_environment_synced(uv, env, repository, include_dev=True):
-        return
+        return True
 
-    info("uv environment out of sync; running uv sync --locked --no-dev")
-    return_code = run_command([uv] + list(UV_SYNC_PRODUCTION), env, repository)
-    if return_code not in (None, 0):
-        warn("uv sync failed with exit code {0}".format(return_code))
+    return run_logged_command([uv] + list(UV_SYNC_PRODUCTION), env, repository)
 
 
-def has_neovim(env: Mapping[str, str]) -> bool:
-    return shutil.which("nvim", path=env.get("PATH")) is not None
+def sync_pnpm_production(env: Mapping[str, str], repository: str) -> bool:
+    pnpm = shutil.which("pnpm", path=env.get("PATH"))
+    if not pnpm:
+        return True
+
+    if not os.path.exists(os.path.join(repository, "package.json")):
+        return True
+
+    return run_logged_command([pnpm] + list(PNPM_INSTALL_PRODUCTION), env, repository)
 
 
-def link_neovim_config(home: str, repository: str) -> None:
+def link_neovim_config(home: str, repository: str) -> bool:
     config_dir = os.path.join(home, ".config")
     try:
         os.makedirs(config_dir, exist_ok=True)
     except OSError as exc:
         warn("unable to create {0}: {1}".format(config_dir, exc))
+        return False
 
     nvim_config = os.path.join(config_dir, "nvim")
-    if os.path.exists(nvim_config):
-        return
+    if os.path.lexists(nvim_config):
+        try:
+            if os.path.realpath(nvim_config) == os.path.realpath(repository):
+                return True
+        except OSError as exc:
+            warn("unable to inspect {0}: {1}".format(nvim_config, exc))
+            return False
+
+        warn("{0} exists and does not point to {1}".format(nvim_config, repository))
+        return False
 
     try:
         os.symlink(repository, nvim_config)
     except FileExistsError:
-        pass
+        return os.path.realpath(nvim_config) == os.path.realpath(repository)
     except OSError as exc:
         warn("unable to link {0} to {1}: {2}".format(nvim_config, repository, exc))
+        return False
+
+    return True
 
 
-def sync_neovim_plugins(env: Mapping[str, str], repository: str) -> None:
-    run_command(["nvim"] + list(NVIM_PLUGIN_SYNC), env, repository)
-    info("nvim plugins installed")
+def sync_neovim_plugins(nvim: str, env: Mapping[str, str], repository: str) -> bool:
+    return run_logged_command([nvim] + list(NVIM_PLUGIN_SYNC), env, repository)
 
 
 def install() -> int:
-    """Install Python production dependencies and Neovim plugins."""
+    """Install production dependencies and Neovim plugins."""
     try:
         home = home_dir()
     except RuntimeError as exc:
@@ -155,15 +186,325 @@ def install() -> int:
     repository = repository_dir()
     env = install_environment(home)
 
-    sync_uv_production_if_needed(env, repository)
+    ok = True
+    if not sync_uv_production_if_needed(env, repository):
+        ok = False
+    if not sync_pnpm_production(env, repository):
+        ok = False
 
-    if not has_neovim(env):
+    nvim = shutil.which("nvim", path=env.get("PATH"))
+    if not nvim:
         info("nvim not found")
-        return 0
+        return 0 if ok else 1
 
-    link_neovim_config(home, repository)
-    sync_neovim_plugins(env, repository)
-    return 0
+    if link_neovim_config(home, repository):
+        if not sync_neovim_plugins(nvim, env, repository):
+            ok = False
+    else:
+        ok = False
+
+    return 0 if ok else 1
+
+
+def command_name(command: Sequence[str]) -> str:
+    return shlex.join(command)
+
+
+def print_command(command: Sequence[str]) -> None:
+    info("$ {0}".format(command_name(command)))
+
+
+def print_completed_output(completed: subprocess.CompletedProcess[str]) -> None:
+    if completed.stdout:
+        print(completed.stdout, end="" if completed.stdout.endswith("\n") else "\n")
+    if completed.stderr:
+        print(
+            completed.stderr,
+            end="" if completed.stderr.endswith("\n") else "\n",
+            file=sys.stderr,
+        )
+
+
+def run_logged_command(
+    command: Sequence[str],
+    env: Mapping[str, str],
+    repository: str,
+    success_message: Optional[str] = None,
+    show_success_output_on_stderr: bool = True,
+) -> bool:
+    print_command(command)
+    try:
+        completed = subprocess.run(
+            command,
+            env=env,
+            cwd=repository,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        warn("unable to run {0}: {1}".format(command[0], exc))
+        return False
+
+    if completed.returncode == 0:
+        if show_success_output_on_stderr and completed.stderr:
+            print_completed_output(completed)
+        if success_message:
+            info(success_message)
+        return True
+
+    print_completed_output(completed)
+    warn(
+        "command failed with exit code {0}: {1}".format(
+            completed.returncode, command_name(command)
+        )
+    )
+    return False
+
+
+def resolve_required(name: str, env: Mapping[str, str]) -> Optional[str]:
+    path = shutil.which(name, path=env.get("PATH"))
+    if not path:
+        warn("{0} not found on PATH".format(name))
+    return path
+
+
+def neovim_value(
+    nvim: str, expression: str, env: Mapping[str, str], repository: str
+) -> Optional[str]:
+    command = [
+        nvim,
+        "--clean",
+        "--headless",
+        "--cmd",
+        "lua io.write(" + expression + ")",
+        "--cmd",
+        "qa",
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            env=env,
+            cwd=repository,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        warn("unable to run nvim: {0}".format(exc))
+        return None
+
+    if completed.returncode != 0:
+        warn("unable to query nvim: {0}".format(completed.stderr.strip()))
+        return None
+
+    value = completed.stdout.strip()
+    if not value:
+        warn("nvim returned an empty value for {0}".format(expression))
+        return None
+    return value
+
+
+def neovim_runtime(nvim: str, env: Mapping[str, str], repository: str) -> Optional[str]:
+    return neovim_value(nvim, "vim.env.VIMRUNTIME", env, repository)
+
+
+def neovim_stdpath(
+    nvim: str, name: str, env: Mapping[str, str], repository: str
+) -> Optional[str]:
+    return neovim_value(
+        nvim, "vim.fn.stdpath(" + json.dumps(name) + ")", env, repository
+    )
+
+
+def expand_lua_library_path(
+    path: str, env: Mapping[str, str], repository: str
+) -> Optional[str]:
+    if "${3rd}" in path:
+        return None
+
+    missing = []
+
+    def replace_env(match: re.Match[str]) -> str:
+        name = match.group(1)
+        value = env.get(name)
+        if value is None:
+            missing.append(name)
+            return match.group(0)
+        return value
+
+    expanded = ENV_VARIABLE_PATTERN.sub(replace_env, path)
+    if missing:
+        raise RuntimeError(
+            "environment variable missing in .luarc.json: {0}".format(missing[0])
+        )
+
+    if "${" in expanded:
+        raise RuntimeError("unsupported variable in .luarc.json path: {0}".format(path))
+
+    if os.path.isabs(expanded):
+        return expanded
+    return os.path.join(repository, expanded)
+
+
+def lua_workspace_libraries(
+    env: Mapping[str, str], repository: str
+) -> Optional[Sequence[str]]:
+    config_path = os.path.join(repository, ".luarc.json")
+    try:
+        with open(config_path, encoding="utf-8") as file:
+            config = json.load(file)
+    except OSError as exc:
+        warn("unable to read {0}: {1}".format(config_path, exc))
+        return None
+    except json.JSONDecodeError as exc:
+        warn("unable to parse {0}: {1}".format(config_path, exc))
+        return None
+
+    libraries = config.get("workspace.library", [])
+    if not isinstance(libraries, list):
+        warn(".luarc.json workspace.library must be a list")
+        return None
+
+    expanded_libraries = []
+    for library in libraries:
+        if not isinstance(library, str):
+            warn(".luarc.json workspace.library entries must be strings")
+            return None
+        try:
+            expanded = expand_lua_library_path(library, env, repository)
+        except RuntimeError as exc:
+            warn(str(exc))
+            return None
+        if expanded is not None:
+            expanded_libraries.append(expanded)
+
+    return expanded_libraries
+
+
+def discover_lua_specs(repository: str) -> Sequence[str]:
+    root = os.path.join(repository, LUA_CHECK_PATH)
+    specs = []
+    for directory, _, filenames in os.walk(root):
+        for filename in filenames:
+            if filename.endswith("_spec.lua"):
+                specs.append(os.path.join(directory, filename))
+    return sorted(specs)
+
+
+def check(fix: bool) -> int:
+    """Run development checks without installing tools implicitly."""
+    try:
+        home = home_dir()
+    except RuntimeError as exc:
+        warn(str(exc))
+        return 1
+
+    repository = repository_dir()
+    env = install_environment(home)
+    if not env.get("XDG_DATA_HOME"):
+        env["XDG_DATA_HOME"] = os.path.join(home, ".local", "share")
+
+    uv = resolve_required("uv", env)
+    stylua = resolve_required("stylua", env)
+    lua_language_server = resolve_required("lua-language-server", env)
+    nvim = resolve_required("nvim", env)
+    if uv is None or stylua is None or lua_language_server is None or nvim is None:
+        return 1
+
+    runtime = neovim_runtime(nvim, env, repository)
+    if not runtime:
+        return 1
+    env["VIMRUNTIME"] = runtime
+
+    lazy_data = neovim_stdpath(nvim, "data", env, repository)
+    if lazy_data is None:
+        return 1
+
+    lazy_root = os.path.join(lazy_data, "lazy")
+    plenary = os.path.join(lazy_root, PLENARY_PLUGIN_NAME)
+    if not os.path.isdir(plenary):
+        warn("{0} not found; run ./manage install".format(plenary))
+        return 1
+
+    libraries = lua_workspace_libraries(env, repository)
+    if libraries is None:
+        return 1
+
+    missing_libraries = [library for library in libraries if not os.path.isdir(library)]
+    if missing_libraries:
+        for library in missing_libraries:
+            warn("{0} not found; run ./manage install".format(library))
+        return 1
+
+    specs = discover_lua_specs(repository)
+    if not specs:
+        warn("no Lua spec files found under {0}".format(LUA_CHECK_PATH))
+        return 1
+
+    ruff_format = [uv, *UV_RUN_CHECK, "ruff", "format"]
+    if not fix:
+        ruff_format.append("--check")
+    ruff_format.append("manage")
+
+    ruff_check = [uv, *UV_RUN_CHECK, "ruff", "check"]
+    if fix:
+        ruff_check.append("--fix")
+    ruff_check.append("manage")
+
+    stylua_check = [stylua]
+    if not fix:
+        stylua_check.append("--check")
+    stylua_check.append(LUA_CHECK_PATH)
+
+    commands = [
+        ruff_format,
+        ruff_check,
+        [uv, *UV_RUN_CHECK, "ty", "check", "manage"],
+        stylua_check,
+        [
+            lua_language_server,
+            "--check=" + LUA_CHECK_PATH,
+            "--checklevel=Warning",
+            "--check_format=pretty",
+            "--configpath=" + os.path.join(repository, ".luarc.json"),
+        ],
+    ]
+
+    runtimepath_command = (
+        "lua vim.opt.runtimepath:prepend({0}); vim.opt.runtimepath:prepend({1})".format(
+            json.dumps(plenary), json.dumps(repository)
+        )
+    )
+    plenary_command = [
+        nvim,
+        "--headless",
+        "--noplugin",
+        "--cmd",
+        runtimepath_command,
+        "-c",
+        "lua require('plenary.test_harness').test_directory("
+        + json.dumps(LUA_CHECK_PATH)
+        + ")",
+    ]
+
+    ok = True
+    for command in commands:
+        if not run_logged_command(command, env, repository):
+            ok = False
+
+    if not run_logged_command(
+        plenary_command,
+        env,
+        repository,
+        "plenary: {0} Lua spec file(s) passed".format(len(specs)),
+        show_success_output_on_stderr=False,
+    ):
+        ok = False
+
+    return 0 if ok else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -173,7 +514,18 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "install",
         help="sync production dependencies and install Neovim plugins",
-        description="Install Python production dependencies when needed, then install Neovim plugins.",
+        description="Install production dependencies when needed, then install Neovim plugins.",
+    )
+
+    check_parser = subparsers.add_parser(
+        "check",
+        help="run Python and Lua development checks",
+        description="Run Python and Lua development checks without installing tools implicitly.",
+    )
+    check_parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="format and apply safe fixes before running non-mutating checks",
     )
 
     return parser
@@ -185,6 +537,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.command == "install":
         return install()
+
+    if args.command == "check":
+        return check(args.fix)
 
     parser.print_help()
     return 0
