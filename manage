@@ -482,7 +482,7 @@ def check(fix: bool) -> int:
         "-c",
         "lua require('plenary.test_harness').test_directory("
         + json.dumps(LUA_CHECK_PATH)
-        + ")",
+        + ", { sequential = true })",
     ]
 
     ok = True
