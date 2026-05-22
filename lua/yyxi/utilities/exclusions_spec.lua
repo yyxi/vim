@@ -1,3 +1,4 @@
+local assert = require('luassert')
 local exclusions = require('yyxi.utilities.exclusions')
 
 describe('yyxi.utilities.exclusions', function()

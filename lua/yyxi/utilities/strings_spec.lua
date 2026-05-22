@@ -1,3 +1,4 @@
+local assert = require('luassert')
 local strings = require('yyxi.utilities.strings')
 
 describe('yyxi.utilities.strings', function()

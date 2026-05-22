@@ -1,3 +1,4 @@
+local assert = require('luassert')
 local environment = require('yyxi.utilities.environment')
 
 local function mkdir(path) vim.fn.mkdir(path, 'p') end
