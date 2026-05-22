@@ -235,15 +235,24 @@ vim.g.clipboard = {
 -- Bootstrap lazy.nvim
 local plugin_root = environment.vendor_root()
 local plugin_manager_path = environment.plugin_manager_path()
+
+local function plugin_manager_revision()
+  local lockfile = environment.repository_path({ 'lazy-lock.json' })
+  local plugins = vim.json.decode(table.concat(vim.fn.readfile(lockfile), '\n'))
+  local plugin = plugins[environment.plugin_manager_package_name]
+  return assert(plugin and plugin.commit, 'lazy-lock.json must pin lazy.nvim')
+end
+
 ---@diagnostic disable-next-line: undefined-field
 if not vim.uv.fs_stat(plugin_manager_path) then
   vim.fn.mkdir(plugin_root, 'p')
+  local revision = plugin_manager_revision()
   local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
   local out = vim.fn.system({
     'git',
     'clone',
     '--filter=blob:none',
-    '--branch=stable',
+    '--revision=' .. revision,
     lazyrepo,
     plugin_manager_path,
   })
