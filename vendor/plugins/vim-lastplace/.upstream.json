@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/farmergreg/vim-lastplace.git",
+  "commit": "e58cb0df716d3c88605ae49db5c4741db8b48aa9",
+  "ref": "refs/heads/master",
+  "notes": "Vendored snapshot managed in-repo for offline startup."
+}

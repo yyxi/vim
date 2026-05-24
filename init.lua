@@ -7,7 +7,7 @@ endif
 
 filetype plugin on
 filetype plugin indent on
-syntax manual
+syntax off
 au FileType help,qf setl nowrap nofen nospell nocul nolist
 
 cmap WQ wq
@@ -35,6 +35,7 @@ autocmd! nvim.popupmenu
 ]])
 
 local environment = require('yyxi.utilities.environment')
+local filetypes = require('yyxi.utilities.filetypes')
 
 environment.configure()
 
@@ -236,95 +237,42 @@ vim.g.clipboard = {
 }
 
 -- Bootstrap lazy.nvim
-local plugin_root = environment.vendor_root()
+local plugin_root = environment.lazy_root()
 local plugin_manager_path = environment.plugin_manager_path()
 
----@return string
-local function plugin_manager_revision()
-  local lockfile = environment.repository_path({ 'lazy-lock.json' })
-  local plugins = vim.json.decode(table.concat(vim.fn.readfile(lockfile), '\n'))
-  local plugin = plugins[environment.plugin_manager_package_name]
-  return assert(plugin and plugin.commit, 'lazy-lock.json must pin lazy.nvim')
-end
-
 ---@diagnostic disable-next-line: undefined-field
-if not vim.uv.fs_stat(plugin_manager_path) then
-  vim.fn.mkdir(plugin_root, 'p')
-  local revision = plugin_manager_revision()
-  local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
-  local out = vim.fn.system({
-    'git',
-    'clone',
-    '--filter=blob:none',
-    '--revision=' .. revision,
-    lazyrepo,
-    plugin_manager_path,
-  })
-  if vim.v.shell_error ~= 0 then
-    vim.api.nvim_echo({
-      { 'Failed to clone lazy.nvim:\n', 'ErrorMsg' },
-      { out, 'WarningMsg' },
-      { '\nPress any key to exit...' },
-    }, true, {})
-    vim.fn.getchar()
-    os.exit(1)
-  end
+local lazy_available = vim.uv.fs_stat(plugin_manager_path) ~= nil
+if lazy_available then
+  vim.opt.rtp:prepend(plugin_manager_path)
+else
+  vim.api.nvim_echo({
+    { 'lazy.nvim is missing at ' .. plugin_manager_path .. '\n', 'WarningMsg' },
+    { 'Run ./manage install to materialize locked Git worktrees.' },
+  }, true, {})
 end
-vim.opt.rtp:prepend(plugin_manager_path)
 
 vim.keymap.set('n', ' ', '<Nop>', { silent = true, remap = false })
 vim.g.mapleader = ' '
-vim.opt.rtp:prepend(plugin_manager_path)
 vim.g.editorconfig = true
 
-vim.filetype.add({
-  extension = {
-    tfvars = 'terraform',
-    tfstate = 'json',
-  },
-  filename = {
-    ['gitconfig'] = 'gitconfig',
-    ['.ansible-lint'] = 'yaml',
-    ['fish_history'] = 'yaml',
-    ['go.sum'] = 'go',
-    ['yarn.lock'] = 'yaml',
-    ['.prettierignore'] = 'gitignore',
-    ['.eslintignore'] = 'gitignore',
-    ['api-extractor.json'] = 'jsonc',
-  },
-  pattern = {
-    ['.*%.js%.map'] = 'json',
-    ['.*%.postman_collection'] = 'json',
-    ['.*/playbooks/.*%.yaml'] = 'yaml.ansible',
-    ['.*/playbooks/.*%.yml'] = 'yaml.ansible',
-    ['.*/roles/.*%.yaml'] = 'yaml.ansible',
-    ['.*/roles/.*%.yml'] = 'yaml.ansible',
-    ['.*/host_vars/.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/group_vars/.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/group_vars/.*/.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/playbook.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/playbooks/.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/roles/.*/tasks/.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/roles/.*/handlers/.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/tasks/.*%.ya?ml'] = 'yaml.ansible',
-    ['.*/meta/.*%.ya?ml'] = 'yaml.ansible',
-  },
-})
+vim.filetype.add(filetypes.filetype_add_spec())
 
 ---@type LazySpec
 local plugin_specs = {
   {
     'farmergreg/vim-lastplace',
+    dir = environment.vendored_plugin_path('vim-lastplace'),
     lazy = false,
     priority = 1000,
   },
   {
     'nvim-lua/plenary.nvim',
+    dir = environment.git_worktree_path('plenary.nvim'),
     lazy = true,
-    pin = true,
   },
   {
-    'echasnovski/mini.base16',
+    'nvim-mini/mini.base16',
+    dir = environment.git_worktree_path('mini.base16'),
     lazy = false, -- make sure we load this during startup if it is your main colorscheme
     branch = 'stable',
     priority = 1000, -- make sure to load this before all the other start plugins
@@ -332,18 +280,21 @@ local plugin_specs = {
   },
   {
     'nvim-lualine/lualine.nvim',
+    dir = environment.git_worktree_path('lualine.nvim'),
     event = 'VimEnter',
     priority = 800,
     config = function() require('yyxi.plugins.interface').lualine() end,
   },
   {
     'folke/snacks.nvim',
+    dir = environment.git_worktree_path('snacks.nvim'),
     priority = 1000,
     lazy = false,
     config = function() require('yyxi.plugins.interface').snacks() end,
   },
   {
-    'echasnovski/mini.bufremove',
+    'nvim-mini/mini.bufremove',
+    dir = environment.git_worktree_path('mini.bufremove'),
     event = 'VimEnter',
     keys = {
       {
@@ -367,18 +318,20 @@ local plugin_specs = {
   },
   {
     'lukas-reineke/indent-blankline.nvim',
+    dir = environment.git_worktree_path('ibl'),
     name = 'ibl',
     event = 'VeryLazy',
     config = function() require('yyxi.plugins.interface').indent_blankline() end,
   },
   {
-    'echasnovski/mini.hipatterns',
-    branch = 'stable',
+    'nvim-mini/mini.hipatterns',
+    dir = environment.git_worktree_path('mini.hipatterns'),
     event = 'VeryLazy',
     config = function() require('yyxi.plugins.syntax').mini_hipatterns() end,
   },
   {
     'nvimtools/none-ls.nvim',
+    dir = environment.git_worktree_path('none-ls.nvim'),
     dependencies = {
       'nvim-lua/plenary.nvim',
       'neovim/nvim-lspconfig',
@@ -388,11 +341,13 @@ local plugin_specs = {
   },
   {
     'neovim/nvim-lspconfig',
+    dir = environment.git_worktree_path('nvim-lspconfig'),
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
       {
         'b0o/schemastore.nvim',
+        dir = environment.git_worktree_path('schemastore.nvim'),
         config = noop,
       },
       { 'nvim-telescope/telescope.nvim' },
@@ -413,6 +368,7 @@ local plugin_specs = {
   },
   {
     'stevearc/conform.nvim',
+    dir = environment.git_worktree_path('conform.nvim'),
     cmd = { 'ConformInfo' },
     dependencies = { 'neovim/nvim-lspconfig' },
     keys = {
@@ -430,23 +386,31 @@ local plugin_specs = {
   },
   {
     'saghen/blink.cmp',
-    version = '1.*',
+    dir = environment.git_worktree_path('blink.cmp'),
     event = 'InsertEnter',
     dependencies = {
       { 'neovim/nvim-lspconfig' },
-      { 'rafamadriz/friendly-snippets' },
+      {
+        'rafamadriz/friendly-snippets',
+        dir = environment.git_worktree_path('friendly-snippets'),
+      },
       {
         'L3MON4D3/LuaSnip',
-        version = 'v2.*',
-        build = 'make install_jsregexp',
+        dir = environment.git_worktree_path('LuaSnip'),
         config = noop,
-        dependencies = { { 'rafamadriz/friendly-snippets' } },
+        dependencies = {
+          {
+            'rafamadriz/friendly-snippets',
+            dir = environment.git_worktree_path('friendly-snippets'),
+          },
+        },
       },
     },
     config = function() require('yyxi.plugins.completion').setup() end,
   },
   {
     'Wansmer/treesj',
+    dir = environment.git_worktree_path('treesj'),
     keys = {
       { '<leader>j', '<cmd>TSJToggle<cr>', desc = 'Join Toggle' },
     },
@@ -455,38 +419,20 @@ local plugin_specs = {
   },
   {
     'nvim-treesitter/nvim-treesitter',
-    branch = 'master',
-    event = { 'BufReadPre', 'BufNewFile' },
-    cmd = {
-      'TSInstall',
-      'TSUninstall',
-      'TSUpdate',
-      'TSUpdateSync',
-      'TSInstallInfo',
-      'TSInstallSync',
-      'TSInstallFromGrammar',
-    },
-    dependencies = {
-      -- :lua print(vim.inspect(vim.treesitter.query.get_files('typescript', 'textobjects')))
-      { 'nvim-treesitter/nvim-treesitter-textobjects', config = noop },
-    },
-    -- init = function(plugin)
-    --   require('lazy.core.loader').add_to_rtp(plugin)
-    --   require('nvim-treesitter.query_predicates')
-    -- end,
-    -- lazy = false,
-    build = ':TSUpdate',
-    init = function()
-      vim.wo.foldmethod = 'expr'
-      vim.wo.foldexpr = 'nvim_treesitter#foldexpr()'
-      vim.wo.foldtext = 'v:lua.custom_fold_text()'
-      -- vim.wo.foldtext = "nvim_treesitter#foldtext()"
-      vim.o.indentexpr = 'nvim_treesitter#indent()'
+    dir = environment.git_worktree_path('nvim-treesitter'),
+    lazy = false,
+    init = function() vim.wo.foldtext = 'v:lua.custom_fold_text()' end,
+    config = function()
+      require('yyxi.plugins.syntax').treesitter()
+
+      for _, command in ipairs({ 'TSInstall', 'TSInstallFromGrammar', 'TSUpdate', 'TSUninstall' }) do
+        pcall(vim.api.nvim_del_user_command, command)
+      end
     end,
-    config = function() require('yyxi.plugins.syntax').treesitter() end,
   },
   {
     'Julian/lean.nvim',
+    dir = environment.git_worktree_path('lean.nvim'),
     event = { 'BufReadPre *.lean', 'BufNewFile *.lean' },
     ft = 'lean',
     dependencies = {
@@ -498,6 +444,7 @@ local plugin_specs = {
   },
   {
     'andymass/vim-matchup',
+    dir = environment.git_worktree_path('vim-matchup'),
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
     },
@@ -520,6 +467,7 @@ local plugin_specs = {
   },
   {
     'windwp/nvim-ts-autotag',
+    dir = environment.git_worktree_path('nvim-ts-autotag'),
     dependencies = { 'nvim-treesitter/nvim-treesitter' },
     ft = { 'html', 'vue' },
     event = { 'BufReadPre', 'BufNewFile' },
@@ -527,21 +475,26 @@ local plugin_specs = {
   },
   {
     'numToStr/Comment.nvim',
+    dir = environment.vendored_plugin_path('Comment.nvim'),
     event = { 'VeryLazy' },
-    -- keys = { { "gc", mode = { "n", "v" } }, { "gb", mode = { "n", "v" } } },
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
-      'JoosepAlviste/nvim-ts-context-commentstring',
+      {
+        'JoosepAlviste/nvim-ts-context-commentstring',
+        dir = environment.vendored_plugin_path('nvim-ts-context-commentstring'),
+      },
     },
     config = function() require('yyxi.plugins.editing').comment() end,
   },
   {
     'windwp/nvim-autopairs',
+    dir = environment.git_worktree_path('nvim-autopairs'),
     event = 'InsertEnter',
     config = function() require('yyxi.plugins.editing').autopairs() end,
   },
   {
     'gbprod/yanky.nvim',
+    dir = environment.git_worktree_path('yanky.nvim'),
     event = 'InsertEnter',
     keys = {
       { 'Y', '<Plug>(YankyYank)', mode = { 'n', 'x' }, desc = 'Yank text' },
@@ -551,15 +504,17 @@ local plugin_specs = {
   },
   {
     'nvim-telescope/telescope.nvim',
-    commit = 'b4da76be54691e854d3e0e02c36b0245f945c2c7',
+    dir = environment.git_worktree_path('telescope.nvim'),
     dependencies = {
+      {
+        'nvim-telescope/telescope-ui-select.nvim',
+        dir = environment.git_worktree_path('telescope-ui-select.nvim'),
+      },
       'nvim-lua/plenary.nvim',
       {
         'nvim-telescope/telescope-fzf-native.nvim',
-        build = 'make',
-        cond = function() return vim.fn.executable('make') == 1 end,
+        dir = environment.git_worktree_path('telescope-fzf-native.nvim'),
       },
-      'nvim-telescope/telescope-ui-select.nvim',
       'nvim-treesitter/nvim-treesitter',
       -- 'neovim/nvim-lspconfig',
       'gbprod/yanky.nvim',
@@ -605,18 +560,18 @@ local plugin_specs = {
     config = function() require('yyxi.plugins.interface').telescope() end,
   },
   {
-    'echasnovski/mini.ai',
-    branch = 'stable',
-    version = '*',
+    'nvim-mini/mini.ai',
+    dir = environment.git_worktree_path('mini.ai'),
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
       'nvim-treesitter/nvim-treesitter',
     },
+    -- mini.ai uses textobjects.scm queries copied from nvim-treesitter-textobjects by ./manage.
     config = function() require('yyxi.plugins.editing').mini_ai() end,
   },
   {
-    'echasnovski/mini.surround',
-    branch = 'stable',
+    'nvim-mini/mini.surround',
+    dir = environment.git_worktree_path('mini.surround'),
     -- event = 'InsertEnter',
     -- event = { 'VeryLazy' },
     event = { 'BufReadPre', 'BufNewFile' },
@@ -627,6 +582,7 @@ local plugin_specs = {
   },
   {
     'folke/flash.nvim',
+    dir = environment.git_worktree_path('flash.nvim'),
     event = 'VeryLazy',
     config = function() require('yyxi.plugins.interface').flash() end,
     keys = {
@@ -646,6 +602,7 @@ local plugin_specs = {
   },
   {
     'sQVe/sort.nvim',
+    dir = environment.vendored_plugin_path('sort.nvim'),
     event = 'InsertEnter',
     keys = {
       {
@@ -660,13 +617,14 @@ local plugin_specs = {
     },
   },
   {
-    'echasnovski/mini.align',
-    branch = 'stable',
+    'nvim-mini/mini.align',
+    dir = environment.git_worktree_path('mini.align'),
     keys = { { '<leader>a', mode = { 'n', 'x' }, desc = 'Align' } },
     config = function() require('yyxi.plugins.editing').mini_align() end,
   },
   {
     'folke/which-key.nvim',
+    dir = environment.git_worktree_path('which-key.nvim'),
     cmd = 'WhichKey',
     event = 'VeryLazy',
     keys = {
@@ -680,11 +638,13 @@ local plugin_specs = {
   },
   {
     'BranimirE/fix-auto-scroll.nvim',
+    dir = environment.vendored_plugin_path('fix-auto-scroll.nvim'),
     config = true,
     event = 'VeryLazy',
   },
   {
     'ghillb/cybu.nvim',
+    dir = environment.vendored_plugin_path('cybu.nvim'),
     keys = {
       { '<Left>', '<Plug>(CybuPrev)', desc = 'Previous Buffer' },
       { '<Right>', '<Plug>(CybuNext)', desc = 'Next Buffer' },
@@ -700,6 +660,7 @@ local plugin_specs = {
   },
   {
     'folke/zen-mode.nvim',
+    dir = environment.git_worktree_path('zen-mode.nvim'),
     keys = {
       {
         '<leader>z',
@@ -711,6 +672,7 @@ local plugin_specs = {
   },
   {
     'hrsh7th/nvim-gtd',
+    dir = environment.git_worktree_path('nvim-gtd'),
     event = { 'BufReadPre', 'BufNewFile' },
     keys = {
       -- { "<C-h>", function() require("foldnav").goto_start() end },
@@ -721,16 +683,18 @@ local plugin_specs = {
         function() require('gtd').exec({ command = 'edit' }) end,
       },
     },
-    config = function() require('yyxi.plugins.interface').gtd() end,
+    config = function() require('yyxi.plugins.language_tools').gtd() end,
   },
   {
     'johmsalas/text-case.nvim',
+    dir = environment.vendored_plugin_path('text-case.nvim'),
     -- dependencies = { 'nvim-telescope/telescope.nvim' },
     event = { 'BufReadPre', 'BufNewFile' },
     config = function() require('yyxi.plugins.editing').text_case() end,
   },
   {
     'danymat/neogen',
+    dir = environment.git_worktree_path('neogen'),
     dependencies = { 'saghen/blink.cmp' },
     cmd = 'Neogen',
     keys = {
@@ -807,4 +771,4 @@ local lazy_options = {
   },
 }
 
-require('lazy').setup(plugin_specs, lazy_options)
+if lazy_available then require('lazy').setup(plugin_specs, lazy_options) end

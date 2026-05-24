@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/ghillb/cybu.nvim.git",
+  "commit": "2dff010394208a0e880c46e06735f9d5f5272aaa",
+  "ref": "refs/heads/main",
+  "notes": "Vendored snapshot managed in-repo for offline startup."
+}

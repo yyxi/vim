@@ -25,7 +25,7 @@ function M.setup()
     use_cterm = not vim.o.termguicolors,
     plugins = {
       default = false,
-      ['echasnovski/mini.nvim'] = true,
+      ['nvim-mini/mini.nvim'] = true,
       ['folke/lazy.nvim'] = true,
       ['folke/which-key.nvim'] = true,
       ['hrsh7th/nvim-cmp'] = true,

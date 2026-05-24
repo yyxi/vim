@@ -2,7 +2,24 @@ local M = {}
 
 function M.setup()
   local cmp = require('blink.cmp')
+  local environment = require('yyxi.utilities.environment')
   local luasnip = require('luasnip')
+
+  local blink_fuzzy_library = environment.join_path({
+    environment.git_worktree_path('blink.cmp'),
+    'target',
+    'release',
+    package.config:sub(1, 1) == '\\' and 'blink_cmp_fuzzy.dll' or 'libblink_cmp_fuzzy.so',
+  })
+  if jit.os:lower() == 'mac' or jit.os:lower() == 'osx' then
+    blink_fuzzy_library = environment.join_path({
+      environment.git_worktree_path('blink.cmp'),
+      'target',
+      'release',
+      'libblink_cmp_fuzzy.dylib',
+    })
+  end
+  local blink_has_rust_fuzzy = environment.exists(blink_fuzzy_library)
 
   luasnip.config.setup()
 
@@ -135,7 +152,10 @@ function M.setup()
         'score',
         'sort_text',
       },
-      implementation = 'prefer_rust_with_warning',
+      implementation = blink_has_rust_fuzzy and 'prefer_rust' or 'lua',
+      prebuilt_binaries = {
+        download = false,
+      },
     },
     cmdline = {
       enabled = true,

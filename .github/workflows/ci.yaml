@@ -1,4 +1,4 @@
-name: test
+name: ci
 on:
   push:
     branches:
@@ -7,12 +7,14 @@ on:
     branches:
       - trunk
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        # os: [macos-latest, ubuntu-latest]
-        os: [ubuntu-latest]
+  continuous-integration:
+    runs-on: ubuntu-latest
+    # name: continuous-integration-${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    # strategy:
+    #   matrix:
+    #     # os: [macos-latest, ubuntu-latest]
+    #     os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v6
       - name: install the latest version of uv
@@ -46,9 +48,15 @@ jobs:
             sudo apt-get install -y zsh bc unzip
 
             mkdir -p "$HOME/.neovim-dist"
-            curl -fsSL -o nvim-linux-x86_64.tar.gz https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz
+            curl -fsSL -o nvim-linux-x86_64.tar.gz https://github.com/neovim/neovim/releases/download/v0.12.2/nvim-linux-x86_64.tar.gz
             tar xzf nvim-linux-x86_64.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
             rm -f nvim-linux-x86_64.tar.gz
+
+            tree_sitter_version=v0.26.1
+            curl -fsSL -o tree-sitter.gz "https://github.com/tree-sitter/tree-sitter/releases/download/${tree_sitter_version}/tree-sitter-linux-x64.gz"
+            gzip -d tree-sitter.gz
+            mv tree-sitter "$HOME/.local/bin/tree-sitter"
+            chmod +x "$HOME/.local/bin/tree-sitter"
 
             stylua_version=v2.5.2
             curl -fsSL -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/${stylua_version}/stylua-linux-x86_64.zip"

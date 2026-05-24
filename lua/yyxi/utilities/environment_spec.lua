@@ -66,14 +66,25 @@ describe('yyxi.utilities.environment', function()
     local root = '/repo'
 
     assert.equals('vendor', environment.vendor_directory_name)
+    assert.equals('lazy', environment.lazy_directory_name)
+    assert.equals('plugins', environment.vendored_plugins_directory_name)
     assert.equals('lazy.nvim', environment.plugin_manager_package_name)
     assert.equals(environment.join_path({ root, 'vendor' }), environment.vendor_root(root))
+    assert.equals(environment.join_path({ root, 'vendor', 'lazy' }), environment.lazy_root(root))
     assert.equals(
-      environment.join_path({ root, 'vendor', 'lazy.nvim' }),
+      environment.join_path({ root, 'vendor', 'plugins' }),
+      environment.vendored_plugins_root(root)
+    )
+    assert.equals(
+      environment.join_path({ root, 'vendor', 'plugins', 'sort.nvim' }),
+      environment.vendored_plugin_path('sort.nvim', root)
+    )
+    assert.equals(
+      environment.join_path({ root, 'vendor', 'git', 'worktrees', 'lazy.nvim' }),
       environment.plugin_manager_path(root)
     )
     assert.equals(
-      environment.join_path({ root, 'vendor', 'plenary.nvim' }),
+      environment.join_path({ root, 'vendor', 'lazy', 'plenary.nvim' }),
       environment.vendor_package_path('plenary.nvim', root)
     )
   end)
@@ -81,12 +92,12 @@ describe('yyxi.utilities.environment', function()
   it('expands luarc workspace libraries from repository context', function()
     local root = vim.fn.tempname()
     mkdir(root)
-    mkdir(environment.join_path({ root, 'vendor', 'plenary.nvim', 'lua' }))
+    mkdir(environment.join_path({ root, 'vendor', 'lazy', 'plenary.nvim', 'lua' }))
     vim.fn.writefile({
       vim.json.encode({
         ['workspace.library'] = {
           '${3rd}/luv/library',
-          'vendor/plenary.nvim/lua',
+          'vendor/lazy/plenary.nvim/lua',
           '${env:HOME}/missing',
         },
       }),
@@ -94,7 +105,7 @@ describe('yyxi.utilities.environment', function()
 
     assert.same({
       '${3rd}/luv/library',
-      environment.join_path({ root, 'vendor', 'plenary.nvim', 'lua' }),
+      environment.join_path({ root, 'vendor', 'lazy', 'plenary.nvim', 'lua' }),
       environment.normalize_path(vim.fn.expand('~/missing')),
     }, environment.luarc_workspace_libraries(root))
 

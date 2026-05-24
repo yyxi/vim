@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/numToStr/Comment.nvim.git",
+  "commit": "e30b7f2008e52442154b66f7c519bfd2f1e32acb",
+  "ref": "refs/heads/master",
+  "notes": "Vendored snapshot managed in-repo for offline startup."
+}

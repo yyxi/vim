@@ -2,6 +2,7 @@
 """Small management CLI for this Neovim configuration."""
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -9,7 +10,12 @@ import shlex
 import shutil
 import subprocess
 import sys
-from typing import Dict, Mapping, Optional, Sequence
+import tarfile
+import tempfile
+import time
+import urllib.error
+import urllib.request
+from typing import Dict, Literal, Mapping, Optional, Sequence, TypeAlias, cast
 
 LOCAL_BIN_PARTS = ((".neovim-dist", "bin"), (".dotfiles", "bin"))
 UV_SYNC_CHECK = ("sync", "--check", "--locked")
@@ -27,12 +33,36 @@ PNPM_INSTALL_PRODUCTION = (
     "--reporter",
     "append-only",
 )
+CARGO_BUILD_RELEASE = ("build", "--release")
 NVIM_PLUGIN_SYNC = ("--headless", "+Lazy! restore", "+qa")
 LUA_CHECK_PATH = "lua/yyxi"
 LUA_CHECK_TARGETS = ("init.lua", LUA_CHECK_PATH)
 VENDOR_DIR_NAME = "vendor"
+LAZY_DIR_NAME = "lazy"
+VENDORED_PLUGINS_DIR_NAME = "plugins"
 PLENARY_PLUGIN_NAME = "plenary.nvim"
+UPSTREAM_METADATA_NAME = ".upstream.json"
 ENV_VARIABLE_PATTERN = re.compile(r"\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}")
+VENDORED_PLUGIN_CALL_PATTERN = re.compile(
+    r"environment\.vendored_plugin_path\(\s*['\"]([^'\"]+)['\"]\s*\)"
+)
+SOURCE_MANIFEST_NAME = "source-manifest.json"
+TREE_SITTER_MINIMUM_VERSION = (0, 26, 1)
+TREE_SITTER_RUNTIME_SITE = os.path.join("vendor", "treesitter")
+TREE_SITTER_RELEASED_SOURCES_DIR = "sources"
+DOWNLOAD_USER_AGENT = "yyxi-vim"
+MAX_AUTOMATIC_DOWNLOAD_RETRY_DELAY_SECONDS = 300
+DEFAULT_GIT_REMOTE = "origin"
+DEFAULT_GIT_FILTER = "blob:none"
+DEFAULT_WORKTREE_LOCKED = True
+WORKTREE_LOCK_REASON = "managed by ./manage; do not edit in place"
+SOURCE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
+SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+JSONScalar: TypeAlias = None | bool | int | float | str
+JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
+JSONObject: TypeAlias = dict[str, JSONValue]
+JSONMapping: TypeAlias = Mapping[str, JSONValue]
+NativeBuildOutcome: TypeAlias = Literal["built", "skipped", "failed"]
 
 
 def info(message: str) -> None:
@@ -119,7 +149,7 @@ def sync_uv_production_if_needed(env: Mapping[str, str], repository: str) -> boo
     if uv_environment_synced(uv, env, repository, include_dev=True):
         return True
 
-    return run_logged_command([uv] + list(UV_SYNC_PRODUCTION), env, repository)
+    return run_logged_command([uv, *UV_SYNC_PRODUCTION], env, repository)
 
 
 def sync_pnpm_production(env: Mapping[str, str], repository: str) -> bool:
@@ -130,7 +160,31 @@ def sync_pnpm_production(env: Mapping[str, str], repository: str) -> bool:
     if not os.path.exists(os.path.join(repository, "package.json")):
         return True
 
-    return run_logged_command([pnpm] + list(PNPM_INSTALL_PRODUCTION), env, repository)
+    return run_logged_command([pnpm, *PNPM_INSTALL_PRODUCTION], env, repository)
+
+
+def neovim_config_path(home: str) -> str:
+    return os.path.join(home, ".config", "nvim")
+
+
+def check_neovim_config_link(
+    home: str, repository: str, emit_warnings: bool = True
+) -> bool:
+    nvim_config = neovim_config_path(home)
+    if not os.path.lexists(nvim_config):
+        if emit_warnings:
+            warn("{0} is missing; run ./manage install".format(nvim_config))
+        return False
+    try:
+        if os.path.realpath(nvim_config) == os.path.realpath(repository):
+            return True
+    except OSError as exc:
+        if emit_warnings:
+            warn("unable to inspect {0}: {1}".format(nvim_config, exc))
+        return False
+    if emit_warnings:
+        warn("{0} exists and does not point to {1}".format(nvim_config, repository))
+    return False
 
 
 def link_neovim_config(home: str, repository: str) -> bool:
@@ -141,17 +195,12 @@ def link_neovim_config(home: str, repository: str) -> bool:
         warn("unable to create {0}: {1}".format(config_dir, exc))
         return False
 
-    nvim_config = os.path.join(config_dir, "nvim")
-    if os.path.lexists(nvim_config):
-        try:
-            if os.path.realpath(nvim_config) == os.path.realpath(repository):
-                return True
-        except OSError as exc:
-            warn("unable to inspect {0}: {1}".format(nvim_config, exc))
-            return False
+    if check_neovim_config_link(home, repository, emit_warnings=False):
+        return True
 
-        warn("{0} exists and does not point to {1}".format(nvim_config, repository))
-        return False
+    nvim_config = neovim_config_path(home)
+    if os.path.lexists(nvim_config):
+        return check_neovim_config_link(home, repository, emit_warnings=True)
 
     try:
         os.symlink(repository, nvim_config)
@@ -168,7 +217,2345 @@ def sync_neovim_plugins(nvim: str, env: Mapping[str, str], repository: str) -> b
     return run_logged_command([nvim] + list(NVIM_PLUGIN_SYNC), env, repository)
 
 
-def install() -> int:
+def run_captured_command(
+    command: Sequence[str], env: Mapping[str, str], repository: str
+) -> Optional[subprocess.CompletedProcess[str]]:
+    try:
+        return subprocess.run(
+            command,
+            env=env,
+            cwd=repository,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        warn("unable to run {0}: {1}".format(command[0], exc))
+        return None
+
+
+def download_retry_delay(headers: object, body: str, attempt: int) -> Optional[int]:
+    get = getattr(headers, "get", None)
+    if not callable(get):
+        return None
+
+    retry_after = get("Retry-After")
+    if isinstance(retry_after, str) and retry_after.isdigit():
+        return max(1, int(retry_after))
+
+    reset = get("X-RateLimit-Reset")
+    remaining = get("X-RateLimit-Remaining")
+    rate_limited = remaining == "0" or "rate limit" in body.lower()
+    if isinstance(reset, str) and reset.isdigit() and rate_limited:
+        return max(1, int(reset) - int(time.time()) + 2)
+    if rate_limited:
+        return min(60, 5 * (2**attempt))
+    return None
+
+
+def urlopen_with_retries(request: urllib.request.Request, timeout: int, purpose: str):
+    max_attempts = 4
+    for attempt in range(max_attempts):
+        try:
+            return urllib.request.urlopen(request, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            delay = download_retry_delay(exc.headers, body, attempt)
+            if (
+                exc.code in (403, 429)
+                and delay is not None
+                and attempt < max_attempts - 1
+            ):
+                if delay > MAX_AUTOMATIC_DOWNLOAD_RETRY_DELAY_SECONDS:
+                    warn(
+                        "{0} is rate-limited for {1} seconds; try again after the reset".format(
+                            purpose, delay
+                        )
+                    )
+                    return None
+                warn(
+                    "{0} is rate-limited; waiting {1} seconds before retrying".format(
+                        purpose, delay
+                    )
+                )
+                time.sleep(delay)
+                continue
+            warn(
+                "{0} failed for {1}: HTTP {2}: {3}".format(
+                    purpose, request.full_url, exc.code, body
+                )
+            )
+            return None
+        except OSError as exc:
+            if attempt < max_attempts - 1:
+                delay = min(30, 2 * (attempt + 1))
+                warn(
+                    "{0} failed for {1}: {2}; retrying in {3} seconds".format(
+                        purpose, request.full_url, exc, delay
+                    )
+                )
+                time.sleep(delay)
+                continue
+            warn("{0} failed for {1}: {2}".format(purpose, request.full_url, exc))
+            return None
+    warn("{0} failed for {1}".format(purpose, request.full_url))
+    return None
+
+
+def download_url(url: str, destination: str) -> bool:
+    request = urllib.request.Request(url, headers={"User-Agent": DOWNLOAD_USER_AGENT})
+    response = urlopen_with_retries(request, timeout=60, purpose="download")
+    if response is None:
+        return False
+    try:
+        with response:
+            with open(destination, "wb") as output:
+                shutil.copyfileobj(response, output)
+    except OSError as exc:
+        warn("unable to write {0}: {1}".format(destination, exc))
+        return False
+    return True
+
+
+def path_within_repository(repository: str, path: str) -> bool:
+    try:
+        common = os.path.commonpath([repository, os.path.abspath(path)])
+    except ValueError:
+        return False
+    return common == repository
+
+
+def repository_path(repository: str, relative_path: str) -> Optional[str]:
+    if os.path.isabs(relative_path):
+        warn("lockfile path must be relative: {0}".format(relative_path))
+        return None
+    path = os.path.abspath(os.path.join(repository, relative_path))
+    if not path_within_repository(repository, path):
+        warn("lockfile path escapes repository: {0}".format(relative_path))
+        return None
+    return path
+
+
+def load_git_worktrees_lock(repository: str) -> Optional[JSONObject]:
+    path = os.path.join(repository, SOURCE_MANIFEST_NAME)
+    try:
+        with open(path, encoding="utf-8") as file:
+            lock = json.load(file)
+    except OSError as exc:
+        warn("unable to read {0}: {1}".format(path, exc))
+        return None
+    except json.JSONDecodeError as exc:
+        warn("unable to parse {0}: {1}".format(path, exc))
+        return None
+
+    if not isinstance(lock, dict):
+        warn("{0} must contain a JSON object".format(SOURCE_MANIFEST_NAME))
+        return None
+    if not isinstance(lock.get("sources"), dict):
+        warn("{0} sources must be an object".format(SOURCE_MANIFEST_NAME))
+        return None
+    return lock
+
+
+def lock_roots(lock: JSONMapping) -> JSONMapping:
+    roots = lock.get("roots", {})
+    return roots if isinstance(roots, dict) else {}
+
+
+def source_treesitter(source: JSONMapping) -> JSONMapping:
+    treesitter = source.get("treesitter", {})
+    return treesitter if isinstance(treesitter, dict) else {}
+
+
+def source_treesitter_released_source(source: JSONMapping) -> JSONMapping:
+    released_source = source_treesitter(source).get("releasedSource", {})
+    return released_source if isinstance(released_source, dict) else {}
+
+
+def normalize_relative_subpath(path: str) -> str:
+    normalized = path.replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    while normalized.startswith("//"):
+        normalized = normalized[1:]
+    if normalized.startswith("/"):
+        normalized = normalized[1:]
+    return normalized.rstrip("/")
+
+
+def validated_relative_subpath(path: str) -> Optional[str]:
+    normalized = normalize_relative_subpath(path)
+    if not normalized or normalized in (".", "..") or normalized.startswith("../"):
+        return None
+    return normalized
+
+
+def validated_relative_subpath_or_current(path: str) -> Optional[str]:
+    normalized = normalize_relative_subpath(path)
+    if normalized in ("", "."):
+        return "."
+    if normalized == ".." or normalized.startswith("../"):
+        return None
+    return normalized
+
+
+def treesitter_released_source_files(released_source: JSONMapping) -> Sequence[str]:
+    value = released_source.get("files", [])
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return [normalize_relative_subpath(str(item)) for item in value]
+    return []
+
+
+def validate_treesitter_released_source(
+    source_id: str, released_source: JSONMapping
+) -> bool:
+    url = released_source.get("url")
+    if not isinstance(url, str) or not url:
+        warn(
+            "source {0} treesitter.releasedSource.url must be a non-empty string".format(
+                source_id
+            )
+        )
+        return False
+
+    sha256 = released_source.get("sha256")
+    if not isinstance(sha256, str) or SHA256_PATTERN.match(sha256) is None:
+        warn(
+            "source {0} treesitter.releasedSource.sha256 must be a lowercase SHA-256 digest".format(
+                source_id
+            )
+        )
+        return False
+
+    files = released_source.get("files")
+    if (
+        not isinstance(files, list)
+        or not files
+        or not all(isinstance(item, str) for item in files)
+    ):
+        warn(
+            "source {0} treesitter.releasedSource.files must be a non-empty list of paths".format(
+                source_id
+            )
+        )
+        return False
+
+    normalized_files: list[str] = []
+    for item in files:
+        normalized = validated_relative_subpath(str(item))
+        if normalized is None:
+            warn(
+                "source {0} treesitter.releasedSource.files entries must be non-empty relative paths".format(
+                    source_id
+                )
+            )
+            return False
+        for existing in normalized_files:
+            if normalized == existing:
+                warn(
+                    "source {0} treesitter.releasedSource.files entries must not repeat paths".format(
+                        source_id
+                    )
+                )
+                return False
+            if normalized.startswith(existing + "/") or existing.startswith(
+                normalized + "/"
+            ):
+                warn(
+                    "source {0} treesitter.releasedSource.files entries must not overlap".format(
+                        source_id
+                    )
+                )
+                return False
+        normalized_files.append(normalized)
+
+    return True
+
+
+def source_plugin_metadata(source: JSONMapping) -> JSONMapping:
+    plugin = source.get("plugin", {})
+    return plugin if isinstance(plugin, dict) else {}
+
+
+def native_build_dependency_sources(
+    source_id: str, native_build: JSONMapping
+) -> Optional[dict[str, str]]:
+    value = native_build.get("dependencySources")
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        warn(
+            "source {0} plugin.nativeBuild.dependencySources must be an object of strings".format(
+                source_id
+            )
+        )
+        return None
+    dependencies: dict[str, str] = {}
+    for relative_path, dependency_source_id in value.items():
+        if not isinstance(relative_path, str) or not relative_path:
+            warn(
+                "source {0} plugin.nativeBuild.dependencySources keys must be non-empty worktree-relative paths".format(
+                    source_id
+                )
+            )
+            return None
+        normalized_path = validated_relative_subpath(relative_path)
+        if normalized_path is None:
+            warn(
+                "source {0} plugin.nativeBuild.dependencySources keys must be non-empty worktree-relative paths".format(
+                    source_id
+                )
+            )
+            return None
+        if normalized_path in dependencies:
+            warn(
+                "source {0} plugin.nativeBuild.dependencySources must not repeat destination paths".format(
+                    source_id
+                )
+            )
+            return None
+        if not valid_source_id(dependency_source_id):
+            warn(
+                "source {0} plugin.nativeBuild.dependencySources values must be valid source ids".format(
+                    source_id
+                )
+            )
+            return None
+        dependencies[normalized_path] = dependency_source_id
+    return dependencies
+
+
+def valid_source_id(source_id: object) -> bool:
+    return isinstance(source_id, str) and SOURCE_ID_PATTERN.match(source_id) is not None
+
+
+def root_treesitter_metadata(lock: JSONMapping) -> JSONMapping:
+    treesitter = lock.get("treesitter", {})
+    return treesitter if isinstance(treesitter, dict) else {}
+
+
+def source_repository_path(
+    repository: str, lock: JSONMapping, source_id: str, source: JSONMapping
+) -> Optional[str]:
+    explicit = source.get("repository")
+    if explicit is not None:
+        if not isinstance(explicit, str):
+            warn("source {0} repository must be a string".format(source_id))
+            return None
+        return repository_path(repository, explicit)
+
+    roots = lock_roots(lock)
+    root = roots.get("repositories", os.path.join("vendor", "git", "repositories"))
+    if not isinstance(root, str):
+        warn("roots.repositories must be a string")
+        return None
+    return repository_path(repository, os.path.join(root, source_id + ".git"))
+
+
+def source_worktree_path(
+    repository: str, lock: JSONMapping, source_id: str, source: JSONMapping
+) -> Optional[str]:
+    explicit = source.get("worktree")
+    if explicit is not None:
+        if not isinstance(explicit, str):
+            warn("source {0} worktree must be a string".format(source_id))
+            return None
+        return repository_path(repository, explicit)
+
+    roots = lock_roots(lock)
+    root = roots.get("worktrees", os.path.join("vendor", "git", "worktrees"))
+    if not isinstance(root, str):
+        warn("roots.worktrees must be a string")
+        return None
+    return repository_path(repository, os.path.join(root, source_id))
+
+
+def source_remote(source: JSONMapping) -> str:
+    remote = source.get("remote", DEFAULT_GIT_REMOTE)
+    return remote if isinstance(remote, str) and remote else DEFAULT_GIT_REMOTE
+
+
+def source_filter(source: JSONMapping) -> Optional[str]:
+    value = source.get("filter", DEFAULT_GIT_FILTER)
+    return value if isinstance(value, str) and value else None
+
+
+def source_locked(source: JSONMapping) -> bool:
+    value = source.get("locked", DEFAULT_WORKTREE_LOCKED)
+    return bool(value)
+
+
+def normalize_worktree_path(path: str) -> str:
+    normalized = path.replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized.rstrip("/")
+
+
+def source_allowed_dirty_paths(source: JSONMapping) -> Sequence[str]:
+    value = source.get("allowedDirtyPaths", [])
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        paths: list[str] = []
+        for item in value:
+            normalized = validated_relative_subpath(str(item))
+            if normalized is not None:
+                paths.append(normalize_worktree_path(normalized))
+        return paths
+    return []
+
+
+def validate_source_settings(source_id: str, source: JSONMapping) -> bool:
+    remote = source.get("remote")
+    if remote is not None and (not isinstance(remote, str) or not remote):
+        warn("source {0} remote must be a non-empty string".format(source_id))
+        return False
+
+    filter_value = source.get("filter")
+    if filter_value is not None and (
+        not isinstance(filter_value, str) or not filter_value
+    ):
+        warn("source {0} filter must be a non-empty string".format(source_id))
+        return False
+
+    locked = source.get("locked")
+    if locked is not None and not isinstance(locked, bool):
+        warn("source {0} locked must be a boolean".format(source_id))
+        return False
+
+    allowed_dirty_paths = source.get("allowedDirtyPaths")
+    if allowed_dirty_paths is not None:
+        if not isinstance(allowed_dirty_paths, list) or not all(
+            isinstance(item, str) for item in allowed_dirty_paths
+        ):
+            warn(
+                "source {0} allowedDirtyPaths must be a list of strings".format(
+                    source_id
+                )
+            )
+            return False
+        if any(
+            validated_relative_subpath(item) is None for item in allowed_dirty_paths
+        ):
+            warn(
+                "source {0} allowedDirtyPaths entries must be non-empty repository-relative paths".format(
+                    source_id
+                )
+            )
+            return False
+
+    treesitter = source.get("treesitter")
+    if treesitter is not None:
+        if not isinstance(treesitter, dict):
+            warn("source {0} treesitter must be an object".format(source_id))
+            return False
+        released_source = treesitter.get("releasedSource")
+        if released_source is not None:
+            if not isinstance(released_source, dict):
+                warn(
+                    "source {0} treesitter.releasedSource must be an object".format(
+                        source_id
+                    )
+                )
+                return False
+            if not validate_treesitter_released_source(
+                source_id, cast(JSONMapping, released_source)
+            ):
+                return False
+
+    plugin = source.get("plugin")
+    if plugin is not None:
+        if not isinstance(plugin, dict):
+            warn("source {0} plugin must be an object".format(source_id))
+            return False
+        native_build = plugin.get("nativeBuild")
+        if native_build is not None:
+            if not isinstance(native_build, dict):
+                warn(
+                    "source {0} plugin.nativeBuild must be an object".format(source_id)
+                )
+                return False
+            kind = native_build.get("kind")
+            if kind not in ("cargo", "luasnip_jsregexp", "make"):
+                warn(
+                    "source {0} plugin.nativeBuild.kind must be one of cargo, luasnip_jsregexp, make".format(
+                        source_id
+                    )
+                )
+                return False
+            if native_build_dependency_sources(source_id, native_build) is None:
+                return False
+            optional = native_build.get("optional")
+            if optional is not None and not isinstance(optional, bool):
+                warn(
+                    "source {0} plugin.nativeBuild.optional must be a boolean".format(
+                        source_id
+                    )
+                )
+                return False
+            minimum_cargo_version = native_build.get("minimumCargoVersion")
+            if minimum_cargo_version is not None and (
+                not isinstance(minimum_cargo_version, str)
+                or parse_version_tuple(minimum_cargo_version) is None
+            ):
+                warn(
+                    "source {0} plugin.nativeBuild.minimumCargoVersion must be a semantic version string".format(
+                        source_id
+                    )
+                )
+                return False
+
+    return True
+
+
+def source_sparse_checkout_paths(
+    source: JSONMapping, source_id: str
+) -> Optional[Sequence[str]]:
+    value = source.get("files")
+    if value is None:
+        return None
+    if not isinstance(value, list) or not value:
+        warn(
+            "source {0} files must be a non-empty list of repository-relative paths".format(
+                source_id
+            )
+        )
+        return []
+    paths: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item:
+            warn(
+                "source {0} files entries must be non-empty repository-relative paths".format(
+                    source_id
+                )
+            )
+            return []
+        normalized = validated_relative_subpath(item)
+        if normalized is None:
+            warn(
+                "source {0} files entries must not escape the repository".format(
+                    source_id
+                )
+            )
+            return []
+        paths.append("/" + normalized)
+    return paths
+
+
+def git_dir_command(git: str, git_dir: str, args: Sequence[str]) -> Sequence[str]:
+    return [git, "--git-dir", git_dir, *args]
+
+
+def ensure_bare_repository(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    source: JSONMapping,
+    git_dir: str,
+) -> bool:
+    url = source.get("url")
+    if not isinstance(url, str) or not url:
+        warn("source {0} url must be a non-empty string".format(source_id))
+        return False
+
+    remote = source_remote(source)
+
+    if not os.path.isdir(git_dir):
+        parent = os.path.dirname(git_dir)
+        try:
+            os.makedirs(parent, exist_ok=True)
+        except OSError as exc:
+            warn("unable to create {0}: {1}".format(parent, exc))
+            return False
+        filter_value = source_filter(source)
+        command = [git, "clone", "--bare", "--origin", remote]
+        if filter_value:
+            command.append("--filter=" + filter_value)
+        command.extend([url, git_dir])
+        return run_logged_command(
+            command, env, repository, show_success_output_on_stderr=False
+        )
+
+    completed = run_captured_command(
+        git_dir_command(git, git_dir, ["remote", "get-url", remote]), env, repository
+    )
+    if completed is None or completed.returncode != 0:
+        warn("unable to inspect remote {0} for source {1}".format(remote, source_id))
+        if completed is not None:
+            print_completed_output(completed)
+        return False
+    current_url = completed.stdout.strip()
+    if current_url != url:
+        warn(
+            "source {0} remote {1} mismatch: expected {2}, found {3}".format(
+                source_id, remote, url, current_url
+            )
+        )
+        return False
+    return True
+
+
+def fetch_source_commit(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    source: JSONMapping,
+    git_dir: str,
+) -> bool:
+    commit = source.get("commit")
+    if not isinstance(commit, str) or not commit:
+        warn("source {0} commit must be a non-empty string".format(source_id))
+        return False
+
+    remote = source_remote(source)
+    filter_value = source_filter(source)
+    fetch_base = ["fetch"]
+    if filter_value:
+        fetch_base.append("--filter=" + filter_value)
+    ref = source.get("ref")
+    if (not isinstance(ref, str) or not ref) and commit_available(
+        git, env, repository, git_dir, commit
+    ):
+        return True
+    ref_fetched = False
+    if isinstance(ref, str) and ref:
+        if not run_logged_command(
+            git_dir_command(git, git_dir, [*fetch_base, remote, ref]),
+            env,
+            repository,
+            show_success_output_on_stderr=False,
+        ):
+            return False
+        ref_fetched = True
+    if ref_fetched and commit_available(git, env, repository, git_dir, commit):
+        return True
+    if not run_logged_command(
+        git_dir_command(git, git_dir, [*fetch_base, remote, commit]),
+        env,
+        repository,
+        show_success_output_on_stderr=False,
+    ):
+        return False
+    return verify_commit(git, env, repository, source_id, git_dir, commit)
+
+
+def commit_available(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    git_dir: str,
+    commit: str,
+) -> bool:
+    completed = run_captured_command(
+        git_dir_command(
+            git,
+            git_dir,
+            ["rev-parse", "--verify", "--end-of-options", commit + "^{commit}"],
+        ),
+        env,
+        repository,
+    )
+    return completed is not None and completed.returncode == 0
+
+
+def verify_commit(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    git_dir: str,
+    commit: str,
+) -> bool:
+    completed = run_captured_command(
+        git_dir_command(
+            git,
+            git_dir,
+            ["rev-parse", "--verify", "--end-of-options", commit + "^{commit}"],
+        ),
+        env,
+        repository,
+    )
+    if completed is None or completed.returncode != 0:
+        warn("source {0} commit is not available: {1}".format(source_id, commit))
+        if completed is not None:
+            print_completed_output(completed)
+        return False
+    return True
+
+
+def is_git_worktree(path: str) -> bool:
+    return os.path.exists(os.path.join(path, ".git"))
+
+
+def worktree_head(
+    git: str, env: Mapping[str, str], repository: str, worktree: str
+) -> Optional[str]:
+    completed = run_captured_command(
+        [git, "-C", worktree, "rev-parse", "HEAD"], env, repository
+    )
+    if completed is None or completed.returncode != 0:
+        if completed is not None:
+            print_completed_output(completed)
+        return None
+    return completed.stdout.strip()
+
+
+def worktree_sparse_checkout_enabled(
+    git: str, env: Mapping[str, str], repository: str, worktree: str
+) -> Optional[bool]:
+    completed = run_captured_command(
+        [
+            git,
+            "-C",
+            worktree,
+            "config",
+            "--worktree",
+            "--get",
+            "--bool",
+            "core.sparseCheckout",
+        ],
+        env,
+        repository,
+    )
+    if completed is None:
+        return None
+    if completed.returncode != 0:
+        return False
+    return completed.stdout.strip() == "true"
+
+
+def worktree_sparse_checkout_list(
+    git: str, env: Mapping[str, str], repository: str, worktree: str
+) -> Optional[Sequence[str]]:
+    completed = run_captured_command(
+        [git, "-C", worktree, "sparse-checkout", "list"], env, repository
+    )
+    if completed is None or completed.returncode != 0:
+        return None
+    return [line for line in completed.stdout.splitlines() if line]
+
+
+def configure_worktree_sparse_checkout(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    worktree: str,
+    sparse_paths: Optional[Sequence[str]],
+    initialize: bool,
+) -> bool:
+    if sparse_paths is None:
+        enabled = worktree_sparse_checkout_enabled(git, env, repository, worktree)
+        if enabled is None:
+            warn("unable to inspect source {0} sparse checkout state".format(source_id))
+            return False
+        if not enabled:
+            return True
+        return run_logged_command(
+            [git, "-C", worktree, "sparse-checkout", "disable"],
+            env,
+            repository,
+            show_success_output_on_stderr=False,
+        )
+
+    if not run_logged_command(
+        [git, "-C", worktree, "sparse-checkout", "set", "--no-cone", *sparse_paths],
+        env,
+        repository,
+        show_success_output_on_stderr=False,
+    ):
+        return False
+
+    if not initialize:
+        return True
+
+    return run_logged_command(
+        [git, "-C", worktree, "read-tree", "-mu", "HEAD"],
+        env,
+        repository,
+        show_success_output_on_stderr=False,
+    )
+
+
+def ensure_worktree(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    source: JSONMapping,
+    git_dir: str,
+    worktree: str,
+) -> bool:
+    commit = source.get("commit")
+    if not isinstance(commit, str) or not commit:
+        warn("source {0} commit must be a non-empty string".format(source_id))
+        return False
+
+    sparse_paths = source_sparse_checkout_paths(source, source_id)
+    if sparse_paths == []:
+        return False
+
+    if os.path.exists(worktree):
+        if not is_git_worktree(worktree):
+            warn(
+                "source {0} worktree exists but is not a Git worktree: {1}".format(
+                    source_id, worktree
+                )
+            )
+            return False
+        if not check_worktree_pristine(
+            git,
+            env,
+            repository,
+            source_id,
+            worktree,
+            source_allowed_dirty_paths(source),
+        ):
+            return False
+        if not configure_worktree_sparse_checkout(
+            git,
+            env,
+            repository,
+            source_id,
+            worktree,
+            sparse_paths,
+            initialize=False,
+        ):
+            return False
+        if not run_logged_command(
+            [git, "-C", worktree, "checkout", "--detach", commit],
+            env,
+            repository,
+            show_success_output_on_stderr=False,
+        ):
+            return False
+    else:
+        if not remove_missing_worktree_registration(
+            git, env, repository, git_dir, worktree
+        ):
+            return False
+        try:
+            os.makedirs(os.path.dirname(worktree), exist_ok=True)
+        except OSError as exc:
+            warn(
+                "unable to create parent directory for source {0} worktree: {1}".format(
+                    source_id, exc
+                )
+            )
+            return False
+        args = ["worktree", "add", "--detach"]
+        if sparse_paths is not None:
+            args.append("--no-checkout")
+        if source_locked(source):
+            args.extend(["--lock", "--reason", WORKTREE_LOCK_REASON])
+        args.extend([worktree, commit])
+        if not run_logged_command(
+            git_dir_command(git, git_dir, args),
+            env,
+            repository,
+            show_success_output_on_stderr=False,
+        ):
+            return False
+        if not configure_worktree_sparse_checkout(
+            git,
+            env,
+            repository,
+            source_id,
+            worktree,
+            sparse_paths,
+            initialize=sparse_paths is not None,
+        ):
+            return False
+
+    if source_locked(source) and not worktree_is_locked(
+        git, env, repository, git_dir, worktree
+    ):
+        if not run_logged_command(
+            git_dir_command(
+                git,
+                git_dir,
+                ["worktree", "lock", "--reason", WORKTREE_LOCK_REASON, worktree],
+            ),
+            env,
+            repository,
+            show_success_output_on_stderr=False,
+        ):
+            return False
+    return check_worktree_pristine(
+        git, env, repository, source_id, worktree, source_allowed_dirty_paths(source)
+    )
+
+
+def status_path(line: str) -> str:
+    value = line[3:] if len(line) > 3 else line
+    if " -> " in value:
+        value = value.rsplit(" -> ", 1)[1]
+    return value
+
+
+def path_allowed_by(path: str, allowed_paths: Sequence[str]) -> bool:
+    normalized_path = normalize_worktree_path(path)
+    for allowed_path in allowed_paths:
+        if normalized_path == allowed_path or normalized_path.startswith(
+            allowed_path + "/"
+        ):
+            return True
+    return False
+
+
+def unexpected_dirty_lines(
+    output: str, allowed_paths: Sequence[str], status: bool
+) -> Sequence[str]:
+    lines = []
+    for line in output.splitlines():
+        path = status_path(line) if status else line
+        if not path_allowed_by(path, allowed_paths):
+            lines.append(line)
+    return lines
+
+
+def check_worktree_pristine(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    worktree: str,
+    allowed_dirty_paths: Sequence[str] = (),
+) -> bool:
+    status = run_captured_command(
+        [git, "-C", worktree, "status", "--porcelain", "--untracked-files=all"],
+        env,
+        repository,
+    )
+    if status is None or status.returncode != 0:
+        warn("unable to inspect source {0} worktree status".format(source_id))
+        if status is not None:
+            print_completed_output(status)
+        return False
+    ignored = run_captured_command(
+        [
+            git,
+            "-C",
+            worktree,
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+        ],
+        env,
+        repository,
+    )
+    if ignored is None or ignored.returncode != 0:
+        warn("unable to inspect source {0} ignored files".format(source_id))
+        if ignored is not None:
+            print_completed_output(ignored)
+        return False
+
+    dirty = []
+    status_dirty = unexpected_dirty_lines(
+        status.stdout, allowed_dirty_paths, status=True
+    )
+    ignored_dirty = unexpected_dirty_lines(
+        ignored.stdout, allowed_dirty_paths, status=False
+    )
+    if status_dirty:
+        dirty.append("\n".join(status_dirty))
+    if ignored_dirty:
+        dirty.append("\n".join(ignored_dirty))
+    if dirty:
+        warn(
+            "source {0} worktree is not pristine:\n{1}".format(
+                source_id, "\n".join(dirty)
+            )
+        )
+        return False
+    return True
+
+
+def worktree_record(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    git_dir: str,
+    worktree: str,
+) -> Optional[list[str]]:
+    completed = run_captured_command(
+        git_dir_command(git, git_dir, ["worktree", "list", "--porcelain"]),
+        env,
+        repository,
+    )
+    if completed is None or completed.returncode != 0:
+        if completed is not None:
+            print_completed_output(completed)
+        return None
+    records = completed.stdout.split("\n\n")
+    for record in records:
+        lines = record.splitlines()
+        if lines and lines[0] == "worktree " + worktree:
+            return lines
+    return []
+
+
+def worktree_is_locked(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    git_dir: str,
+    worktree: str,
+) -> bool:
+    lines = worktree_record(git, env, repository, git_dir, worktree)
+    if lines is None:
+        return False
+    return any(line == "locked" or line.startswith("locked ") for line in lines)
+
+
+def remove_missing_worktree_registration(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    git_dir: str,
+    worktree: str,
+) -> bool:
+    lines = worktree_record(git, env, repository, git_dir, worktree)
+    if lines is None or not lines:
+        return True
+    return run_logged_command(
+        git_dir_command(
+            git, git_dir, ["worktree", "remove", "--force", "--force", worktree]
+        ),
+        env,
+        repository,
+        show_success_output_on_stderr=False,
+    )
+
+
+def materialize_git_sources(
+    env: Mapping[str, str], repository: str, lock: JSONMapping
+) -> bool:
+    git = resolve_required("git", env)
+    if git is None:
+        return False
+    ok = True
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        warn("lockfile sources must be an object")
+        return False
+    for source_id, source_value in sources.items():
+        if not valid_source_id(source_id):
+            warn("invalid source id: {0}".format(source_id))
+            ok = False
+            continue
+        if not isinstance(source_value, dict):
+            warn("source {0} must be an object".format(source_id))
+            ok = False
+            continue
+        if not validate_source_settings(source_id, source_value):
+            ok = False
+            continue
+        git_dir = source_repository_path(repository, lock, source_id, source_value)
+        worktree = source_worktree_path(repository, lock, source_id, source_value)
+        if git_dir is None or worktree is None:
+            ok = False
+            continue
+        if not ensure_bare_repository(
+            git, env, repository, source_id, source_value, git_dir
+        ):
+            ok = False
+            continue
+        if not fetch_source_commit(
+            git, env, repository, source_id, source_value, git_dir
+        ):
+            ok = False
+            continue
+        if not ensure_worktree(
+            git, env, repository, source_id, source_value, git_dir, worktree
+        ):
+            ok = False
+    return ok
+
+
+def check_worktree_sparse_checkout(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    source: JSONMapping,
+    worktree: str,
+) -> bool:
+    expected = source_sparse_checkout_paths(source, source_id)
+    if expected == []:
+        return False
+
+    enabled = worktree_sparse_checkout_enabled(git, env, repository, worktree)
+    if enabled is None:
+        warn("unable to inspect source {0} sparse checkout state".format(source_id))
+        return False
+    if expected is None:
+        if enabled:
+            warn("source {0} sparse checkout is enabled unexpectedly".format(source_id))
+            return False
+        return True
+    if not enabled:
+        warn("source {0} sparse checkout is not enabled".format(source_id))
+        return False
+    actual = worktree_sparse_checkout_list(git, env, repository, worktree)
+    if actual is None:
+        warn("unable to inspect source {0} sparse checkout paths".format(source_id))
+        return False
+    if list(actual) != list(expected):
+        warn(
+            "source {0} sparse checkout mismatch: expected {1}, found {2}".format(
+                source_id,
+                ", ".join(expected),
+                ", ".join(actual),
+            )
+        )
+        return False
+    return True
+
+
+def check_git_sources(
+    env: Mapping[str, str], repository: str, lock: JSONMapping
+) -> bool:
+    git = resolve_required("git", env)
+    if git is None:
+        return False
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        warn("lockfile sources must be an object")
+        return False
+    ok = True
+    for source_id, source_value in sources.items():
+        if not valid_source_id(source_id) or not isinstance(source_value, dict):
+            warn("invalid source entry in lockfile")
+            ok = False
+            continue
+        if not validate_source_settings(source_id, source_value):
+            ok = False
+            continue
+        git_dir = source_repository_path(repository, lock, source_id, source_value)
+        worktree = source_worktree_path(repository, lock, source_id, source_value)
+        commit = source_value.get("commit")
+        if git_dir is None or worktree is None or not isinstance(commit, str):
+            ok = False
+            continue
+        if not os.path.isdir(git_dir):
+            warn(
+                "source {0} repository not found; run ./manage install".format(
+                    source_id
+                )
+            )
+            ok = False
+            continue
+        url = source_value.get("url")
+        if not isinstance(url, str) or not url:
+            warn("source {0} url must be a non-empty string".format(source_id))
+            ok = False
+            continue
+        remote = source_remote(source_value)
+        completed = run_captured_command(
+            git_dir_command(git, git_dir, ["remote", "get-url", remote]),
+            env,
+            repository,
+        )
+        if completed is None or completed.returncode != 0:
+            warn(
+                "unable to inspect remote {0} for source {1}".format(remote, source_id)
+            )
+            if completed is not None:
+                print_completed_output(completed)
+            ok = False
+            continue
+        current_url = completed.stdout.strip()
+        if current_url != url:
+            warn(
+                "source {0} remote {1} mismatch: expected {2}, found {3}".format(
+                    source_id, remote, url, current_url
+                )
+            )
+            ok = False
+        if not commit_available(git, env, repository, git_dir, commit):
+            warn(
+                "source {0} commit is not available in bare repository: {1}".format(
+                    source_id, commit
+                )
+            )
+            ok = False
+        if not os.path.exists(worktree):
+            warn(
+                "source {0} worktree not found; run ./manage install".format(source_id)
+            )
+            ok = False
+            continue
+        if not is_git_worktree(worktree):
+            warn(
+                "source {0} worktree exists but is not a Git worktree: {1}".format(
+                    source_id, worktree
+                )
+            )
+            ok = False
+            continue
+        head = worktree_head(git, env, repository, worktree)
+        if head != commit:
+            warn(
+                "source {0} HEAD mismatch: expected {1}, found {2}".format(
+                    source_id, commit, head
+                )
+            )
+            ok = False
+        if source_locked(source_value) and not worktree_is_locked(
+            git, env, repository, git_dir, worktree
+        ):
+            warn("source {0} worktree is not locked".format(source_id))
+            ok = False
+        if not check_worktree_sparse_checkout(
+            git, env, repository, source_id, source_value, worktree
+        ):
+            ok = False
+        if not check_worktree_pristine(
+            git,
+            env,
+            repository,
+            source_id,
+            worktree,
+            source_allowed_dirty_paths(source_value),
+        ):
+            ok = False
+    return ok
+
+
+def parse_version_tuple(text: str) -> Optional[tuple[int, int, int]]:
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", text)
+    if not match:
+        return None
+    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+
+
+def check_tree_sitter_cli(
+    env: Mapping[str, str], repository: str, minimum: tuple[int, int, int]
+) -> bool:
+    tree_sitter = resolve_required("tree-sitter", env)
+    if tree_sitter is None:
+        return False
+    completed = run_captured_command([tree_sitter, "--version"], env, repository)
+    if completed is None or completed.returncode != 0:
+        warn("unable to query tree-sitter version")
+        if completed is not None:
+            print_completed_output(completed)
+        return False
+    version = parse_version_tuple(completed.stdout)
+    if version is None or version < minimum:
+        warn(
+            "tree-sitter-cli >= {0} is required; found {1}".format(
+                ".".join(str(part) for part in minimum), completed.stdout.strip()
+            )
+        )
+        return False
+    return True
+
+
+def parser_extension() -> str:
+    return ".so"
+
+
+def treesitter_languages(lock: JSONMapping) -> Dict[str, JSONObject]:
+    languages: Dict[str, JSONObject] = {}
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        return languages
+    for source_id, source_value in sources.items():
+        if not isinstance(source_id, str) or not isinstance(source_value, dict):
+            continue
+        treesitter = source_treesitter(source_value)
+        parsers = treesitter.get("parsers", {})
+        if not isinstance(parsers, dict):
+            continue
+        for language, parser_data in parsers.items():
+            if isinstance(language, str) and isinstance(parser_data, dict):
+                data = dict(parser_data)
+                data["source"] = source_id
+                languages[language] = data
+    return languages
+
+
+def tree_sitter_runtime_site(repository: str, lock: JSONMapping) -> Optional[str]:
+    treesitter = root_treesitter_metadata(lock)
+    runtime_site_value = treesitter.get("runtimeSite", TREE_SITTER_RUNTIME_SITE)
+    if not isinstance(runtime_site_value, str):
+        warn("treesitter.runtimeSite must be a string")
+        return None
+    return repository_path(repository, runtime_site_value)
+
+
+def source_worktree_by_id(
+    repository: str, lock: JSONMapping, source_id: str
+) -> Optional[str]:
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        return None
+    source = sources.get(source_id)
+    if not isinstance(source, dict):
+        warn("unknown source id: {0}".format(source_id))
+        return None
+    return source_worktree_path(repository, lock, source_id, source)
+
+
+def source_commit_by_id(lock: JSONMapping, source_id: str) -> Optional[str]:
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        return None
+    source = sources.get(source_id)
+    if not isinstance(source, dict):
+        return None
+    commit = source.get("commit")
+    return commit if isinstance(commit, str) else None
+
+
+def treesitter_sources_root(repository: str, lock: JSONMapping) -> Optional[str]:
+    runtime_site = tree_sitter_runtime_site(repository, lock)
+    if runtime_site is None:
+        return None
+    return os.path.join(runtime_site, TREE_SITTER_RELEASED_SOURCES_DIR)
+
+
+def treesitter_released_source_root_path(
+    repository: str, lock: JSONMapping, source_id: str
+) -> Optional[str]:
+    root = treesitter_sources_root(repository, lock)
+    if root is None:
+        return None
+    return os.path.join(root, source_id)
+
+
+def treesitter_released_source_archive_path(
+    repository: str, lock: JSONMapping, source_id: str
+) -> Optional[str]:
+    root = treesitter_released_source_root_path(repository, lock, source_id)
+    if root is None:
+        return None
+    return os.path.join(root, "archive.tar.gz")
+
+
+def treesitter_released_source_source_path(
+    repository: str, lock: JSONMapping, source_id: str
+) -> Optional[str]:
+    root = treesitter_released_source_root_path(repository, lock, source_id)
+    if root is None:
+        return None
+    return os.path.join(root, "source")
+
+
+def treesitter_released_source_metadata_path(
+    repository: str, lock: JSONMapping, source_id: str
+) -> Optional[str]:
+    root = treesitter_released_source_root_path(repository, lock, source_id)
+    if root is None:
+        return None
+    return os.path.join(root, "metadata.json")
+
+
+def treesitter_source_root_by_id(
+    repository: str, lock: JSONMapping, source_id: str
+) -> Optional[str]:
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        return None
+    source = sources.get(source_id)
+    if not isinstance(source, dict):
+        warn("unknown source id: {0}".format(source_id))
+        return None
+    if source_treesitter_released_source(cast(JSONMapping, source)):
+        return treesitter_released_source_source_path(repository, lock, source_id)
+    return source_worktree_path(repository, lock, source_id, cast(JSONMapping, source))
+
+
+def copy_query_dir(source_dir: str, destination_dir: str) -> bool:
+    if not os.path.isdir(source_dir):
+        warn("query source not found: {0}".format(source_dir))
+        return False
+    try:
+        if os.path.exists(destination_dir):
+            shutil.rmtree(destination_dir)
+        shutil.copytree(source_dir, destination_dir)
+    except OSError as exc:
+        warn(
+            "unable to copy query directory {0} to {1}: {2}".format(
+                source_dir, destination_dir, exc
+            )
+        )
+        return False
+    return True
+
+
+# tree-sitter-sql v0.3.11 ships SQL highlights predicates in a form Neovim
+# does not load as-is, so normalize only the installed SQL query copy.
+def normalize_installed_query_dir(
+    source_id: str, language: str, destination_dir: str
+) -> bool:
+    if source_id != "tree-sitter-sql" or language != "sql":
+        return True
+
+    highlights = os.path.join(destination_dir, "highlights.scm")
+    try:
+        with open(highlights, encoding="utf-8") as file:
+            content = file.read()
+    except OSError as exc:
+        warn("unable to read {0}: {1}".format(highlights, exc))
+        return False
+
+    content = content.replace(
+        '(#match? @number "^[-+]?%d+$")',
+        '(#lua-match? @number "^[-+]?%d+$")',
+    )
+    content = content.replace(
+        '(#match? @float "^[-+]?%d*\\.%d*$")',
+        '(#lua-match? @float "^[-+]?%d*%.%d*$")',
+    )
+
+    try:
+        with open(highlights, "w", encoding="utf-8") as file:
+            file.write(content)
+    except OSError as exc:
+        warn("unable to write {0}: {1}".format(highlights, exc))
+        return False
+
+    return True
+
+
+def query_source_path(
+    repository: str,
+    lock: JSONMapping,
+    language: str,
+    parser_data: JSONMapping,
+) -> Optional[tuple[str, str]]:
+    metadata = root_treesitter_metadata(lock)
+    defaults = metadata.get("defaults", {})
+    if not isinstance(defaults, dict):
+        defaults = {}
+    source_id = parser_data.get(
+        "querySource", defaults.get("querySource", "nvim-treesitter")
+    )
+    if not isinstance(source_id, str):
+        warn("querySource for {0} must be a string".format(language))
+        return None
+    query_path = parser_data.get("queryPath")
+    if not isinstance(query_path, str):
+        template = defaults.get("queryPathTemplate", "runtime/queries/{language}")
+        if not isinstance(template, str):
+            warn("treesitter.defaults.queryPathTemplate must be a string")
+            return None
+        query_path = template.replace("{language}", language)
+    normalized_query_path = validated_relative_subpath(query_path)
+    if normalized_query_path is None:
+        warn("queryPath for {0} must be a non-empty relative path".format(language))
+        return None
+    source_root = treesitter_source_root_by_id(repository, lock, source_id)
+    if source_root is None:
+        return None
+    return source_id, os.path.join(source_root, normalized_query_path)
+
+
+def required_queries(lock: JSONMapping, parser_data: JSONMapping) -> Sequence[str]:
+    value = parser_data.get("requiredQueries")
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
+    metadata = root_treesitter_metadata(lock)
+    defaults = metadata.get("defaults", {})
+    if isinstance(defaults, dict):
+        default_queries = defaults.get("requiredQueries", ["highlights"])
+        if isinstance(default_queries, list) and all(
+            isinstance(item, str) for item in default_queries
+        ):
+            return default_queries
+    return ["highlights"]
+
+
+def sequence_strings(value: object) -> Sequence[str]:
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return [str(item) for item in value]
+    return []
+
+
+def sequence_mappings(value: object) -> Sequence[JSONMapping]:
+    if not isinstance(value, list):
+        return []
+    items: list[JSONMapping] = []
+    for item in value:
+        if not isinstance(item, dict):
+            return []
+        items.append(cast(JSONMapping, item))
+    return items
+
+
+def supplemental_query_groups(lock: JSONMapping) -> Sequence[JSONMapping]:
+    metadata = root_treesitter_metadata(lock)
+    defaults = metadata.get("defaults", {})
+    if not isinstance(defaults, dict):
+        return []
+    return sequence_mappings(defaults.get("supplementalQueryGroups"))
+
+
+def supplemental_query_languages(group: JSONMapping) -> Sequence[str]:
+    return sequence_strings(group.get("languages"))
+
+
+def supplemental_query_source_path(
+    repository: str, lock: JSONMapping, group: JSONMapping, language: str
+) -> Optional[tuple[str, str, str]]:
+    group_name = group.get("name")
+    source_id = group.get("source")
+    if not isinstance(group_name, str) or not group_name:
+        warn("supplemental query group name must be a non-empty string")
+        return None
+    if not isinstance(source_id, str) or not source_id:
+        warn(
+            "supplemental query group {0} source must be a non-empty string".format(
+                group_name
+            )
+        )
+        return None
+
+    query_path = group.get("path")
+    if not isinstance(query_path, str):
+        template = group.get("pathTemplate", "queries/{language}/{group}.scm")
+        if not isinstance(template, str):
+            warn(
+                "supplemental query group {0} pathTemplate must be a string".format(
+                    group_name
+                )
+            )
+            return None
+        query_path = template.replace("{language}", language).replace(
+            "{group}", group_name
+        )
+    normalized_query_path = validated_relative_subpath(query_path)
+    if normalized_query_path is None:
+        warn(
+            "supplemental query group {0} path must be a non-empty relative path".format(
+                group_name
+            )
+        )
+        return None
+
+    source_root = treesitter_source_root_by_id(repository, lock, source_id)
+    if source_root is None:
+        return None
+    return source_id, group_name, os.path.join(source_root, normalized_query_path)
+
+
+def install_supplemental_query_groups(
+    repository: str, lock: JSONMapping, runtime_site: str
+) -> bool:
+    ok = True
+    for group in supplemental_query_groups(lock):
+        for language in supplemental_query_languages(group):
+            resolved = supplemental_query_source_path(repository, lock, group, language)
+            if resolved is None:
+                ok = False
+                continue
+            source_id, group_name, source_file = resolved
+            if not os.path.isfile(source_file):
+                warn("supplemental Treesitter query missing: {0}".format(source_file))
+                ok = False
+                continue
+            destination_dir = os.path.join(runtime_site, "queries", language)
+            try:
+                os.makedirs(destination_dir, exist_ok=True)
+                shutil.copy2(
+                    source_file, os.path.join(destination_dir, group_name + ".scm")
+                )
+            except OSError as exc:
+                warn(
+                    "unable to install supplemental Treesitter query {0}/{1}: {2}".format(
+                        language, group_name, exc
+                    )
+                )
+                ok = False
+                continue
+            commit = source_commit_by_id(lock, source_id)
+            if commit and not write_revision_file(
+                runtime_site, language + "." + group_name, commit
+            ):
+                ok = False
+    return ok
+
+
+def remove_path(path: str) -> None:
+    try:
+        if os.path.islink(path) or os.path.isfile(path):
+            os.unlink(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
+    except OSError as exc:
+        warn("unable to remove {0}: {1}".format(path, exc))
+
+
+def replace_directory(destination: str, staged: str) -> bool:
+    backup = destination + ".previous.{0}.{1}".format(os.getpid(), time.time_ns())
+    existing_was_moved = False
+    try:
+        if os.path.exists(destination) or os.path.islink(destination):
+            os.rename(destination, backup)
+            existing_was_moved = True
+        os.rename(staged, destination)
+    except OSError as exc:
+        if existing_was_moved and not (
+            os.path.exists(destination) or os.path.islink(destination)
+        ):
+            try:
+                os.rename(backup, destination)
+            except OSError:
+                pass
+        warn("unable to replace {0}: {1}".format(destination, exc))
+        return False
+    if existing_was_moved and (os.path.exists(backup) or os.path.islink(backup)):
+        remove_path(backup)
+    return True
+
+
+def revision_file_path(runtime_site: str, name: str) -> str:
+    return os.path.join(runtime_site, "state", name + ".revision")
+
+
+def write_revision_file(runtime_site: str, name: str, commit: str) -> bool:
+    try:
+        with open(
+            revision_file_path(runtime_site, name), "w", encoding="utf-8"
+        ) as file:
+            file.write(commit + "\n")
+    except OSError as exc:
+        warn("unable to write Treesitter revision file for {0}: {1}".format(name, exc))
+        return False
+    return True
+
+
+def publish_runtime_subdirectories(
+    runtime_site: str, staged_runtime_site: str, children: Sequence[str]
+) -> bool:
+    try:
+        os.makedirs(runtime_site, exist_ok=True)
+    except OSError as exc:
+        warn("unable to create {0}: {1}".format(runtime_site, exc))
+        return False
+
+    backups: list[tuple[str, str]] = []
+    try:
+        for child in children:
+            target = os.path.join(runtime_site, child)
+            if not (os.path.exists(target) or os.path.islink(target)):
+                continue
+            backup = target + ".previous.{0}.{1}".format(os.getpid(), time.time_ns())
+            os.rename(target, backup)
+            backups.append((target, backup))
+    except OSError as exc:
+        for target, backup in reversed(backups):
+            if os.path.exists(backup) or os.path.islink(backup):
+                try:
+                    os.rename(backup, target)
+                except OSError:
+                    pass
+        warn("unable to stage Treesitter runtime publication: {0}".format(exc))
+        return False
+
+    published_targets: list[str] = []
+    try:
+        for child in children:
+            target = os.path.join(runtime_site, child)
+            staged = os.path.join(staged_runtime_site, child)
+            os.rename(staged, target)
+            published_targets.append(target)
+    except OSError as exc:
+        for target in reversed(published_targets):
+            if os.path.exists(target) or os.path.islink(target):
+                remove_path(target)
+        for target, backup in reversed(backups):
+            if os.path.exists(backup) or os.path.islink(backup):
+                try:
+                    os.rename(backup, target)
+                except OSError:
+                    pass
+        warn("unable to publish Treesitter runtime: {0}".format(exc))
+        return False
+
+    for _, backup in backups:
+        if os.path.exists(backup) or os.path.islink(backup):
+            remove_path(backup)
+    return True
+
+
+def sha256_file(path: str, emit_warnings: bool = True) -> Optional[str]:
+    digest = hashlib.sha256()
+    try:
+        with open(path, "rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as exc:
+        if emit_warnings:
+            warn("unable to read {0}: {1}".format(path, exc))
+        return None
+    return digest.hexdigest()
+
+
+def verify_file_sha256(path: str, expected: str, emit_warnings: bool = True) -> bool:
+    actual = sha256_file(path, emit_warnings=emit_warnings)
+    if actual is None:
+        return False
+    if actual != expected:
+        if emit_warnings:
+            warn(
+                "SHA-256 mismatch for {0}: expected {1}, got {2}".format(
+                    path, expected, actual
+                )
+            )
+        return False
+    return True
+
+
+def normalize_archive_member_path(path: str) -> Optional[str]:
+    normalized = normalize_relative_subpath(path)
+    if not normalized:
+        return None
+    if normalized in (".", "..") or normalized.startswith("../"):
+        return None
+    return normalized
+
+
+def extract_tar_gz(archive: str, destination: str) -> bool:
+    try:
+        with tarfile.open(archive, "r:gz") as tar:
+            for member in tar.getmembers():
+                normalized = normalize_archive_member_path(member.name)
+                if normalized is None:
+                    continue
+                if member.islnk() or member.issym():
+                    warn(
+                        "unsupported symlink in Treesitter released source archive: {0}".format(
+                            member.name
+                        )
+                    )
+                    return False
+                target = os.path.join(destination, normalized)
+                if not path_within_repository(destination, target):
+                    warn(
+                        "Treesitter released source archive path escapes extraction root: {0}".format(
+                            member.name
+                        )
+                    )
+                    return False
+                if member.isdir():
+                    os.makedirs(target, exist_ok=True)
+                    continue
+                if not member.isfile():
+                    continue
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                extracted = tar.extractfile(member)
+                if extracted is None:
+                    warn(
+                        "unable to extract Treesitter released source archive member: {0}".format(
+                            member.name
+                        )
+                    )
+                    return False
+                with extracted:
+                    with open(target, "wb") as output:
+                        shutil.copyfileobj(extracted, output)
+    except (OSError, tarfile.TarError) as exc:
+        warn(
+            "unable to extract Treesitter released source archive {0}: {1}".format(
+                archive, exc
+            )
+        )
+        return False
+    return True
+
+
+def copy_treesitter_released_source_paths(
+    source_root: str, destination_root: str, paths: Sequence[str]
+) -> bool:
+    try:
+        for relative_path in paths:
+            source = os.path.join(source_root, relative_path)
+            destination = os.path.join(destination_root, relative_path)
+            if not os.path.exists(source):
+                warn(
+                    "Treesitter released source retained path missing: {0}".format(
+                        source
+                    )
+                )
+                return False
+            if os.path.isdir(source):
+                shutil.copytree(source, destination)
+            else:
+                os.makedirs(os.path.dirname(destination), exist_ok=True)
+                shutil.copy2(source, destination)
+    except OSError as exc:
+        warn("unable to copy Treesitter released source paths: {0}".format(exc))
+        return False
+    return True
+
+
+def read_json_object_file(path: str, emit_warnings: bool) -> Optional[JSONObject]:
+    try:
+        with open(path, encoding="utf-8") as file:
+            value = json.load(file)
+    except OSError as exc:
+        if emit_warnings:
+            warn("unable to read {0}: {1}".format(path, exc))
+        return None
+    except json.JSONDecodeError as exc:
+        if emit_warnings:
+            warn("unable to parse {0}: {1}".format(path, exc))
+        return None
+    if not isinstance(value, dict):
+        if emit_warnings:
+            warn("{0} must contain a JSON object".format(path))
+        return None
+    return value
+
+
+def treesitter_released_source_state_ok(
+    repository: str,
+    lock: JSONMapping,
+    source_id: str,
+    source: JSONMapping,
+    emit_warnings: bool,
+) -> bool:
+    released_source = source_treesitter_released_source(source)
+    if not released_source:
+        return True
+
+    archive = treesitter_released_source_archive_path(repository, lock, source_id)
+    metadata_path = treesitter_released_source_metadata_path(
+        repository, lock, source_id
+    )
+    source_root = treesitter_released_source_source_path(repository, lock, source_id)
+    if archive is None or metadata_path is None or source_root is None:
+        return False
+
+    if not os.path.isfile(archive):
+        if emit_warnings:
+            warn(
+                "Treesitter released source archive missing: {0}; run ./manage install".format(
+                    archive
+                )
+            )
+        return False
+
+    expected_sha256 = released_source.get("sha256")
+    if not isinstance(expected_sha256, str) or not verify_file_sha256(
+        archive, expected_sha256, emit_warnings=emit_warnings
+    ):
+        return False
+
+    metadata = read_json_object_file(metadata_path, emit_warnings=emit_warnings)
+    if metadata is None:
+        return False
+    expected_url = released_source.get("url")
+    expected_files = list(treesitter_released_source_files(released_source))
+    if (
+        metadata.get("url") != expected_url
+        or metadata.get("sha256") != expected_sha256
+        or metadata.get("files") != expected_files
+    ):
+        if emit_warnings:
+            warn(
+                "Treesitter released source metadata mismatch for {0}; run ./manage install".format(
+                    source_id
+                )
+            )
+        return False
+
+    for relative_path in expected_files:
+        path = os.path.join(source_root, relative_path)
+        if not os.path.exists(path):
+            if emit_warnings:
+                warn(
+                    "Treesitter released source path missing: {0}; run ./manage install".format(
+                        path
+                    )
+                )
+            return False
+    return True
+
+
+def materialize_treesitter_released_source(
+    repository: str,
+    lock: JSONMapping,
+    source_id: str,
+    source: JSONMapping,
+) -> bool:
+    released_source = source_treesitter_released_source(source)
+    if not released_source:
+        return True
+    if treesitter_released_source_state_ok(
+        repository, lock, source_id, source, emit_warnings=False
+    ):
+        return True
+
+    root = treesitter_released_source_root_path(repository, lock, source_id)
+    if root is None:
+        return False
+
+    url = released_source.get("url")
+    sha256 = released_source.get("sha256")
+    files = list(treesitter_released_source_files(released_source))
+    if not isinstance(url, str) or not isinstance(sha256, str) or not files:
+        warn(
+            "invalid Treesitter released source metadata for source {0}".format(
+                source_id
+            )
+        )
+        return False
+
+    parent = os.path.dirname(root)
+    try:
+        os.makedirs(parent, exist_ok=True)
+    except OSError as exc:
+        warn("unable to create {0}: {1}".format(parent, exc))
+        return False
+
+    info("materializing Treesitter released source {0}".format(source_id))
+    with tempfile.TemporaryDirectory(
+        prefix=".{0}.{1}.".format(source_id, os.getpid()), dir=parent
+    ) as staging_root:
+        staged_root = os.path.join(staging_root, "install")
+        staged_source_root = os.path.join(staged_root, "source")
+        extracted_root = os.path.join(staging_root, "extract")
+        try:
+            os.makedirs(staged_source_root, exist_ok=True)
+            os.makedirs(extracted_root, exist_ok=True)
+        except OSError as exc:
+            warn(
+                "unable to create staging directories for {0}: {1}".format(
+                    source_id, exc
+                )
+            )
+            return False
+
+        staged_archive = os.path.join(staged_root, "archive.tar.gz")
+        staged_metadata_path = os.path.join(staged_root, "metadata.json")
+        if not download_url(url, staged_archive):
+            return False
+        if not verify_file_sha256(staged_archive, sha256):
+            return False
+        if not extract_tar_gz(staged_archive, extracted_root):
+            return False
+        if not copy_treesitter_released_source_paths(
+            extracted_root, staged_source_root, files
+        ):
+            return False
+        try:
+            with open(staged_metadata_path, "w", encoding="utf-8") as file:
+                json.dump(
+                    {"url": url, "sha256": sha256, "files": files},
+                    file,
+                    indent=2,
+                )
+                file.write("\n")
+        except OSError as exc:
+            warn(
+                "unable to write Treesitter released source metadata for {0}: {1}".format(
+                    source_id, exc
+                )
+            )
+            return False
+        if not replace_directory(root, staged_root):
+            return False
+    return True
+
+
+def materialize_treesitter_released_sources(repository: str, lock: JSONMapping) -> bool:
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        warn("lockfile sources must be an object")
+        return False
+    ok = True
+    for source_id, source_value in sources.items():
+        if not valid_source_id(source_id):
+            warn("invalid source id: {0}".format(source_id))
+            ok = False
+            continue
+        if not isinstance(source_value, dict):
+            warn("source {0} must be an object".format(source_id))
+            ok = False
+            continue
+        if not validate_source_settings(source_id, source_value):
+            ok = False
+            continue
+        if not materialize_treesitter_released_source(
+            repository, lock, source_id, cast(JSONMapping, source_value)
+        ):
+            ok = False
+    return ok
+
+
+def check_treesitter_released_sources(repository: str, lock: JSONMapping) -> bool:
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        warn("lockfile sources must be an object")
+        return False
+    ok = True
+    for source_id, source_value in sources.items():
+        if not valid_source_id(source_id):
+            warn("invalid source id: {0}".format(source_id))
+            ok = False
+            continue
+        if not isinstance(source_value, dict):
+            warn("source {0} must be an object".format(source_id))
+            ok = False
+            continue
+        if not validate_source_settings(source_id, source_value):
+            ok = False
+            continue
+        if not treesitter_released_source_state_ok(
+            repository,
+            lock,
+            source_id,
+            cast(JSONMapping, source_value),
+            emit_warnings=True,
+        ):
+            ok = False
+    return ok
+
+
+def copy_source_for_build(
+    repository: str,
+    lock: JSONMapping,
+    scratch_root: str,
+    source_id: str,
+    copied_sources: set[str],
+) -> Optional[str]:
+    destination = os.path.join(scratch_root, "sources", source_id)
+    if source_id in copied_sources:
+        return destination
+    source_root = treesitter_source_root_by_id(repository, lock, source_id)
+    if source_root is None:
+        return None
+    try:
+        if os.path.exists(destination):
+            shutil.rmtree(destination)
+        shutil.copytree(source_root, destination, ignore=shutil.ignore_patterns(".git"))
+    except OSError as exc:
+        warn("unable to stage Treesitter build source {0}: {1}".format(source_id, exc))
+        return None
+    copied_sources.add(source_id)
+    return destination
+
+
+def install_treesitter_runtime(
+    env: Mapping[str, str], repository: str, lock: JSONMapping
+) -> bool:
+    minimum = TREE_SITTER_MINIMUM_VERSION
+    metadata = root_treesitter_metadata(lock)
+    minimum_value = metadata.get("minimumCliVersion")
+    if isinstance(minimum_value, str):
+        parsed = parse_version_tuple(minimum_value)
+        if parsed is not None:
+            minimum = parsed
+    if not check_tree_sitter_cli(env, repository, minimum):
+        return False
+
+    runtime_site = tree_sitter_runtime_site(repository, lock)
+    if runtime_site is None:
+        return False
+    languages = treesitter_languages(lock)
+    if not languages:
+        warn("no Treesitter parsers configured in {0}".format(SOURCE_MANIFEST_NAME))
+        return False
+
+    tree_sitter = resolve_required("tree-sitter", env)
+    if tree_sitter is None:
+        return False
+
+    with tempfile.TemporaryDirectory(prefix="treesitter-runtime-") as staging_root:
+        staged_runtime_site = os.path.join(staging_root, "site")
+        try:
+            for child in ("parser", "queries", "state"):
+                os.makedirs(os.path.join(staged_runtime_site, child), exist_ok=True)
+        except OSError as exc:
+            warn(
+                "unable to create staged Treesitter runtime directories: {0}".format(
+                    exc
+                )
+            )
+            return False
+
+        ok = True
+        with tempfile.TemporaryDirectory(prefix="treesitter-build-") as scratch_root:
+            copied_sources: set[str] = set()
+            for language, parser_data in sorted(languages.items()):
+                source_id = parser_data.get("source")
+                location = parser_data.get("location", ".")
+                parser_name = parser_data.get("parser", language)
+                if (
+                    not isinstance(source_id, str)
+                    or not isinstance(location, str)
+                    or not isinstance(parser_name, str)
+                ):
+                    warn("invalid Treesitter parser metadata for {0}".format(language))
+                    ok = False
+                    continue
+                build_source = copy_source_for_build(
+                    repository, lock, scratch_root, source_id, copied_sources
+                )
+                if build_source is None:
+                    ok = False
+                    continue
+                normalized_location = validated_relative_subpath_or_current(location)
+                if normalized_location is None:
+                    warn(
+                        "parser location for {0} must be a relative path within the source".format(
+                            language
+                        )
+                    )
+                    ok = False
+                    continue
+                build_dir = os.path.abspath(
+                    os.path.join(build_source, normalized_location)
+                )
+                if not os.path.isdir(build_dir):
+                    warn(
+                        "parser source not found for {0}: {1}".format(
+                            language, build_dir
+                        )
+                    )
+                    ok = False
+                    continue
+                if bool(parser_data.get("generate", False)):
+                    if not run_logged_command(
+                        [tree_sitter, "generate"],
+                        env,
+                        build_dir,
+                        show_success_output_on_stderr=False,
+                    ):
+                        ok = False
+                        continue
+                output = os.path.join(
+                    staged_runtime_site, "parser", parser_name + parser_extension()
+                )
+                if not run_logged_command(
+                    [tree_sitter, "build", "-o", output],
+                    env,
+                    build_dir,
+                    show_success_output_on_stderr=False,
+                ):
+                    ok = False
+                    continue
+                commit = source_commit_by_id(lock, source_id)
+                if commit and not write_revision_file(
+                    staged_runtime_site, language, commit
+                ):
+                    ok = False
+                    continue
+                if not install_query_language(
+                    repository,
+                    lock,
+                    staged_runtime_site,
+                    language,
+                    parser_data,
+                    revision_name=None,
+                ):
+                    ok = False
+                for query_language in sequence_strings(
+                    parser_data.get("queryDependencies")
+                ):
+                    query_data = {}
+                    if isinstance(parser_data.get("querySource"), str):
+                        query_data["querySource"] = parser_data.get("querySource")
+                    if isinstance(parser_data.get("queryPath"), str):
+                        query_data["queryPath"] = parser_data.get("queryPath")
+                    if not install_query_language(
+                        repository,
+                        lock,
+                        staged_runtime_site,
+                        query_language,
+                        query_data,
+                        revision_name=query_language,
+                    ):
+                        ok = False
+
+        if not install_supplemental_query_groups(repository, lock, staged_runtime_site):
+            ok = False
+        if not ok:
+            return False
+
+        if not publish_runtime_subdirectories(
+            runtime_site, staged_runtime_site, ("parser", "queries", "state")
+        ):
+            return False
+
+    return True
+
+
+def install_query_language(
+    repository: str,
+    lock: JSONMapping,
+    runtime_site: str,
+    language: str,
+    parser_data: JSONMapping,
+    revision_name: Optional[str],
+) -> bool:
+    resolved = query_source_path(repository, lock, language, parser_data)
+    if resolved is None:
+        return False
+    source_id, source_dir = resolved
+    destination = os.path.join(runtime_site, "queries", language)
+    if not copy_query_dir(source_dir, destination):
+        return False
+    if not normalize_installed_query_dir(source_id, language, destination):
+        return False
+    commit = source_commit_by_id(lock, source_id)
+    if (
+        revision_name is not None
+        and commit
+        and not write_revision_file(runtime_site, revision_name, commit)
+    ):
+        return False
+    parser_source_id = parser_data.get("source")
+    if (
+        isinstance(parser_source_id, str)
+        and parser_source_id != source_id
+        and commit
+        and not write_revision_file(runtime_site, language + ".query", commit)
+    ):
+        return False
+    return True
+
+
+def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
+    runtime_site = tree_sitter_runtime_site(repository, lock)
+    if runtime_site is None:
+        return False
+    languages = treesitter_languages(lock)
+    ok = True
+    for language, parser_data in sorted(languages.items()):
+        parser_name = parser_data.get("parser", language)
+        if not isinstance(parser_name, str):
+            warn("invalid parser name for {0}".format(language))
+            ok = False
+            continue
+        parser_path = os.path.join(
+            runtime_site, "parser", parser_name + parser_extension()
+        )
+        if not os.path.isfile(parser_path):
+            warn(
+                "Treesitter parser missing: {0}; run ./manage install".format(
+                    parser_path
+                )
+            )
+            ok = False
+        for query in required_queries(lock, parser_data):
+            query_file = os.path.join(runtime_site, "queries", language, query + ".scm")
+            if not os.path.isfile(query_file):
+                warn(
+                    "Treesitter query missing: {0}; run ./manage install".format(
+                        query_file
+                    )
+                )
+                ok = False
+        source_id = parser_data.get("source")
+        commit = (
+            source_commit_by_id(lock, source_id) if isinstance(source_id, str) else None
+        )
+        revision = revision_file_path(runtime_site, language)
+        if commit and read_text_file(revision) != commit:
+            warn(
+                "Treesitter revision mismatch for {0}; run ./manage install".format(
+                    language
+                )
+            )
+            ok = False
+        resolved_query_source = query_source_path(
+            repository, lock, language, parser_data
+        )
+        if resolved_query_source is None:
+            ok = False
+        else:
+            query_source_id, _ = resolved_query_source
+            query_commit = source_commit_by_id(lock, query_source_id)
+            if (
+                query_commit
+                and isinstance(source_id, str)
+                and query_source_id != source_id
+                and read_text_file(
+                    revision_file_path(runtime_site, language + ".query")
+                )
+                != query_commit
+            ):
+                warn(
+                    "Treesitter query revision mismatch for {0}; run ./manage install".format(
+                        language
+                    )
+                )
+                ok = False
+        for query_language in sequence_strings(parser_data.get("queryDependencies")):
+            query_dir = os.path.join(runtime_site, "queries", query_language)
+            if not os.path.isdir(query_dir):
+                warn(
+                    "Treesitter query dependency missing: {0}; run ./manage install".format(
+                        query_dir
+                    )
+                )
+                ok = False
+
+    for group in supplemental_query_groups(lock):
+        for language in supplemental_query_languages(group):
+            resolved = supplemental_query_source_path(repository, lock, group, language)
+            if resolved is None:
+                ok = False
+                continue
+            source_id, group_name, _ = resolved
+            query_file = os.path.join(
+                runtime_site, "queries", language, group_name + ".scm"
+            )
+            if not os.path.isfile(query_file):
+                warn(
+                    "supplemental Treesitter query missing: {0}; run ./manage install".format(
+                        query_file
+                    )
+                )
+                ok = False
+            commit = source_commit_by_id(lock, source_id)
+            revision = revision_file_path(runtime_site, language + "." + group_name)
+            if commit and read_text_file(revision) != commit:
+                warn(
+                    "supplemental Treesitter query revision mismatch for {0}/{1}; run ./manage install".format(
+                        language, group_name
+                    )
+                )
+                ok = False
+    return ok
+
+
+def check_treesitter_runtime(
+    env: Mapping[str, str], repository: str, lock: JSONMapping
+) -> bool:
+    minimum = TREE_SITTER_MINIMUM_VERSION
+    metadata = root_treesitter_metadata(lock)
+    minimum_value = metadata.get("minimumCliVersion")
+    if isinstance(minimum_value, str):
+        parsed = parse_version_tuple(minimum_value)
+        if parsed is not None:
+            minimum = parsed
+    ok = check_tree_sitter_cli(env, repository, minimum)
+    if not check_treesitter_released_sources(repository, lock):
+        ok = False
+    if not check_treesitter_runtime_state(repository, lock):
+        ok = False
+    return ok
+
+
+def read_text_file(path: str) -> Optional[str]:
+    try:
+        with open(path, encoding="utf-8") as file:
+            return file.read().strip()
+    except OSError:
+        return None
+
+
+def install(offline: bool) -> int:
     """Install production dependencies and Neovim plugins."""
     try:
         home = home_dir()
@@ -180,20 +2567,55 @@ def install() -> int:
     env = install_environment(home)
 
     ok = True
-    if not sync_uv_production_if_needed(env, repository):
+    if offline:
+        info("offline mode: verifying local state only")
+        if os.path.exists(os.path.join(repository, "pyproject.toml")):
+            info("offline mode: skipped uv production sync")
+        if os.path.exists(os.path.join(repository, "package.json")):
+            info("offline mode: skipped pnpm production install")
+    else:
+        if not sync_uv_production_if_needed(env, repository):
+            ok = False
+        if not sync_pnpm_production(env, repository):
+            ok = False
+
+    lock = load_git_worktrees_lock(repository)
+    if lock is None:
         ok = False
-    if not sync_pnpm_production(env, repository):
-        ok = False
+    elif offline:
+        if not check_git_sources(env, repository, lock):
+            ok = False
+        if not check_treesitter_released_sources(repository, lock):
+            ok = False
+        if not check_native_plugin_artifacts(repository, lock):
+            ok = False
+        if not check_treesitter_runtime_state(repository, lock):
+            ok = False
+    else:
+        if not materialize_git_sources(env, repository, lock):
+            ok = False
+        if not materialize_treesitter_released_sources(repository, lock):
+            ok = False
+        if not install_native_plugin_artifacts(env, repository, lock):
+            ok = False
+        if not install_treesitter_runtime(env, repository, lock):
+            ok = False
+
+    if offline:
+        if not check_neovim_config_link(home, repository):
+            ok = False
+        info("offline mode: skipped Lazy restore")
+        return 0 if ok else 1
 
     nvim = shutil.which("nvim", path=env.get("PATH"))
     if not nvim:
-        info("nvim not found")
+        info("nvim not found; skipped Neovim config link and Lazy restore")
         return 0 if ok else 1
 
-    if link_neovim_config(home, repository):
-        if not sync_neovim_plugins(nvim, env, repository):
-            ok = False
-    else:
+    if not link_neovim_config(home, repository):
+        ok = False
+
+    if ok and not sync_neovim_plugins(nvim, env, repository):
         ok = False
 
     return 0 if ok else 1
@@ -308,16 +2730,518 @@ def vendor_dir(repository: str) -> str:
     return os.path.join(repository, VENDOR_DIR_NAME)
 
 
+def lazy_dir(repository: str) -> str:
+    return os.path.join(vendor_dir(repository), LAZY_DIR_NAME)
+
+
 def lazy_plugin_dir(repository: str, plugin_name: str) -> str:
-    return os.path.join(vendor_dir(repository), plugin_name)
+    return os.path.join(lazy_dir(repository), plugin_name)
 
 
-def neovim_stdpath(
-    nvim: str, name: str, env: Mapping[str, str], repository: str
+def vendored_plugins_dir(repository: str) -> str:
+    return os.path.join(vendor_dir(repository), VENDORED_PLUGINS_DIR_NAME)
+
+
+def vendored_plugin_dir(repository: str, plugin_name: str) -> str:
+    return os.path.join(vendored_plugins_dir(repository), plugin_name)
+
+
+def source_native_build(source: JSONMapping) -> JSONMapping:
+    native_build = source_plugin_metadata(source).get("nativeBuild", {})
+    return native_build if isinstance(native_build, dict) else {}
+
+
+def native_build_optional(native_build: JSONMapping) -> bool:
+    return bool(native_build.get("optional", False))
+
+
+def native_build_minimum_cargo_version(
+    native_build: JSONMapping,
+) -> Optional[tuple[int, int, int]]:
+    value = native_build.get("minimumCargoVersion")
+    if not isinstance(value, str):
+        return None
+    return parse_version_tuple(value)
+
+
+def cargo_version(
+    cargo: str, env: Mapping[str, str], repository: str
+) -> Optional[tuple[int, int, int]]:
+    completed = run_captured_command([cargo, "--version"], env, repository)
+    if completed is None or completed.returncode != 0:
+        return None
+    return parse_version_tuple(completed.stdout)
+
+
+def optional_native_build_outcome(
+    source_id: str, native_build: JSONMapping, message: str
+) -> NativeBuildOutcome:
+    if native_build_optional(native_build):
+        warn(message + "; skipping optional native build")
+        return "skipped"
+    warn(message)
+    return "failed"
+
+
+def native_build_source_ids(lock: JSONMapping) -> Sequence[str]:
+    source_ids: list[str] = []
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        return source_ids
+    for source_id, source_value in sources.items():
+        if (
+            isinstance(source_id, str)
+            and isinstance(source_value, dict)
+            and source_native_build(source_value)
+        ):
+            source_ids.append(source_id)
+    return sorted(source_ids)
+
+
+def native_library_extension() -> str:
+    if sys.platform == "darwin":
+        return ".dylib"
+    if os.name == "nt":
+        return ".dll"
+    return ".so"
+
+
+def native_plugin_artifact_path(
+    worktree: str, native_build: JSONMapping
 ) -> Optional[str]:
-    return neovim_value(
-        nvim, "vim.fn.stdpath(" + json.dumps(name) + ")", env, repository
-    )
+    kind = native_build.get("kind")
+    if kind == "cargo":
+        return os.path.join(
+            worktree,
+            "target",
+            "release",
+            "libblink_cmp_fuzzy" + native_library_extension(),
+        )
+    if kind == "luasnip_jsregexp":
+        return os.path.join(worktree, "deps", "luasnip-jsregexp.so")
+    if kind == "make":
+        return os.path.join(worktree, "build", "libfzf.so")
+    return None
+
+
+def native_build_revision_path(
+    worktree: str, native_build: JSONMapping
+) -> Optional[str]:
+    kind = native_build.get("kind")
+    if kind == "cargo":
+        return os.path.join(worktree, "target", "release", ".manage-native-build")
+    if kind == "luasnip_jsregexp":
+        return os.path.join(worktree, "deps", "jsregexp", ".manage-native-build")
+    if kind == "make":
+        return os.path.join(worktree, "build", ".manage-native-build")
+    return None
+
+
+def native_build_revision_text(
+    lock: JSONMapping, source_id: str, native_build: JSONMapping
+) -> Optional[str]:
+    commit = source_commit_by_id(lock, source_id)
+    if commit is None:
+        warn("source {0} commit must be a non-empty string".format(source_id))
+        return None
+    lines = ["source {0} {1}".format(source_id, commit)]
+    dependency_sources = native_build_dependency_sources(source_id, native_build)
+    if dependency_sources is None:
+        return None
+    for relative_path, dependency_source_id in sorted(dependency_sources.items()):
+        dependency_commit = source_commit_by_id(lock, dependency_source_id)
+        if dependency_commit is None:
+            warn(
+                "source {0} dependency source commit is not available: {1}".format(
+                    source_id, dependency_source_id
+                )
+            )
+            return None
+        lines.append(
+            "dependency {0} {1} {2}".format(
+                relative_path, dependency_source_id, dependency_commit
+            )
+        )
+    return "\n".join(lines)
+
+
+def write_native_build_revision(
+    worktree: str, lock: JSONMapping, source_id: str, native_build: JSONMapping
+) -> bool:
+    revision_path = native_build_revision_path(worktree, native_build)
+    revision_text = native_build_revision_text(lock, source_id, native_build)
+    if revision_path is None or revision_text is None:
+        return False
+    try:
+        with open(revision_path, "w", encoding="utf-8") as file:
+            file.write(revision_text + "\n")
+    except OSError as exc:
+        warn(
+            "unable to write native build revision for source {0}: {1}".format(
+                source_id, exc
+            )
+        )
+        return False
+    return True
+
+
+def check_native_build_revision(
+    worktree: str, lock: JSONMapping, source_id: str, native_build: JSONMapping
+) -> bool:
+    revision_path = native_build_revision_path(worktree, native_build)
+    revision_text = native_build_revision_text(lock, source_id, native_build)
+    if revision_path is None or revision_text is None:
+        return False
+    actual = read_text_file(revision_path)
+    if actual is None:
+        warn(
+            "native build revision missing for source {0}: {1}; run ./manage install".format(
+                source_id, revision_path
+            )
+        )
+        return False
+    if actual != revision_text:
+        warn(
+            "native build revision mismatch for source {0}; run ./manage install".format(
+                source_id
+            )
+        )
+        return False
+    return True
+
+
+def overlay_native_build_dependency_sources(
+    repository: str,
+    lock: JSONMapping,
+    worktree: str,
+    dependency_sources: Mapping[str, str],
+) -> bool:
+    for relative_path, dependency_source_id in dependency_sources.items():
+        dependency_worktree = source_worktree_by_id(
+            repository, lock, dependency_source_id
+        )
+        if dependency_worktree is None:
+            return False
+        destination = os.path.join(worktree, relative_path)
+        try:
+            if os.path.exists(destination):
+                shutil.rmtree(destination)
+            shutil.copytree(
+                dependency_worktree,
+                destination,
+                ignore=shutil.ignore_patterns(".git"),
+            )
+        except OSError as exc:
+            warn(
+                "unable to overlay native build dependency source {0} into {1}: {2}".format(
+                    dependency_source_id, destination, exc
+                )
+            )
+            return False
+    return True
+
+
+def build_luasnip_jsregexp_runtime(
+    make: str,
+    env: Mapping[str, str],
+    repository: str,
+    worktree: str,
+) -> bool:
+    include_dir = os.path.join(worktree, "deps", "lua51_include")
+    build_dirs = ("deps/jsregexp", "deps/jsregexp005", "deps/jsregexp006")
+    for relative_path in build_dirs:
+        build_dir = os.path.join(worktree, relative_path)
+        if not os.path.isdir(build_dir):
+            warn("LuaSnip build input missing: {0}".format(build_dir))
+            return False
+        if not run_logged_command(
+            [
+                make,
+                "-C",
+                build_dir,
+                "INCLUDE_DIR=-I{0}/".format(include_dir),
+                "LDLIBS=",
+            ],
+            env,
+            repository,
+            show_success_output_on_stderr=False,
+        ):
+            return False
+
+    source_library = os.path.join(worktree, "deps", "jsregexp", "jsregexp.so")
+    source_module = os.path.join(worktree, "deps", "jsregexp", "jsregexp.lua")
+    if not os.path.isfile(source_library) or not os.path.isfile(source_module):
+        warn("LuaSnip jsregexp build outputs missing in {0}".format(worktree))
+        return False
+
+    try:
+        shutil.copy2(
+            source_module, os.path.join(worktree, "lua", "luasnip-jsregexp.lua")
+        )
+        shutil.copy2(
+            source_library, os.path.join(worktree, "deps", "luasnip-jsregexp.so")
+        )
+    except OSError as exc:
+        warn("unable to publish LuaSnip jsregexp artifacts: {0}".format(exc))
+        return False
+    return True
+
+
+def build_native_plugin_runtime(
+    env: Mapping[str, str],
+    repository: str,
+    lock: JSONMapping,
+    source_id: str,
+    worktree: str,
+    native_build: JSONMapping,
+) -> NativeBuildOutcome:
+    kind = native_build.get("kind")
+    if kind == "make":
+        make = resolve_required("make", env)
+        if make is None:
+            return "failed"
+        if not run_logged_command(
+            [make], env, worktree, show_success_output_on_stderr=False
+        ):
+            return "failed"
+        return (
+            "built"
+            if write_native_build_revision(worktree, lock, source_id, native_build)
+            else "failed"
+        )
+    if kind == "cargo":
+        cargo = resolve_required("cargo", env)
+        if cargo is None:
+            return optional_native_build_outcome(
+                source_id,
+                native_build,
+                "source {0} requires cargo on PATH".format(source_id),
+            )
+        minimum_version = native_build_minimum_cargo_version(native_build)
+        if minimum_version is not None:
+            version = cargo_version(cargo, env, repository)
+            if version is None:
+                return optional_native_build_outcome(
+                    source_id,
+                    native_build,
+                    "unable to query cargo version for source {0}".format(source_id),
+                )
+            if version < minimum_version:
+                return optional_native_build_outcome(
+                    source_id,
+                    native_build,
+                    "source {0} requires cargo >= {1}; found {2}".format(
+                        source_id,
+                        ".".join(str(part) for part in minimum_version),
+                        ".".join(str(part) for part in version),
+                    ),
+                )
+        if run_logged_command(
+            [cargo, *CARGO_BUILD_RELEASE],
+            env,
+            worktree,
+            show_success_output_on_stderr=False,
+        ):
+            return (
+                "built"
+                if write_native_build_revision(worktree, lock, source_id, native_build)
+                else "failed"
+            )
+        return optional_native_build_outcome(
+            source_id,
+            native_build,
+            "cargo native build failed for source {0}".format(source_id),
+        )
+    if kind == "luasnip_jsregexp":
+        dependency_sources = native_build_dependency_sources(source_id, native_build)
+        if dependency_sources is None:
+            return "failed"
+        if not overlay_native_build_dependency_sources(
+            repository, lock, worktree, dependency_sources
+        ):
+            return "failed"
+        make = resolve_required("make", env)
+        if make is None:
+            return "failed"
+        if not build_luasnip_jsregexp_runtime(make, env, repository, worktree):
+            return "failed"
+        return (
+            "built"
+            if write_native_build_revision(worktree, lock, source_id, native_build)
+            else "failed"
+        )
+    warn("unsupported native build kind for source {0}".format(source_id))
+    return "failed"
+
+
+def install_native_plugin_artifacts(
+    env: Mapping[str, str], repository: str, lock: JSONMapping
+) -> bool:
+    ok = True
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        return False
+    for source_id in native_build_source_ids(lock):
+        source_value = sources.get(source_id)
+        if not isinstance(source_value, dict):
+            ok = False
+            continue
+        worktree = source_worktree_by_id(repository, lock, source_id)
+        if worktree is None:
+            ok = False
+            continue
+        native_build = source_native_build(source_value)
+        outcome = build_native_plugin_runtime(
+            env, repository, lock, source_id, worktree, native_build
+        )
+        if outcome == "failed":
+            ok = False
+            continue
+        artifact = native_plugin_artifact_path(worktree, native_build)
+        if artifact is None:
+            warn(
+                "native plugin artifact path is not defined for source {0}".format(
+                    source_id
+                )
+            )
+            ok = False
+            continue
+        if outcome != "skipped" and not os.path.isfile(artifact):
+            if native_build_optional(native_build):
+                warn(
+                    "native plugin artifact missing for optional source {0}: {1}".format(
+                        source_id, artifact
+                    )
+                )
+            else:
+                warn(
+                    "native plugin artifact missing for source {0}: {1}".format(
+                        source_id, artifact
+                    )
+                )
+                ok = False
+        if outcome == "built" and not check_native_build_revision(
+            worktree, lock, source_id, native_build
+        ):
+            ok = False
+    return ok
+
+
+def check_native_plugin_artifacts(repository: str, lock: JSONMapping) -> bool:
+    sources = lock.get("sources", {})
+    if not isinstance(sources, dict):
+        return False
+    ok = True
+    for source_id in native_build_source_ids(lock):
+        source_value = sources.get(source_id)
+        if not isinstance(source_value, dict):
+            ok = False
+            continue
+        worktree = source_worktree_by_id(repository, lock, source_id)
+        if worktree is None:
+            ok = False
+            continue
+        native_build = source_native_build(source_value)
+        artifact = native_plugin_artifact_path(worktree, native_build)
+        if artifact is None:
+            warn(
+                "native plugin artifact path is not defined for source {0}".format(
+                    source_id
+                )
+            )
+            ok = False
+            continue
+        if not os.path.isfile(artifact):
+            if native_build_optional(native_build):
+                info(
+                    "optional native plugin artifact not installed for source {0}".format(
+                        source_id
+                    )
+                )
+            else:
+                warn(
+                    "native plugin artifact missing: {0}; run ./manage install".format(
+                        artifact
+                    )
+                )
+                ok = False
+            continue
+        if not check_native_build_revision(worktree, lock, source_id, native_build):
+            ok = False
+    return ok
+
+
+def read_json_object(path: str) -> Optional[JSONObject]:
+    return read_json_object_file(path, emit_warnings=True)
+
+
+def validate_upstream_metadata(path: str, metadata: JSONMapping) -> bool:
+    required_strings = ("url", "commit")
+    for key in required_strings:
+        value = metadata.get(key)
+        if not isinstance(value, str) or not value:
+            warn("{0} {1} must be a non-empty string".format(path, key))
+            return False
+
+    optional_strings = ("ref", "importedAt", "notes")
+    for key in optional_strings:
+        value = metadata.get(key)
+        if value is not None and not isinstance(value, str):
+            warn("{0} {1} must be a string".format(path, key))
+            return False
+
+    return True
+
+
+def nested_git_path(path: str) -> Optional[str]:
+    for current_root, directory_names, file_names in os.walk(path):
+        if ".git" in directory_names:
+            return os.path.join(current_root, ".git")
+        if ".git" in file_names:
+            return os.path.join(current_root, ".git")
+    return None
+
+
+def discover_vendored_plugins(repository: str) -> Optional[Sequence[str]]:
+    init_path = os.path.join(repository, "init.lua")
+    try:
+        with open(init_path, encoding="utf-8") as file:
+            text = file.read()
+    except OSError as exc:
+        warn("unable to read {0}: {1}".format(init_path, exc))
+        return None
+    return sorted(set(VENDORED_PLUGIN_CALL_PATTERN.findall(text)))
+
+
+def check_vendored_plugins(repository: str) -> bool:
+    plugin_names = discover_vendored_plugins(repository)
+    if plugin_names is None:
+        return False
+
+    ok = True
+    repository_realpath = os.path.realpath(repository)
+    for plugin_name in plugin_names:
+        path = vendored_plugin_dir(repository, plugin_name)
+        realpath = os.path.realpath(path)
+        if not os.path.isdir(path):
+            warn("vendored plugin not found: {0}".format(path))
+            ok = False
+            continue
+        if not path_within_repository(repository_realpath, realpath):
+            warn("vendored plugin escapes repository: {0}".format(path))
+            ok = False
+        git_path = nested_git_path(path)
+        if git_path is not None:
+            warn("vendored plugin contains nested .git: {0}".format(git_path))
+            ok = False
+        upstream_path = os.path.join(path, UPSTREAM_METADATA_NAME)
+        if os.path.exists(upstream_path):
+            metadata = read_json_object(upstream_path)
+            if metadata is None or not validate_upstream_metadata(
+                upstream_path, metadata
+            ):
+                ok = False
+    return ok
 
 
 def expand_lua_library_path(
@@ -415,15 +3339,24 @@ def check(fix: bool) -> int:
     if uv is None or stylua is None or lua_language_server is None or nvim is None:
         return 1
 
+    lock = load_git_worktrees_lock(repository)
+    if lock is None:
+        return 1
+
+    ok = True
+    if not check_git_sources(env, repository, lock):
+        ok = False
+    if not check_treesitter_runtime(env, repository, lock):
+        ok = False
+    if not check_native_plugin_artifacts(repository, lock):
+        ok = False
+    if not check_vendored_plugins(repository):
+        ok = False
+
     runtime = neovim_runtime(nvim, env, repository)
     if not runtime:
         return 1
     env["VIMRUNTIME"] = runtime
-
-    plenary = lazy_plugin_dir(repository, PLENARY_PLUGIN_NAME)
-    if not os.path.isdir(plenary):
-        warn("{0} not found; run ./manage install".format(plenary))
-        return 1
 
     libraries = lua_workspace_libraries(env, repository)
     if libraries is None:
@@ -433,6 +3366,13 @@ def check(fix: bool) -> int:
     if missing_libraries:
         for library in missing_libraries:
             warn("{0} not found; run ./manage install".format(library))
+        return 1
+
+    plenary = source_worktree_by_id(repository, lock, PLENARY_PLUGIN_NAME)
+    if plenary is None:
+        return 1
+    if not os.path.isdir(plenary):
+        warn("{0} not found; run ./manage install".format(plenary))
         return 1
 
     specs = discover_lua_specs(repository)
@@ -491,7 +3431,6 @@ def check(fix: bool) -> int:
         + ", { sequential = true })",
     ]
 
-    ok = True
     for command in commands:
         if not run_logged_command(command, env, repository):
             ok = False
@@ -512,10 +3451,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="manage")
     subparsers = parser.add_subparsers(dest="command", title="commands")
 
-    subparsers.add_parser(
+    install_parser = subparsers.add_parser(
         "install",
         help="sync production dependencies and install Neovim plugins",
         description="Install production dependencies when needed, then install Neovim plugins.",
+    )
+    install_parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="verify already-local state only; do not fetch, build, or mutate",
     )
 
     check_parser = subparsers.add_parser(
@@ -537,7 +3481,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "install":
-        return install()
+        return install(args.offline)
 
     if args.command == "check":
         return check(args.fix)

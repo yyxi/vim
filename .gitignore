@@ -11,6 +11,11 @@ vimrc
 .netrwhist
 /vendor/*
 !/vendor/.gitkeep
+!/vendor/plugins/
+!/vendor/plugins/**
+/vendor/plugins/**/doc/tags
+/vendor/git/
+/vendor/treesitter/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

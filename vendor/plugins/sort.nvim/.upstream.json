@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/sQVe/sort.nvim.git",
+  "commit": "fa6318fc6676294bff0fd56ae8e8f9552be1ac7e",
+  "ref": "refs/heads/main",
+  "notes": "Vendored snapshot managed in-repo for offline startup."
+}

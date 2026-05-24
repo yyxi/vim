@@ -76,11 +76,6 @@ function M.flash()
   require('flash').setup(opts)
 end
 
-function M.gtd()
-  ---@diagnostic disable-next-line: missing-fields
-  require('gtd').setup({})
-end
-
 function M.indent_blankline()
   require('ibl').setup({
     indent = {
@@ -239,7 +234,7 @@ function M.telescope()
     },
   })
 
-  telescope.load_extension('fzf')
+  pcall(telescope.load_extension, 'fzf')
   telescope.load_extension('yank_history')
   telescope.load_extension('ui-select')
 end

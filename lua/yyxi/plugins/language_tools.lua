@@ -46,6 +46,11 @@ local function configure_lua_ls_workspace(_, config)
   })
 end
 
+function M.gtd()
+  ---@diagnostic disable-next-line: missing-fields
+  require('gtd').setup({})
+end
+
 function M.lsp_fix()
   local fix = require('lsp-fix')
 

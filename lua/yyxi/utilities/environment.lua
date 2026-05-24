@@ -4,6 +4,8 @@ local uv = vim.uv or vim.loop
 local path_separator = package.config:sub(1, 1) == '\\' and ';' or ':'
 local directory_separator = package.config:sub(1, 1)
 local vendor_directory_name = 'vendor'
+local lazy_directory_name = 'lazy'
+local vendored_plugins_directory_name = 'plugins'
 local plugin_manager_package_name = 'lazy.nvim'
 
 ---@param parts string[]
@@ -130,16 +132,42 @@ function M.node_bin(root) return M.repository_path({ 'node_modules', '.bin' }, r
 ---@return string
 function M.vendor_root(root) return M.repository_path({ vendor_directory_name }, root) end
 
+---@param root? string
+---@return string
+function M.lazy_root(root)
+  return M.repository_path({ vendor_directory_name, lazy_directory_name }, root)
+end
+
 ---@param name string
 ---@param root? string
 ---@return string
 function M.vendor_package_path(name, root)
-  return M.repository_path({ vendor_directory_name, name }, root)
+  return M.repository_path({ vendor_directory_name, lazy_directory_name, name }, root)
 end
 
 ---@param root? string
 ---@return string
-function M.plugin_manager_path(root) return M.vendor_package_path(plugin_manager_package_name, root) end
+function M.vendored_plugins_root(root)
+  return M.repository_path({ vendor_directory_name, vendored_plugins_directory_name }, root)
+end
+
+---@param name string
+---@param root? string
+---@return string
+function M.vendored_plugin_path(name, root)
+  return M.repository_path({ vendor_directory_name, vendored_plugins_directory_name, name }, root)
+end
+
+---@param source_id string
+---@param root? string
+---@return string
+function M.git_worktree_path(source_id, root)
+  return M.repository_path({ vendor_directory_name, 'git', 'worktrees', source_id }, root)
+end
+
+---@param root? string
+---@return string
+function M.plugin_manager_path(root) return M.git_worktree_path(plugin_manager_package_name, root) end
 
 ---@param root? string
 ---@return string
@@ -263,6 +291,8 @@ end
 M.path_separator = path_separator
 M.directory_separator = directory_separator
 M.vendor_directory_name = vendor_directory_name
+M.lazy_directory_name = lazy_directory_name
+M.vendored_plugins_directory_name = vendored_plugins_directory_name
 M.plugin_manager_package_name = plugin_manager_package_name
 
 return M

@@ -1,0 +1,6 @@
+{
+  "url": "https://github.com/johmsalas/text-case.nvim.git",
+  "commit": "e898cfd46fa6cde0e83abb624a16e67d2ffc6457",
+  "ref": "refs/heads/main",
+  "notes": "Vendored snapshot managed in-repo for offline startup. Upstream license was not detected during audit."
+}
