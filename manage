@@ -320,10 +320,12 @@ def download_url(url: str, destination: str) -> bool:
 
 def path_within_repository(repository: str, path: str) -> bool:
     try:
-        common = os.path.commonpath([repository, os.path.abspath(path)])
+        repository_realpath = os.path.realpath(repository)
+        path_realpath = os.path.realpath(path)
+        common = os.path.commonpath([repository_realpath, path_realpath])
     except ValueError:
         return False
-    return common == repository
+    return common == repository_realpath
 
 
 def repository_path(repository: str, relative_path: str) -> Optional[str]:
@@ -515,6 +517,16 @@ def native_build_dependency_sources(
                 )
             )
             return None
+        for existing_path in dependencies:
+            if normalized_path.startswith(
+                existing_path + "/"
+            ) or existing_path.startswith(normalized_path + "/"):
+                warn(
+                    "source {0} plugin.nativeBuild.dependencySources must not contain overlapping destination paths".format(
+                        source_id
+                    )
+                )
+                return None
         if not valid_source_id(dependency_source_id):
             warn(
                 "source {0} plugin.nativeBuild.dependencySources values must be valid source ids".format(
@@ -738,6 +750,16 @@ def source_sparse_checkout_paths(
                 )
             )
             return []
+        for existing_path in paths:
+            existing_normalized = existing_path[1:]
+            if normalized == existing_normalized:
+                warn("source {0} files entries must not repeat paths".format(source_id))
+                return []
+            if normalized.startswith(
+                existing_normalized + "/"
+            ) or existing_normalized.startswith(normalized + "/"):
+                warn("source {0} files entries must not overlap".format(source_id))
+                return []
         paths.append("/" + normalized)
     return paths
 
@@ -2250,6 +2272,17 @@ def copy_source_for_build(
     return destination
 
 
+def query_dependency_data(parser_data: JSONMapping) -> JSONObject:
+    query_data: JSONObject = {}
+    query_source = parser_data.get("querySource")
+    if isinstance(query_source, str):
+        query_data["querySource"] = query_source
+    query_path = parser_data.get("queryPath")
+    if isinstance(query_path, str):
+        query_data["queryPath"] = query_path
+    return query_data
+
+
 def install_treesitter_runtime(
     env: Mapping[str, str], repository: str, lock: JSONMapping
 ) -> bool:
@@ -2275,7 +2308,16 @@ def install_treesitter_runtime(
     if tree_sitter is None:
         return False
 
-    with tempfile.TemporaryDirectory(prefix="treesitter-runtime-") as staging_root:
+    runtime_parent = os.path.dirname(runtime_site)
+    try:
+        os.makedirs(runtime_parent, exist_ok=True)
+    except OSError as exc:
+        warn("unable to create {0}: {1}".format(runtime_parent, exc))
+        return False
+
+    with tempfile.TemporaryDirectory(
+        prefix="treesitter-runtime-", dir=runtime_parent
+    ) as staging_root:
         staged_runtime_site = os.path.join(staging_root, "site")
         try:
             for child in ("parser", "queries", "state"):
@@ -2364,14 +2406,10 @@ def install_treesitter_runtime(
                     revision_name=None,
                 ):
                     ok = False
+                query_data = query_dependency_data(parser_data)
                 for query_language in sequence_strings(
                     parser_data.get("queryDependencies")
                 ):
-                    query_data = {}
-                    if isinstance(parser_data.get("querySource"), str):
-                        query_data["querySource"] = parser_data.get("querySource")
-                    if isinstance(parser_data.get("queryPath"), str):
-                        query_data["queryPath"] = parser_data.get("queryPath")
                     if not install_query_language(
                         repository,
                         lock,
@@ -2496,12 +2534,33 @@ def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
                     )
                 )
                 ok = False
+        query_data = query_dependency_data(parser_data)
         for query_language in sequence_strings(parser_data.get("queryDependencies")):
             query_dir = os.path.join(runtime_site, "queries", query_language)
             if not os.path.isdir(query_dir):
                 warn(
                     "Treesitter query dependency missing: {0}; run ./manage install".format(
                         query_dir
+                    )
+                )
+                ok = False
+                continue
+            resolved_dependency_source = query_source_path(
+                repository, lock, query_language, query_data
+            )
+            if resolved_dependency_source is None:
+                ok = False
+                continue
+            query_source_id, _ = resolved_dependency_source
+            query_commit = source_commit_by_id(lock, query_source_id)
+            if (
+                query_commit
+                and read_text_file(revision_file_path(runtime_site, query_language))
+                != query_commit
+            ):
+                warn(
+                    "Treesitter query dependency revision mismatch for {0}; run ./manage install".format(
+                        query_language
                     )
                 )
                 ok = False
@@ -2613,13 +2672,13 @@ def install(offline: bool) -> int:
         info("offline mode: skipped Lazy restore")
         return 0 if ok else 1
 
-    nvim = shutil.which("nvim", path=env.get("PATH"))
-    if not nvim:
-        info("nvim not found; skipped Neovim config link and Lazy restore")
-        return 0 if ok else 1
-
     if not link_neovim_config(home, repository):
         ok = False
+
+    nvim = shutil.which("nvim", path=env.get("PATH"))
+    if not nvim:
+        info("nvim not found; skipped Lazy restore")
+        return 0 if ok else 1
 
     if ok and not sync_neovim_plugins(nvim, env, repository):
         ok = False
@@ -2930,8 +2989,8 @@ def overlay_native_build_dependency_sources(
             return False
         destination = os.path.join(worktree, relative_path)
         try:
-            if os.path.exists(destination):
-                shutil.rmtree(destination)
+            if os.path.exists(destination) or os.path.islink(destination):
+                remove_path(destination)
             shutil.copytree(
                 dependency_worktree,
                 destination,
