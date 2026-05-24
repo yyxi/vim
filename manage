@@ -2871,6 +2871,12 @@ def native_library_extension() -> str:
     return ".so"
 
 
+def lua_module_make_overrides() -> Sequence[str]:
+    if sys.platform == "darwin":
+        return ("LDFLAGS=-bundle -undefined dynamic_lookup", "LDLIBS=")
+    return ("LDLIBS=",)
+
+
 def native_plugin_artifact_path(
     worktree: str, native_build: JSONMapping
 ) -> Optional[str]:
@@ -3025,7 +3031,7 @@ def build_luasnip_jsregexp_runtime(
                 "-C",
                 build_dir,
                 "INCLUDE_DIR=-I{0}/".format(include_dir),
-                "LDLIBS=",
+                *lua_module_make_overrides(),
             ],
             env,
             repository,

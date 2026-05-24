@@ -24,7 +24,7 @@ function M.setup()
   luasnip.config.setup()
 
   require('luasnip.loaders.from_vscode').lazy_load({
-    exclude = { 'html', 'all' },
+    exclude = { 'html' },
   })
 
   local has_words_before = function()
@@ -44,14 +44,22 @@ function M.setup()
       ['<CR>'] = { 'accept', 'fallback' },
       ['<Tab>'] = {
         function(cmp)
-          if has_words_before() and not cmp.is_visible() then return cmp.show() end
+          if not cmp.snippet_active({ direction = 1 }) and has_words_before() and not cmp.is_visible() then
+            return cmp.show()
+          end
         end,
-        'select_next',
         'snippet_forward',
+        'select_next',
         'fallback',
       },
-      ['<S-Tab>'] = { 'select_prev', 'snippet_backward', 'fallback' },
-      ['<Esc>'] = { 'fallback' },
+      ['<S-Tab>'] = { 'snippet_backward', 'select_prev', 'fallback' },
+      ['<Esc>'] = {
+        function(cmp)
+          if cmp.is_menu_visible() then cmp.hide() end
+          if cmp.snippet_active() then require('luasnip').unlink_current() end
+        end,
+        'fallback',
+      },
     },
     appearance = {
       use_nvim_cmp_as_default = true,
@@ -117,7 +125,7 @@ function M.setup()
             -- },
             label = {
               width = { fill = true, max = 60 },
-              text = function(ctx) return ctx.label .. ctx.label_detail end,
+              text = function(ctx) return ctx.label .. (ctx.label_detail or '') end,
               highlight = function(ctx)
                 -- label and label details
                 local highlights = {
