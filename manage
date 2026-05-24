@@ -81,7 +81,7 @@ def home_dir() -> str:
 
 
 def repository_dir() -> str:
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(os.path.realpath(__file__))
 
 
 def local_bin_directories(home: str) -> Sequence[str]:
@@ -1081,7 +1081,7 @@ def ensure_worktree(
             env,
             repository,
             show_success_output_on_stderr=False,
-        ):
+        ) and not worktree_is_locked(git, env, repository, git_dir, worktree):
             return False
     return check_worktree_pristine(
         git, env, repository, source_id, worktree, source_allowed_dirty_paths(source)
@@ -1190,10 +1190,16 @@ def worktree_record(
         if completed is not None:
             print_completed_output(completed)
         return None
+    worktree_realpath = os.path.realpath(worktree)
     records = completed.stdout.split("\n\n")
     for record in records:
         lines = record.splitlines()
-        if lines and lines[0] == "worktree " + worktree:
+        if not lines or not lines[0].startswith("worktree "):
+            continue
+        listed_worktree = lines[0][len("worktree ") :]
+        if listed_worktree == worktree:
+            return lines
+        if os.path.realpath(listed_worktree) == worktree_realpath:
             return lines
     return []
 
