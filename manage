@@ -2909,7 +2909,7 @@ def install(offline: bool, refresh: bool) -> int:
     elif offline:
         if not install_managed_state_ok(env, repository, lock, emit_warnings=True):
             ok = False
-        if not check_neovim_config_link(home, repository, emit_warnings=True):
+        if not link_neovim_config(home, repository):
             ok = False
         return 0 if ok else 1
     else:
@@ -3903,7 +3903,7 @@ def build_parser() -> argparse.ArgumentParser:
     install_mode.add_argument(
         "--offline",
         action="store_true",
-        help="verify already-local state only; do not fetch, build, download, or mutate",
+        help="verify already-local managed state only; do not fetch, build, or download; still ensure the Neovim config link exists",
     )
     install_mode.add_argument(
         "--refresh",
