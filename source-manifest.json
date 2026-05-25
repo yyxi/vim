@@ -13,7 +13,8 @@
         "doc",
         "lua",
         "plugin",
-        "runtime/queries"
+        "runtime/queries",
+        "LICENSE"
       ],
       "allowedDirtyPaths": [
         "doc/tags"
@@ -27,7 +28,8 @@
       "commit": "10fe0054734eec83049514ea2e718b2a56acd0c9",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE.md"
       ],
       "treesitter": {
         "parsers": {
@@ -48,7 +50,8 @@
       "commit": "001c28d7a29832b06b0e831ec77845553c89b56d",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -69,7 +72,8 @@
       "ref": "refs/heads/split_parser",
       "files": [
         "tree-sitter-markdown",
-        "tree-sitter-markdown-inline"
+        "tree-sitter-markdown-inline",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -101,7 +105,8 @@
       "ref": "refs/heads/main",
       "files": [
         "queries",
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -125,7 +130,8 @@
       "files": [
         "common",
         "typescript",
-        "tsx"
+        "tsx",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -162,7 +168,8 @@
       "commit": "ce8011a414fdf8091f4e4071752efc376f4afb08",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -186,7 +193,8 @@
       "commit": "4463985dfccc640f3d6991e3396a2047610cf5f8",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -207,7 +215,8 @@
       "commit": "293fdc02038ee2bf0e2e206711b69c90ac0d413f",
       "ref": "refs/tags/v0.25.0",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -228,7 +237,8 @@
       "commit": "77a3747266f4d621d0757825e6b11edcbf991ca5",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -249,7 +259,8 @@
       "commit": "fa2143f5d66a9eb6c007ba9173525ea7aaafe788",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -270,7 +281,8 @@
       "commit": "0fbc9f99d5a28865f9de8427fb0672d66f9d83a5",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -290,7 +302,8 @@
       "commit": "760ba8e34e7a68294ffb9c495e1388e030366188",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -310,7 +323,8 @@
       "commit": "3092fcd99eb87bbd0fc434aa03650ba58bd5b43b",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -330,7 +344,8 @@
       "commit": "70613f3d812cbabbd7f38d104d60a409c4008b43",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -350,7 +365,8 @@
       "commit": "8454f266717232525ed03c7b09164b0404a03150",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -372,7 +388,8 @@
       "ref": "refs/heads/main",
       "files": [
         "src",
-        "dialects/terraform"
+        "dialects/terraform",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -405,7 +422,8 @@
       "commit": "1b7af09d45b579f9f288453b95ad555f1f431645",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -425,7 +443,8 @@
       "commit": "2520c3f934b3179bb540d23e0ef45f75304b5fed",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -445,7 +464,8 @@
       "commit": "71d2693deadaca8cdc09e38ba41d2f6042da1616",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -466,7 +486,8 @@
       "commit": "6479aa13f32f701c383083d8b28360ebd682fb7d",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -492,7 +513,8 @@
           "sha256": "a97a324eae9c81ed68f6e162b9b33f8911fc6442caa2950e57c498e2460d1387",
           "files": [
             "src",
-            "queries"
+            "queries",
+            "LICENSE"
           ]
         },
         "parsers": {
@@ -514,7 +536,8 @@
       "commit": "64b56832c2cffe41758f28e05c756a3a98d16f41",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -535,7 +558,8 @@
       "commit": "2346a3ab1bb3857b48b29d779a1ef9799a248cd7",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -556,7 +580,8 @@
       "commit": "2e886870578eeba1927a2dc4bd2e2b3f598c5f9a",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -576,7 +601,8 @@
       "commit": "27816eb6b7315746ae9fcf711e4e1396dc1cf237",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -595,7 +621,8 @@
       "commit": "949a8a470559543857a62102c84700d291fc984c",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -615,7 +642,8 @@
       "commit": "5e66e961eee421786bdda8495ed1db045e06b5fe",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -636,7 +664,8 @@
       "commit": "73a3947324f6efddf9e17c0ea58d454843590cc0",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -660,7 +689,8 @@
       "commit": "58404d8cf191d69f2674a8fd507bd5776f46cb11",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -685,7 +715,8 @@
       "commit": "658d18dcdddb75c760363faa4963427a7c6b52db",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -704,7 +735,8 @@
       "commit": "90ae195b31933ceb9d079abfa8a3ad0a36fee4cc",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -725,7 +757,8 @@
       "commit": "47ade644d754cce57974aac44d2c9450e823d4f4",
       "ref": "refs/heads/main",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -745,7 +778,8 @@
       "commit": "eabf96807ea4ab6d6c7f09b671a88cd483542840",
       "ref": "refs/heads/master",
       "files": [
-        "src"
+        "src",
+        "LICENSE"
       ],
       "treesitter": {
         "parsers": {
@@ -761,12 +795,372 @@
         }
       }
     },
+    "tree-sitter-gitcommit": {
+      "url": "https://github.com/gbprod/tree-sitter-gitcommit.git",
+      "commit": "33fe8548abcc6e374feaac5724b5a2364bf23090",
+      "ref": "refs/tags/v0.5.0",
+      "files": [
+        "src",
+        "LICENCE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "gitcommit": {
+            "location": ".",
+            "parser": "gitcommit",
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-gitignore": {
+      "url": "https://github.com/shunsambongi/tree-sitter-gitignore.git",
+      "commit": "f4685bf11ac466dd278449bcfe5fd014e94aa504",
+      "ref": "refs/heads/main",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "gitignore": {
+            "location": ".",
+            "parser": "gitignore",
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-editorconfig": {
+      "url": "https://github.com/ValdezFOmar/tree-sitter-editorconfig.git",
+      "commit": "c4d5e725e1bbf683b223f4bebe83142cefe68da5",
+      "ref": "refs/tags/v2.0.0",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "editorconfig": {
+            "location": ".",
+            "parser": "editorconfig",
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-swift": {
+      "url": "https://github.com/alex-pinkus/tree-sitter-swift.git",
+      "commit": "8abb3e8b33256d89127a35e87480736f74755ff9",
+      "ref": "refs/tags/0.7.2",
+      "files": [
+        "grammar.js",
+        "tree-sitter.json",
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "swift": {
+            "location": ".",
+            "parser": "swift",
+            "generate": true,
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-svelte": {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-svelte.git",
+      "commit": "ae5199db47757f785e43a14b332118a5474de1a2",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "svelte": {
+            "location": ".",
+            "parser": "svelte",
+            "queryDependencies": [
+              "html_tags"
+            ],
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-astro": {
+      "url": "https://github.com/virchau13/tree-sitter-astro.git",
+      "commit": "213f6e6973d9b456c6e50e86f19f66877e7ef0ee",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "astro": {
+            "location": ".",
+            "parser": "astro",
+            "queryDependencies": [
+              "html_tags"
+            ],
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-css": {
+      "url": "https://github.com/tree-sitter/tree-sitter-css.git",
+      "commit": "dda5cfc5722c429eaba1c910ca32c2c0c5bb1a3f",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "css": {
+            "location": ".",
+            "parser": "css",
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-bash": {
+      "url": "https://github.com/tree-sitter/tree-sitter-bash.git",
+      "commit": "a06c2e4415e9bc0346c6b86d401879ffb44058f7",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "bash": {
+            "location": ".",
+            "parser": "bash",
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-c": {
+      "url": "https://github.com/tree-sitter/tree-sitter-c.git",
+      "commit": "ae19b676b13bdcc13b7665397e6d9b14975473dd",
+      "ref": "refs/tags/v0.24.2",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "c": {
+            "location": ".",
+            "parser": "c",
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-cpp": {
+      "url": "https://github.com/tree-sitter/tree-sitter-cpp.git",
+      "commit": "8b5b49eb196bec7040441bee33b2c9a4838d6967",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "cpp": {
+            "location": ".",
+            "parser": "cpp",
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-dockerfile": {
+      "url": "https://github.com/camdencheek/tree-sitter-dockerfile.git",
+      "commit": "971acdd908568b4531b0ba28a445bf0bb720aba5",
+      "ref": "refs/heads/main",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "dockerfile": {
+            "location": ".",
+            "parser": "dockerfile",
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-ini": {
+      "url": "https://github.com/justinmk/tree-sitter-ini.git",
+      "commit": "e4018b5176132b4f3c5d6e61cea383f42288d0f5",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "ini": {
+            "location": ".",
+            "parser": "ini",
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-elixir": {
+      "url": "https://github.com/elixir-lang/tree-sitter-elixir.git",
+      "commit": "7937d3b4d65fa574163cfa59394515d3c1cf16f4",
+      "ref": "refs/heads/main",
+      "files": [
+        "src",
+        "LICENSE",
+        "NOTICE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "elixir": {
+            "location": ".",
+            "parser": "elixir",
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-haskell": {
+      "url": "https://github.com/tree-sitter-grammars/tree-sitter-haskell.git",
+      "commit": "7fa19f195803a77855f036ee7f49e4b22856e338",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "haskell": {
+            "location": ".",
+            "parser": "haskell",
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-ocaml": {
+      "url": "https://github.com/tree-sitter/tree-sitter-ocaml.git",
+      "commit": "5a979b3ec7f1fe990b8e8c4412294a0cf7228e45",
+      "ref": "refs/tags/v0.25.0",
+      "files": [
+        "common",
+        "grammars/ocaml",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "ocaml": {
+            "location": "grammars/ocaml",
+            "parser": "ocaml",
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents"
+            ]
+          }
+        }
+      }
+    },
+    "tree-sitter-latex": {
+      "url": "https://github.com/latex-lsp/tree-sitter-latex.git",
+      "commit": "7e0ecdc02926c7b9b2e0c76003d4fe7b0944f957",
+      "ref": "refs/heads/master",
+      "files": [
+        "grammar.js",
+        "tree-sitter.json",
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "latex": {
+            "location": ".",
+            "parser": "latex",
+            "generate": true,
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
     "nvim-treesitter-textobjects": {
       "url": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects.git",
       "commit": "851e865342e5a4cb1ae23d31caf6e991e1c99f1e",
       "ref": "refs/heads/main",
       "files": [
-        "queries"
+        "queries",
+        "LICENSE"
       ],
       "treesitter": {
         "queryRoot": "queries"
@@ -778,7 +1172,8 @@
       "ref": "refs/heads/main",
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ],
       "allowedDirtyPaths": [
         "doc/tags"
@@ -795,7 +1190,8 @@
         "data",
         "doc",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE"
       ]
     },
     "none-ls.nvim": {
@@ -807,7 +1203,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "nvim-lspconfig": {
@@ -821,7 +1218,8 @@
         "doc",
         "lsp",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE.md"
       ]
     },
     "schemastore.nvim": {
@@ -833,7 +1231,9 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE",
+        "NOTICE"
       ]
     },
     "conform.nvim": {
@@ -846,7 +1246,8 @@
       "files": [
         "doc",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE"
       ]
     },
     "telescope.nvim": {
@@ -862,7 +1263,8 @@
         "doc",
         "ftplugin",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE"
       ]
     },
     "snacks.nvim": {
@@ -876,7 +1278,8 @@
         "doc",
         "lua",
         "plugin",
-        "queries"
+        "queries",
+        "LICENSE"
       ]
     },
     "lualine.nvim": {
@@ -888,7 +1291,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "mini.base16": {
@@ -901,7 +1305,8 @@
       "files": [
         "colors",
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "mini.bufremove": {
@@ -913,7 +1318,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "ibl": {
@@ -926,7 +1332,8 @@
       "files": [
         "after",
         "doc",
-        "lua"
+        "lua",
+        "LICENSE.md"
       ]
     },
     "mini.hipatterns": {
@@ -938,7 +1345,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "friendly-snippets": {
@@ -947,7 +1355,8 @@
       "ref": "refs/heads/main",
       "files": [
         "package.json",
-        "snippets"
+        "snippets",
+        "LICENSE"
       ]
     },
     "treesj": {
@@ -959,7 +1368,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "lean.nvim": {
@@ -977,7 +1387,8 @@
         "lua",
         "plugin",
         "queries",
-        "syntax"
+        "syntax",
+        "COPYING"
       ]
     },
     "vim-matchup": {
@@ -992,7 +1403,8 @@
         "autoload",
         "doc",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE.md"
       ]
     },
     "nvim-ts-autotag": {
@@ -1004,7 +1416,8 @@
       ],
       "files": [
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE"
       ]
     },
     "nvim-autopairs": {
@@ -1016,7 +1429,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "telescope-ui-select.nvim": {
@@ -1027,7 +1441,8 @@
         "doc/tags"
       ],
       "files": [
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "nvim-gtd": {
@@ -1051,7 +1466,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "mini.surround": {
@@ -1063,7 +1479,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "flash.nvim": {
@@ -1075,7 +1492,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "mini.align": {
@@ -1087,7 +1505,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "which-key.nvim": {
@@ -1100,7 +1519,8 @@
       "files": [
         "doc",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE"
       ]
     },
     "zen-mode.nvim": {
@@ -1113,7 +1533,8 @@
       "files": [
         "doc",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENSE"
       ]
     },
     "neogen": {
@@ -1125,7 +1546,8 @@
       ],
       "files": [
         "doc",
-        "lua"
+        "lua",
+        "LICENSE"
       ]
     },
     "yanky.nvim": {
@@ -1138,7 +1560,8 @@
       "files": [
         "doc",
         "lua",
-        "plugin"
+        "plugin",
+        "LICENCE"
       ]
     },
     "telescope-fzf-native.nvim": {
@@ -1148,7 +1571,8 @@
       "files": [
         "Makefile",
         "lua",
-        "src"
+        "src",
+        "LICENSE"
       ],
       "allowedDirtyPaths": [
         "build"
@@ -1170,7 +1594,8 @@
         "ftplugin",
         "lua",
         "plugin",
-        "syntax"
+        "syntax",
+        "LICENSE"
       ],
       "allowedDirtyPaths": [
         "deps/jsregexp",
@@ -1199,7 +1624,8 @@
         "Makefile",
         "jsregexp.c",
         "jsregexp.lua",
-        "libregexp"
+        "libregexp",
+        "LICENSE"
       ]
     },
     "jsregexp-005": {
@@ -1216,7 +1642,8 @@
         "libregexp.h",
         "libunicode-table.h",
         "libunicode.c",
-        "libunicode.h"
+        "libunicode.h",
+        "LICENSE"
       ]
     },
     "jsregexp-006": {
@@ -1234,7 +1661,8 @@
         "libregexp.h",
         "libunicode-table.h",
         "libunicode.c",
-        "libunicode.h"
+        "libunicode.h",
+        "LICENSE"
       ]
     },
     "blink.cmp": {
@@ -1249,7 +1677,8 @@
         "doc",
         "lua",
         "plugin",
-        "src"
+        "src",
+        "LICENSE"
       ],
       "plugin": {
         "nativeBuild": {

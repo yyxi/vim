@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import re
 import shlex
 import shutil
@@ -159,6 +160,7 @@ def sync_pnpm_production(env: Mapping[str, str], repository: str) -> bool:
     if not os.path.exists(os.path.join(repository, "package.json")):
         return True
 
+    # Let pnpm remain the single source of truth for production dependency state.
     return run_logged_command([pnpm, *PNPM_INSTALL_PRODUCTION], env, repository)
 
 
@@ -542,6 +544,18 @@ def root_treesitter_metadata(lock: JSONMapping) -> JSONMapping:
     return treesitter if isinstance(treesitter, dict) else {}
 
 
+def treesitter_minimum_cli_version(
+    lock: JSONMapping,
+) -> tuple[int, int, int]:
+    minimum = TREE_SITTER_MINIMUM_VERSION
+    minimum_value = root_treesitter_metadata(lock).get("minimumCliVersion")
+    if isinstance(minimum_value, str):
+        parsed = parse_version_tuple(minimum_value)
+        if parsed is not None:
+            return parsed
+    return minimum
+
+
 def source_repository_path(
     repository: str, lock: JSONMapping, source_id: str, source: JSONMapping
 ) -> Optional[str]:
@@ -820,6 +834,7 @@ def fetch_source_commit(
     source_id: str,
     source: JSONMapping,
     git_dir: str,
+    refresh: bool,
 ) -> bool:
     commit = source.get("commit")
     if not isinstance(commit, str) or not commit:
@@ -832,11 +847,9 @@ def fetch_source_commit(
     if filter_value:
         fetch_base.append("--filter=" + filter_value)
     ref = source.get("ref")
-    if (not isinstance(ref, str) or not ref) and commit_available(
-        git, env, repository, git_dir, commit
-    ):
+    commit_is_available = commit_available(git, env, repository, git_dir, commit)
+    if commit_is_available and not refresh:
         return True
-    ref_fetched = False
     if isinstance(ref, str) and ref:
         if not run_logged_command(
             git_dir_command(git, git_dir, [*fetch_base, remote, ref]),
@@ -845,8 +858,9 @@ def fetch_source_commit(
             show_success_output_on_stderr=False,
         ):
             return False
-        ref_fetched = True
-    if ref_fetched and commit_available(git, env, repository, git_dir, commit):
+        if commit_available(git, env, repository, git_dir, commit):
+            return True
+    if commit_is_available and (not isinstance(ref, str) or not ref):
         return True
     if not run_logged_command(
         git_dir_command(git, git_dir, [*fetch_base, remote, commit]),
@@ -963,11 +977,12 @@ def configure_worktree_sparse_checkout(
     sparse_paths: Optional[Sequence[str]],
     initialize: bool,
 ) -> bool:
+    enabled = worktree_sparse_checkout_enabled(git, env, repository, worktree)
+    if enabled is None:
+        warn("unable to inspect source {0} sparse checkout state".format(source_id))
+        return False
+
     if sparse_paths is None:
-        enabled = worktree_sparse_checkout_enabled(git, env, repository, worktree)
-        if enabled is None:
-            warn("unable to inspect source {0} sparse checkout state".format(source_id))
-            return False
         if not enabled:
             return True
         return run_logged_command(
@@ -976,6 +991,14 @@ def configure_worktree_sparse_checkout(
             repository,
             show_success_output_on_stderr=False,
         )
+
+    if not initialize and enabled:
+        actual = worktree_sparse_checkout_list(git, env, repository, worktree)
+        if actual is None:
+            warn("unable to inspect source {0} sparse checkout paths".format(source_id))
+            return False
+        if list(actual) == list(sparse_paths):
+            return True
 
     if not run_logged_command(
         [git, "-C", worktree, "sparse-checkout", "set", "--no-cone", *sparse_paths],
@@ -1041,7 +1064,11 @@ def ensure_worktree(
             initialize=False,
         ):
             return False
-        if not run_logged_command(
+        head = worktree_head(git, env, repository, worktree)
+        if head is None:
+            warn("unable to inspect source {0} HEAD".format(source_id))
+            return False
+        if head != commit and not run_logged_command(
             [git, "-C", worktree, "checkout", "--detach", commit],
             env,
             repository,
@@ -1086,20 +1113,15 @@ def ensure_worktree(
         ):
             return False
 
-    if source_locked(source) and not worktree_is_locked(
-        git, env, repository, git_dir, worktree
+    if not ensure_worktree_lock_state(
+        git,
+        env,
+        repository,
+        git_dir,
+        worktree,
+        source_locked(source),
     ):
-        if not run_logged_command(
-            git_dir_command(
-                git,
-                git_dir,
-                ["worktree", "lock", "--reason", WORKTREE_LOCK_REASON, worktree],
-            ),
-            env,
-            repository,
-            show_success_output_on_stderr=False,
-        ) and not worktree_is_locked(git, env, repository, git_dir, worktree):
-            return False
+        return False
     return check_worktree_pristine(
         git, env, repository, source_id, worktree, source_allowed_dirty_paths(source)
     )
@@ -1140,6 +1162,7 @@ def check_worktree_pristine(
     source_id: str,
     worktree: str,
     allowed_dirty_paths: Sequence[str] = (),
+    emit_warnings: bool = True,
 ) -> bool:
     status = run_captured_command(
         [git, "-C", worktree, "status", "--porcelain", "--untracked-files=all"],
@@ -1147,9 +1170,10 @@ def check_worktree_pristine(
         repository,
     )
     if status is None or status.returncode != 0:
-        warn("unable to inspect source {0} worktree status".format(source_id))
-        if status is not None:
-            print_completed_output(status)
+        if emit_warnings:
+            warn("unable to inspect source {0} worktree status".format(source_id))
+            if status is not None:
+                print_completed_output(status)
         return False
     ignored = run_captured_command(
         [
@@ -1165,9 +1189,10 @@ def check_worktree_pristine(
         repository,
     )
     if ignored is None or ignored.returncode != 0:
-        warn("unable to inspect source {0} ignored files".format(source_id))
-        if ignored is not None:
-            print_completed_output(ignored)
+        if emit_warnings:
+            warn("unable to inspect source {0} ignored files".format(source_id))
+            if ignored is not None:
+                print_completed_output(ignored)
         return False
 
     dirty = []
@@ -1182,11 +1207,12 @@ def check_worktree_pristine(
     if ignored_dirty:
         dirty.append("\n".join(ignored_dirty))
     if dirty:
-        warn(
-            "source {0} worktree is not pristine:\n{1}".format(
-                source_id, "\n".join(dirty)
+        if emit_warnings:
+            warn(
+                "source {0} worktree is not pristine:\n{1}".format(
+                    source_id, "\n".join(dirty)
+                )
             )
-        )
         return False
     return True
 
@@ -1221,17 +1247,75 @@ def worktree_record(
     return []
 
 
-def worktree_is_locked(
+def worktree_lock_state(
     git: str,
     env: Mapping[str, str],
     repository: str,
     git_dir: str,
     worktree: str,
-) -> bool:
+) -> Optional[bool]:
     lines = worktree_record(git, env, repository, git_dir, worktree)
     if lines is None:
-        return False
+        return None
     return any(line == "locked" or line.startswith("locked ") for line in lines)
+
+
+def ensure_worktree_lock_state(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    git_dir: str,
+    worktree: str,
+    locked: bool,
+) -> bool:
+    current = worktree_lock_state(git, env, repository, git_dir, worktree)
+    if current is None:
+        warn("unable to inspect Git worktree lock state: {0}".format(worktree))
+        return False
+    if current == locked:
+        return True
+    args = (
+        ["worktree", "lock", "--reason", WORKTREE_LOCK_REASON, worktree]
+        if locked
+        else ["worktree", "unlock", worktree]
+    )
+    if not run_logged_command(
+        git_dir_command(git, git_dir, args),
+        env,
+        repository,
+        show_success_output_on_stderr=False,
+    ):
+        return False
+    updated = worktree_lock_state(git, env, repository, git_dir, worktree)
+    return updated == locked
+
+
+def check_worktree_lock_state(
+    git: str,
+    env: Mapping[str, str],
+    repository: str,
+    source_id: str,
+    git_dir: str,
+    worktree: str,
+    locked: bool,
+    emit_warnings: bool = True,
+) -> bool:
+    current = worktree_lock_state(git, env, repository, git_dir, worktree)
+    if current is None:
+        if emit_warnings:
+            warn("unable to inspect source {0} worktree lock state".format(source_id))
+        return False
+    if current == locked:
+        return True
+    if emit_warnings:
+        warn(
+            "source {0} worktree lock mismatch: expected {1}, found {2}".format(
+                source_id,
+                "locked" if locked else "unlocked",
+                "locked" if current else "unlocked",
+            )
+        )
+    return False
 
 
 def remove_missing_worktree_registration(
@@ -1242,7 +1326,9 @@ def remove_missing_worktree_registration(
     worktree: str,
 ) -> bool:
     lines = worktree_record(git, env, repository, git_dir, worktree)
-    if lines is None or not lines:
+    if lines is None:
+        return False
+    if not lines:
         return True
     return run_logged_command(
         git_dir_command(
@@ -1255,7 +1341,7 @@ def remove_missing_worktree_registration(
 
 
 def materialize_git_sources(
-    env: Mapping[str, str], repository: str, lock: JSONMapping
+    env: Mapping[str, str], repository: str, lock: JSONMapping, refresh: bool
 ) -> bool:
     git = resolve_required("git", env)
     if git is None:
@@ -1288,7 +1374,7 @@ def materialize_git_sources(
             ok = False
             continue
         if not fetch_source_commit(
-            git, env, repository, source_id, source_value, git_dir
+            git, env, repository, source_id, source_value, git_dir, refresh
         ):
             ok = False
             continue
@@ -1306,6 +1392,7 @@ def check_worktree_sparse_checkout(
     source_id: str,
     source: JSONMapping,
     worktree: str,
+    emit_warnings: bool = True,
 ) -> bool:
     expected = source_sparse_checkout_paths(source, source_id)
     if expected == []:
@@ -1313,46 +1400,60 @@ def check_worktree_sparse_checkout(
 
     enabled = worktree_sparse_checkout_enabled(git, env, repository, worktree)
     if enabled is None:
-        warn("unable to inspect source {0} sparse checkout state".format(source_id))
+        if emit_warnings:
+            warn("unable to inspect source {0} sparse checkout state".format(source_id))
         return False
     if expected is None:
         if enabled:
-            warn("source {0} sparse checkout is enabled unexpectedly".format(source_id))
+            if emit_warnings:
+                warn(
+                    "source {0} sparse checkout is enabled unexpectedly".format(
+                        source_id
+                    )
+                )
             return False
         return True
     if not enabled:
-        warn("source {0} sparse checkout is not enabled".format(source_id))
+        if emit_warnings:
+            warn("source {0} sparse checkout is not enabled".format(source_id))
         return False
     actual = worktree_sparse_checkout_list(git, env, repository, worktree)
     if actual is None:
-        warn("unable to inspect source {0} sparse checkout paths".format(source_id))
+        if emit_warnings:
+            warn("unable to inspect source {0} sparse checkout paths".format(source_id))
         return False
     if list(actual) != list(expected):
-        warn(
-            "source {0} sparse checkout mismatch: expected {1}, found {2}".format(
-                source_id,
-                ", ".join(expected),
-                ", ".join(actual),
+        if emit_warnings:
+            warn(
+                "source {0} sparse checkout mismatch: expected {1}, found {2}".format(
+                    source_id,
+                    ", ".join(expected),
+                    ", ".join(actual),
+                )
             )
-        )
         return False
     return True
 
 
-def check_git_sources(
-    env: Mapping[str, str], repository: str, lock: JSONMapping
+def git_sources_state_ok(
+    env: Mapping[str, str],
+    repository: str,
+    lock: JSONMapping,
+    emit_warnings: bool,
 ) -> bool:
     git = resolve_required("git", env)
     if git is None:
         return False
     sources = lock.get("sources", {})
     if not isinstance(sources, dict):
-        warn("lockfile sources must be an object")
+        if emit_warnings:
+            warn("lockfile sources must be an object")
         return False
     ok = True
     for source_id, source_value in sources.items():
         if not valid_source_id(source_id) or not isinstance(source_value, dict):
-            warn("invalid source entry in lockfile")
+            if emit_warnings:
+                warn("invalid source entry in lockfile")
             ok = False
             continue
         if not validate_source_settings(source_id, source_value):
@@ -1365,16 +1466,18 @@ def check_git_sources(
             ok = False
             continue
         if not os.path.isdir(git_dir):
-            warn(
-                "source {0} repository not found; run ./manage install".format(
-                    source_id
+            if emit_warnings:
+                warn(
+                    "source {0} repository not found; run ./manage install".format(
+                        source_id
+                    )
                 )
-            )
             ok = False
             continue
         url = source_value.get("url")
         if not isinstance(url, str) or not url:
-            warn("source {0} url must be a non-empty string".format(source_id))
+            if emit_warnings:
+                warn("source {0} url must be a non-empty string".format(source_id))
             ok = False
             continue
         remote = source_remote(source_value)
@@ -1384,57 +1487,79 @@ def check_git_sources(
             repository,
         )
         if completed is None or completed.returncode != 0:
-            warn(
-                "unable to inspect remote {0} for source {1}".format(remote, source_id)
-            )
-            if completed is not None:
-                print_completed_output(completed)
+            if emit_warnings:
+                warn(
+                    "unable to inspect remote {0} for source {1}".format(
+                        remote, source_id
+                    )
+                )
+                if completed is not None:
+                    print_completed_output(completed)
             ok = False
             continue
         current_url = completed.stdout.strip()
         if current_url != url:
-            warn(
-                "source {0} remote {1} mismatch: expected {2}, found {3}".format(
-                    source_id, remote, url, current_url
+            if emit_warnings:
+                warn(
+                    "source {0} remote {1} mismatch: expected {2}, found {3}".format(
+                        source_id, remote, url, current_url
+                    )
                 )
-            )
             ok = False
         if not commit_available(git, env, repository, git_dir, commit):
-            warn(
-                "source {0} commit is not available in bare repository: {1}".format(
-                    source_id, commit
+            if emit_warnings:
+                warn(
+                    "source {0} commit is not available in bare repository: {1}".format(
+                        source_id, commit
+                    )
                 )
-            )
             ok = False
         if not os.path.exists(worktree):
-            warn(
-                "source {0} worktree not found; run ./manage install".format(source_id)
-            )
+            if emit_warnings:
+                warn(
+                    "source {0} worktree not found; run ./manage install".format(
+                        source_id
+                    )
+                )
             ok = False
             continue
         if not is_git_worktree(worktree):
-            warn(
-                "source {0} worktree exists but is not a Git worktree: {1}".format(
-                    source_id, worktree
+            if emit_warnings:
+                warn(
+                    "source {0} worktree exists but is not a Git worktree: {1}".format(
+                        source_id, worktree
+                    )
                 )
-            )
             ok = False
             continue
         head = worktree_head(git, env, repository, worktree)
         if head != commit:
-            warn(
-                "source {0} HEAD mismatch: expected {1}, found {2}".format(
-                    source_id, commit, head
+            if emit_warnings:
+                warn(
+                    "source {0} HEAD mismatch: expected {1}, found {2}".format(
+                        source_id, commit, head
+                    )
                 )
-            )
             ok = False
-        if source_locked(source_value) and not worktree_is_locked(
-            git, env, repository, git_dir, worktree
+        if not check_worktree_lock_state(
+            git,
+            env,
+            repository,
+            source_id,
+            git_dir,
+            worktree,
+            source_locked(source_value),
+            emit_warnings=emit_warnings,
         ):
-            warn("source {0} worktree is not locked".format(source_id))
             ok = False
         if not check_worktree_sparse_checkout(
-            git, env, repository, source_id, source_value, worktree
+            git,
+            env,
+            repository,
+            source_id,
+            source_value,
+            worktree,
+            emit_warnings=emit_warnings,
         ):
             ok = False
         if not check_worktree_pristine(
@@ -1444,9 +1569,16 @@ def check_git_sources(
             source_id,
             worktree,
             source_allowed_dirty_paths(source_value),
+            emit_warnings=emit_warnings,
         ):
             ok = False
     return ok
+
+
+def check_git_sources(
+    env: Mapping[str, str], repository: str, lock: JSONMapping
+) -> bool:
+    return git_sources_state_ok(env, repository, lock, emit_warnings=True)
 
 
 def parse_version_tuple(text: str) -> Optional[tuple[int, int, int]]:
@@ -1481,6 +1613,27 @@ def check_tree_sitter_cli(
 
 def parser_extension() -> str:
     return ".so"
+
+
+def current_platform_signature() -> JSONObject:
+    signature: JSONObject = {
+        "osName": os.name,
+        "sysPlatform": sys.platform,
+    }
+    machine = platform.machine()
+    if machine:
+        signature["machine"] = machine
+    return signature
+
+
+def treesitter_runtime_signature(
+    parser_extension_value: str, tree_sitter_version: Optional[str]
+) -> JSONObject:
+    signature = dict(current_platform_signature())
+    signature["parserExtension"] = parser_extension_value
+    if tree_sitter_version:
+        signature["treeSitterCliVersion"] = tree_sitter_version
+    return signature
 
 
 def treesitter_languages(lock: JSONMapping) -> Dict[str, JSONObject]:
@@ -1840,6 +1993,70 @@ def replace_directory(destination: str, staged: str) -> bool:
 
 def revision_file_path(runtime_site: str, name: str) -> str:
     return os.path.join(runtime_site, "state", name + ".revision")
+
+
+def treesitter_runtime_signature_path(runtime_site: str) -> str:
+    return os.path.join(runtime_site, "state", "runtime-signature.json")
+
+
+def tree_sitter_cli_version_text(
+    tree_sitter: str, env: Mapping[str, str], repository: str
+) -> Optional[str]:
+    completed = run_captured_command([tree_sitter, "--version"], env, repository)
+    if completed is None or completed.returncode != 0:
+        return None
+    version = completed.stdout.strip()
+    return version if version else None
+
+
+def write_treesitter_runtime_signature(
+    runtime_site: str, signature: JSONMapping
+) -> bool:
+    path = treesitter_runtime_signature_path(runtime_site)
+    try:
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(signature, file, indent=2)
+            file.write("\n")
+    except OSError as exc:
+        warn("unable to write Treesitter runtime signature {0}: {1}".format(path, exc))
+        return False
+    return True
+
+
+def treesitter_runtime_signature_ok(
+    runtime_site: str,
+    env: Optional[Mapping[str, str]],
+    repository: str,
+    emit_warnings: bool,
+) -> bool:
+    path = treesitter_runtime_signature_path(runtime_site)
+    signature = read_json_object_file(path, emit_warnings=emit_warnings)
+    if signature is None:
+        if emit_warnings and not os.path.exists(path):
+            warn(
+                "Treesitter runtime signature missing: {0}; run ./manage install".format(
+                    path
+                )
+            )
+        return False
+    tree_sitter_version = None
+    if env is not None:
+        tree_sitter = shutil.which("tree-sitter", path=env.get("PATH"))
+        if tree_sitter:
+            tree_sitter_version = tree_sitter_cli_version_text(
+                tree_sitter, env, repository
+            )
+    expected = treesitter_runtime_signature(parser_extension(), tree_sitter_version)
+    for key, value in expected.items():
+        if signature.get(key) != value:
+            if emit_warnings:
+                warn(
+                    "Treesitter runtime signature mismatch for {0}: expected {1}={2}, found {3}; run ./manage install".format(
+                        path, key, value, signature.get(key)
+                    )
+                )
+            return False
+    return True
 
 
 def write_revision_file(runtime_site: str, name: str, commit: str) -> bool:
@@ -2214,19 +2431,24 @@ def materialize_treesitter_released_sources(repository: str, lock: JSONMapping) 
     return ok
 
 
-def check_treesitter_released_sources(repository: str, lock: JSONMapping) -> bool:
+def treesitter_released_sources_state_ok(
+    repository: str, lock: JSONMapping, emit_warnings: bool
+) -> bool:
     sources = lock.get("sources", {})
     if not isinstance(sources, dict):
-        warn("lockfile sources must be an object")
+        if emit_warnings:
+            warn("lockfile sources must be an object")
         return False
     ok = True
     for source_id, source_value in sources.items():
         if not valid_source_id(source_id):
-            warn("invalid source id: {0}".format(source_id))
+            if emit_warnings:
+                warn("invalid source id: {0}".format(source_id))
             ok = False
             continue
         if not isinstance(source_value, dict):
-            warn("source {0} must be an object".format(source_id))
+            if emit_warnings:
+                warn("source {0} must be an object".format(source_id))
             ok = False
             continue
         if not validate_source_settings(source_id, source_value):
@@ -2237,10 +2459,14 @@ def check_treesitter_released_sources(repository: str, lock: JSONMapping) -> boo
             lock,
             source_id,
             cast(JSONMapping, source_value),
-            emit_warnings=True,
+            emit_warnings=emit_warnings,
         ):
             ok = False
     return ok
+
+
+def check_treesitter_released_sources(repository: str, lock: JSONMapping) -> bool:
+    return treesitter_released_sources_state_ok(repository, lock, emit_warnings=True)
 
 
 def copy_source_for_build(
@@ -2281,14 +2507,9 @@ def query_dependency_data(parser_data: JSONMapping) -> JSONObject:
 def install_treesitter_runtime(
     env: Mapping[str, str], repository: str, lock: JSONMapping
 ) -> bool:
-    minimum = TREE_SITTER_MINIMUM_VERSION
-    metadata = root_treesitter_metadata(lock)
-    minimum_value = metadata.get("minimumCliVersion")
-    if isinstance(minimum_value, str):
-        parsed = parse_version_tuple(minimum_value)
-        if parsed is not None:
-            minimum = parsed
-    if not check_tree_sitter_cli(env, repository, minimum):
+    if treesitter_runtime_state_ok(repository, lock, emit_warnings=False):
+        return True
+    if not check_tree_sitter_cli(env, repository, treesitter_minimum_cli_version(lock)):
         return False
 
     runtime_site = tree_sitter_runtime_site(repository, lock)
@@ -2417,6 +2638,12 @@ def install_treesitter_runtime(
 
         if not install_supplemental_query_groups(repository, lock, staged_runtime_site):
             ok = False
+        signature = treesitter_runtime_signature(
+            parser_extension(),
+            tree_sitter_cli_version_text(tree_sitter, env, repository),
+        )
+        if not write_treesitter_runtime_signature(staged_runtime_site, signature):
+            ok = False
         if not ok:
             return False
 
@@ -2463,36 +2690,46 @@ def install_query_language(
     return True
 
 
-def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
+def treesitter_runtime_state_ok(
+    repository: str,
+    lock: JSONMapping,
+    emit_warnings: bool,
+    env: Optional[Mapping[str, str]] = None,
+) -> bool:
     runtime_site = tree_sitter_runtime_site(repository, lock)
     if runtime_site is None:
         return False
+    ok = treesitter_runtime_signature_ok(
+        runtime_site, env, repository, emit_warnings=emit_warnings
+    )
     languages = treesitter_languages(lock)
-    ok = True
     for language, parser_data in sorted(languages.items()):
         parser_name = parser_data.get("parser", language)
         if not isinstance(parser_name, str):
-            warn("invalid parser name for {0}".format(language))
+            if emit_warnings:
+                warn("invalid parser name for {0}".format(language))
             ok = False
             continue
         parser_path = os.path.join(
             runtime_site, "parser", parser_name + parser_extension()
         )
         if not os.path.isfile(parser_path):
-            warn(
-                "Treesitter parser missing: {0}; run ./manage install".format(
-                    parser_path
+            if emit_warnings:
+                warn(
+                    "Treesitter parser missing: {0}; run ./manage install".format(
+                        parser_path
+                    )
                 )
-            )
             ok = False
         for query in required_queries(lock, parser_data):
             query_file = os.path.join(runtime_site, "queries", language, query + ".scm")
             if not os.path.isfile(query_file):
-                warn(
-                    "Treesitter query missing: {0}; run ./manage install".format(
-                        query_file
+                if emit_warnings:
+                    warn(
+                        "Treesitter query missing: {0}; run ./manage install".format(
+                            query_file
+                        )
                     )
-                )
                 ok = False
         source_id = parser_data.get("source")
         commit = (
@@ -2500,11 +2737,12 @@ def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
         )
         revision = revision_file_path(runtime_site, language)
         if commit and read_text_file(revision) != commit:
-            warn(
-                "Treesitter revision mismatch for {0}; run ./manage install".format(
-                    language
+            if emit_warnings:
+                warn(
+                    "Treesitter revision mismatch for {0}; run ./manage install".format(
+                        language
+                    )
                 )
-            )
             ok = False
         resolved_query_source = query_source_path(
             repository, lock, language, parser_data
@@ -2523,21 +2761,23 @@ def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
                 )
                 != query_commit
             ):
-                warn(
-                    "Treesitter query revision mismatch for {0}; run ./manage install".format(
-                        language
+                if emit_warnings:
+                    warn(
+                        "Treesitter query revision mismatch for {0}; run ./manage install".format(
+                            language
+                        )
                     )
-                )
                 ok = False
         query_data = query_dependency_data(parser_data)
         for query_language in sequence_strings(parser_data.get("queryDependencies")):
             query_dir = os.path.join(runtime_site, "queries", query_language)
             if not os.path.isdir(query_dir):
-                warn(
-                    "Treesitter query dependency missing: {0}; run ./manage install".format(
-                        query_dir
+                if emit_warnings:
+                    warn(
+                        "Treesitter query dependency missing: {0}; run ./manage install".format(
+                            query_dir
+                        )
                     )
-                )
                 ok = False
                 continue
             resolved_dependency_source = query_source_path(
@@ -2553,11 +2793,12 @@ def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
                 and read_text_file(revision_file_path(runtime_site, query_language))
                 != query_commit
             ):
-                warn(
-                    "Treesitter query dependency revision mismatch for {0}; run ./manage install".format(
-                        query_language
+                if emit_warnings:
+                    warn(
+                        "Treesitter query dependency revision mismatch for {0}; run ./manage install".format(
+                            query_language
+                        )
                     )
-                )
                 ok = False
 
     for group in supplemental_query_groups(lock):
@@ -2571,38 +2812,37 @@ def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
                 runtime_site, "queries", language, group_name + ".scm"
             )
             if not os.path.isfile(query_file):
-                warn(
-                    "supplemental Treesitter query missing: {0}; run ./manage install".format(
-                        query_file
+                if emit_warnings:
+                    warn(
+                        "supplemental Treesitter query missing: {0}; run ./manage install".format(
+                            query_file
+                        )
                     )
-                )
                 ok = False
             commit = source_commit_by_id(lock, source_id)
             revision = revision_file_path(runtime_site, language + "." + group_name)
             if commit and read_text_file(revision) != commit:
-                warn(
-                    "supplemental Treesitter query revision mismatch for {0}/{1}; run ./manage install".format(
-                        language, group_name
+                if emit_warnings:
+                    warn(
+                        "supplemental Treesitter query revision mismatch for {0}/{1}; run ./manage install".format(
+                            language, group_name
+                        )
                     )
-                )
                 ok = False
     return ok
+
+
+def check_treesitter_runtime_state(repository: str, lock: JSONMapping) -> bool:
+    return treesitter_runtime_state_ok(repository, lock, emit_warnings=True)
 
 
 def check_treesitter_runtime(
     env: Mapping[str, str], repository: str, lock: JSONMapping
 ) -> bool:
-    minimum = TREE_SITTER_MINIMUM_VERSION
-    metadata = root_treesitter_metadata(lock)
-    minimum_value = metadata.get("minimumCliVersion")
-    if isinstance(minimum_value, str):
-        parsed = parse_version_tuple(minimum_value)
-        if parsed is not None:
-            minimum = parsed
-    ok = check_tree_sitter_cli(env, repository, minimum)
+    ok = check_tree_sitter_cli(env, repository, treesitter_minimum_cli_version(lock))
     if not check_treesitter_released_sources(repository, lock):
         ok = False
-    if not check_treesitter_runtime_state(repository, lock):
+    if not treesitter_runtime_state_ok(repository, lock, emit_warnings=True, env=env):
         ok = False
     return ok
 
@@ -2615,7 +2855,31 @@ def read_text_file(path: str) -> Optional[str]:
         return None
 
 
-def install(offline: bool) -> int:
+def install_managed_state_ok(
+    env: Mapping[str, str],
+    repository: str,
+    lock: JSONMapping,
+    emit_warnings: bool,
+) -> bool:
+    ok = True
+    if not git_sources_state_ok(env, repository, lock, emit_warnings=emit_warnings):
+        ok = False
+    if not treesitter_released_sources_state_ok(
+        repository, lock, emit_warnings=emit_warnings
+    ):
+        ok = False
+    if not native_plugin_artifacts_state_ok(
+        repository, lock, emit_warnings=emit_warnings
+    ):
+        ok = False
+    if not treesitter_runtime_state_ok(
+        repository, lock, emit_warnings=emit_warnings, env=env
+    ):
+        ok = False
+    return ok
+
+
+def install(offline: bool, refresh: bool) -> int:
     """Install production dependencies and Neovim plugins."""
     try:
         home = home_dir()
@@ -2643,23 +2907,27 @@ def install(offline: bool) -> int:
     if lock is None:
         ok = False
     elif offline:
-        if not check_git_sources(env, repository, lock):
+        if not install_managed_state_ok(env, repository, lock, emit_warnings=True):
             ok = False
-        if not check_treesitter_released_sources(repository, lock):
+        if not check_neovim_config_link(home, repository, emit_warnings=True):
             ok = False
-        if not check_native_plugin_artifacts(repository, lock):
-            ok = False
-        if not check_treesitter_runtime_state(repository, lock):
-            ok = False
+        return 0 if ok else 1
     else:
-        if not materialize_git_sources(env, repository, lock):
-            ok = False
-        if not materialize_treesitter_released_sources(repository, lock):
-            ok = False
-        if not install_native_plugin_artifacts(env, repository, lock):
-            ok = False
-        if not install_treesitter_runtime(env, repository, lock):
-            ok = False
+        if not refresh and install_managed_state_ok(
+            env, repository, lock, emit_warnings=False
+        ):
+            info(
+                "managed state already current; skipped source, build, and Treesitter install steps"
+            )
+        else:
+            if not materialize_git_sources(env, repository, lock, refresh):
+                ok = False
+            if not materialize_treesitter_released_sources(repository, lock):
+                ok = False
+            if not install_native_plugin_artifacts(env, repository, lock):
+                ok = False
+            if not install_treesitter_runtime(env, repository, lock):
+                ok = False
 
     if not link_neovim_config(home, repository):
         ok = False
@@ -2820,7 +3088,7 @@ def cargo_version(
 
 
 def optional_native_build_outcome(
-    source_id: str, native_build: JSONMapping, message: str
+    native_build: JSONMapping, message: str
 ) -> NativeBuildOutcome:
     if native_build_optional(native_build):
         warn(message + "; skipping optional native build")
@@ -2889,6 +3157,17 @@ def native_build_revision_path(
     return None
 
 
+def native_build_platform_signature_lines() -> Sequence[str]:
+    lines: list[str] = [
+        "platform osName {0}".format(os.name),
+        "platform sysPlatform {0}".format(sys.platform),
+    ]
+    machine = platform.machine()
+    if machine:
+        lines.append("platform machine {0}".format(machine))
+    return lines
+
+
 def native_build_revision_text(
     lock: JSONMapping, source_id: str, native_build: JSONMapping
 ) -> Optional[str]:
@@ -2914,6 +3193,7 @@ def native_build_revision_text(
                 relative_path, dependency_source_id, dependency_commit
             )
         )
+    lines.extend(native_build_platform_signature_lines())
     return "\n".join(lines)
 
 
@@ -2935,6 +3215,16 @@ def write_native_build_revision(
         )
         return False
     return True
+
+
+def native_build_revision_matches(
+    worktree: str, lock: JSONMapping, source_id: str, native_build: JSONMapping
+) -> bool:
+    revision_path = native_build_revision_path(worktree, native_build)
+    revision_text = native_build_revision_text(lock, source_id, native_build)
+    if revision_path is None or revision_text is None:
+        return False
+    return read_text_file(revision_path) == revision_text
 
 
 def check_native_build_revision(
@@ -2960,6 +3250,15 @@ def check_native_build_revision(
         )
         return False
     return True
+
+
+def native_build_artifact_current(
+    worktree: str, lock: JSONMapping, source_id: str, native_build: JSONMapping
+) -> bool:
+    artifact = native_plugin_artifact_path(worktree, native_build)
+    if artifact is None or not os.path.isfile(artifact):
+        return False
+    return native_build_revision_matches(worktree, lock, source_id, native_build)
 
 
 def overlay_native_build_dependency_sources(
@@ -3065,7 +3364,6 @@ def build_native_plugin_runtime(
         cargo = resolve_required("cargo", env)
         if cargo is None:
             return optional_native_build_outcome(
-                source_id,
                 native_build,
                 "source {0} requires cargo on PATH".format(source_id),
             )
@@ -3074,13 +3372,11 @@ def build_native_plugin_runtime(
             version = cargo_version(cargo, env, repository)
             if version is None:
                 return optional_native_build_outcome(
-                    source_id,
                     native_build,
                     "unable to query cargo version for source {0}".format(source_id),
                 )
             if version < minimum_version:
                 return optional_native_build_outcome(
-                    source_id,
                     native_build,
                     "source {0} requires cargo >= {1}; found {2}".format(
                         source_id,
@@ -3100,7 +3396,6 @@ def build_native_plugin_runtime(
                 else "failed"
             )
         return optional_native_build_outcome(
-            source_id,
             native_build,
             "cargo native build failed for source {0}".format(source_id),
         )
@@ -3143,6 +3438,8 @@ def install_native_plugin_artifacts(
             ok = False
             continue
         native_build = source_native_build(source_value)
+        if native_build_artifact_current(worktree, lock, source_id, native_build):
+            continue
         outcome = build_native_plugin_runtime(
             env, repository, lock, source_id, worktree, native_build
         )
@@ -3179,9 +3476,13 @@ def install_native_plugin_artifacts(
     return ok
 
 
-def check_native_plugin_artifacts(repository: str, lock: JSONMapping) -> bool:
+def native_plugin_artifacts_state_ok(
+    repository: str, lock: JSONMapping, emit_warnings: bool
+) -> bool:
     sources = lock.get("sources", {})
     if not isinstance(sources, dict):
+        if emit_warnings:
+            warn("lockfile sources must be an object")
         return False
     ok = True
     for source_id in native_build_source_ids(lock):
@@ -3196,31 +3497,41 @@ def check_native_plugin_artifacts(repository: str, lock: JSONMapping) -> bool:
         native_build = source_native_build(source_value)
         artifact = native_plugin_artifact_path(worktree, native_build)
         if artifact is None:
-            warn(
-                "native plugin artifact path is not defined for source {0}".format(
-                    source_id
+            if emit_warnings:
+                warn(
+                    "native plugin artifact path is not defined for source {0}".format(
+                        source_id
+                    )
                 )
-            )
             ok = False
             continue
         if not os.path.isfile(artifact):
             if native_build_optional(native_build):
-                info(
-                    "optional native plugin artifact not installed for source {0}".format(
-                        source_id
+                if emit_warnings:
+                    info(
+                        "optional native plugin artifact not installed for source {0}".format(
+                            source_id
+                        )
                     )
-                )
             else:
-                warn(
-                    "native plugin artifact missing: {0}; run ./manage install".format(
-                        artifact
+                if emit_warnings:
+                    warn(
+                        "native plugin artifact missing: {0}; run ./manage install".format(
+                            artifact
+                        )
                     )
-                )
                 ok = False
             continue
-        if not check_native_build_revision(worktree, lock, source_id, native_build):
+        if emit_warnings:
+            if not check_native_build_revision(worktree, lock, source_id, native_build):
+                ok = False
+        elif not native_build_revision_matches(worktree, lock, source_id, native_build):
             ok = False
     return ok
+
+
+def check_native_plugin_artifacts(repository: str, lock: JSONMapping) -> bool:
+    return native_plugin_artifacts_state_ok(repository, lock, emit_warnings=True)
 
 
 def read_json_object(path: str) -> Optional[JSONObject]:
@@ -3581,13 +3892,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     install_parser = subparsers.add_parser(
         "install",
-        help="sync production dependencies and install Neovim plugins",
-        description="Install production dependencies when needed, then install Neovim plugins.",
+        help="sync production dependencies and ensure the managed Neovim runtime",
+        description=(
+            "Sync production dependencies when needed, then ensure the pinned managed "
+            "Neovim runtime locally. Repeated installs skip source, build, and "
+            "Treesitter work when local state is already current."
+        ),
     )
-    install_parser.add_argument(
+    install_mode = install_parser.add_mutually_exclusive_group()
+    install_mode.add_argument(
         "--offline",
         action="store_true",
-        help="verify already-local state only; do not fetch, build, or mutate",
+        help="verify already-local state only; do not fetch, build, download, or mutate",
+    )
+    install_mode.add_argument(
+        "--refresh",
+        action="store_true",
+        help="force Git ref refresh before ensuring the pinned manifest state locally",
     )
 
     check_parser = subparsers.add_parser(
@@ -3630,7 +3951,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "install":
-        return install(args.offline)
+        return install(args.offline, args.refresh)
 
     if args.command == "check":
         return check(args.fix)

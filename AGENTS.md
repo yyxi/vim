@@ -4,8 +4,7 @@ This file records only non-obvious guidance for coding agents. Do not treat it a
 
 ## Critical non-obvious constraints
 - Treat `manage`, `init.lua`, and `lua/yyxi/utilities/` as the source of truth for current behavior.
-- Keep `manage` as a standalone Python 3 standard-library CLI. It must stay safe to run from any working directory, and runtime behavior must not depend on uv or project dependencies being present.
-- uv is optional at runtime. If uv is available, only run the production sync when both production and development sync checks fail, so a usable dev-synced environment is not downgraded.
+- Keep `manage` as a standalone Python 3 standard-library CLI. It must stay safe to run from any working directory.
 - Neovim must not clone, update, compile, or repair managed dependencies at startup. That lifecycle belongs to `manage`.
 - `manage` must not invoke Neovim in a way that loads runtime code from managed dependencies before those dependencies have been reviewed and scanned. Keep Neovim invocations limited to built-in queries (`--clean`) or the explicit `plenary.nvim` test harness used by `./manage check`.
 - For sources with declared `plugin.nativeBuild`, `manage` may write generated build outputs into the Git worktree only under explicitly allowed `allowedDirtyPaths`. Do not reintroduce a separate published native-runtime layer.

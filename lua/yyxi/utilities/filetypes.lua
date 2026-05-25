@@ -53,10 +53,13 @@ end
 
 function M.treesitter_language_aliases()
   return {
+    bash = { 'sh' },
     git_config = { 'gitconfig' },
     git_rebase = { 'gitrebase' },
+    ini = { 'confini', 'dosini' },
     javascript = { 'javascriptreact', 'jsx', 'js' },
     json = { 'jsonc' },
+    latex = { 'tex' },
     ssh_config = { 'sshconfig' },
     tsx = { 'typescriptreact', 'typescript.tsx' },
     yaml = { 'yaml.ansible' },
