@@ -190,6 +190,8 @@ end
 ---@param root string
 ---@return string?
 function M.python3_host_prog(root)
+  -- Prefer the managed local host when present. If absent, leave provider
+  -- discovery to Neovim by returning nil.
   local python = M.join_path({ M.venv_bin(root), 'python3' })
   if M.is_executable(python) then return python end
   return nil
@@ -198,6 +200,8 @@ end
 ---@param root string
 ---@return string?
 function M.node_host_prog(root)
+  -- Prefer the managed local Node host when present. If absent, leave
+  -- provider discovery to Neovim by returning nil.
   local host = M.repository_path({ 'node_modules', 'neovim', 'bin', 'cli.js' }, root)
   if M.exists(host) and not M.is_directory(host) then return host end
   return nil
@@ -274,6 +278,8 @@ function M.configure(opts)
 
   env.PATH = M.prepend_path(env.PATH, path_directories)
 
+  -- Only pin provider hosts when the managed local paths exist. Otherwise
+  -- keep the globals unset so Neovim can use its built-in fallback logic.
   local python3_host_prog = M.python3_host_prog(root)
   if python3_host_prog then vim.g.python3_host_prog = python3_host_prog end
 
