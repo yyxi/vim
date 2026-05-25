@@ -1,0 +1,29 @@
+rules:
+  - id: lua-checkcaller
+    pattern: checkcaller()
+    message: >
+      checkcaller() detects whether the calling function originates from user-supplied
+      code or an executor script. This is a Roblox executor API; its presence in a
+      Neovim plugin suggests the code was written for a different (potentially malicious)
+      execution context.
+    severity: WARNING
+    languages:
+      - lua
+
+  - id: lua-isexecutorclosure
+    pattern: isexecutorclosure(...)
+    message: >
+      isexecutorclosure() checks whether a closure was created by an executor. This
+      is a Roblox exploit API with no legitimate use in Neovim plugins.
+    severity: WARNING
+    languages:
+      - lua
+
+  - id: lua-syn-isexecutorclosure
+    pattern: syn.isexecutorclosure(...)
+    message: >
+      syn.isexecutorclosure() is a Synapse X (Roblox exploit) API. Its presence
+      indicates code targeting exploit execution environments.
+    severity: ERROR
+    languages:
+      - lua

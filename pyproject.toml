@@ -8,6 +8,9 @@ requires-python = ">=3.12,<3.13"
 managed = true
 exclude-newer = "10 days"
 
+[dependency-groups]
+dev = ["semgrep>=1.90.0"]
+
 [tool.uv.workspace]
 members = []
 

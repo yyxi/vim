@@ -1,0 +1,10 @@
+rules:
+  - id: lua-known-obfuscator-string
+    pattern-regex: "(IronBrew2?|Luraph|MoonSec2?|moonsec|luraph|ironbrew|Bytecode Ultra|BytecodeUltra|ProtoSmasher)"
+    message: >
+      Signature of a known Lua obfuscator detected in source text. Obfuscated Lua
+      is a strong indicator of intentionally hidden logic and should not appear in
+      vendored Neovim plugins.
+    severity: ERROR
+    languages:
+      - lua

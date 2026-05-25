@@ -1,0 +1,41 @@
+rules:
+  - id: lua-getgenv-with-network
+    patterns:
+      - pattern: getgenv()
+      - pattern-either:
+          - pattern: vim.fn.system(...)
+          - pattern: io.popen(...)
+    message: >
+      getgenv() used together with shell/system calls. getgenv() accesses the global
+      Roblox executor environment and is not a standard Lua or Neovim function; its
+      presence alongside network or execution primitives strongly suggests data
+      exfiltration or injected code.
+    severity: ERROR
+    languages:
+      - lua
+
+  - id: lua-hookfunction
+    pattern: hookfunction(...)
+    message: >
+      hookfunction() replaces an existing function's implementation at runtime. This
+      is a Roblox executor API not present in standard Lua or Neovim; its presence in
+      a Neovim plugin is unexpected and warrants review.
+    severity: ERROR
+    languages:
+      - lua
+
+  - id: lua-getfenv-suspicious
+    patterns:
+      - pattern: getfenv(...)
+      - pattern-either:
+          - pattern: vim.fn.system(...)
+          - pattern: io.popen(...)
+          - pattern: loadstring(...)
+          - pattern: load(...)
+    message: >
+      getfenv() combined with execution or dynamic loading. getfenv() retrieves a
+      function's environment table; combined with dynamic execution it can be used
+      to inject code into arbitrary scopes.
+    severity: WARNING
+    languages:
+      - lua

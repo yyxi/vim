@@ -1,0 +1,36 @@
+# This file controls what semgrep scans in this repository.
+# It follows gitignore syntax. Negation patterns (!) allow paths
+# that would otherwise be excluded by semgrep's defaults.
+#
+# The primary use of semgrep here is to scan vendored third-party
+# code via ./manage scan, which targets vendor/ subdirectories.
+# Those paths must not be excluded.
+
+# Allow vendored git worktrees (semgrep would otherwise skip these
+# because each worktree contains a .git file and looks like a project root)
+!vendor/git/worktrees/
+!vendor/git/worktrees/**
+
+# Allow vendored plugins
+!vendor/plugins/
+!vendor/plugins/**
+
+# Allow tree-sitter released sources
+!vendor/treesitter/sources/
+!vendor/treesitter/sources/**
+
+# Exclude compiled parser binaries (not text-scannable by semgrep)
+vendor/treesitter/parser/
+
+# Exclude tree-sitter query files (.scm) — not a supported semgrep language
+vendor/treesitter/queries/
+
+# Exclude local Python venv and caches
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+
+# Exclude lock files and generated docs
+*.lock
+**/doc/tags

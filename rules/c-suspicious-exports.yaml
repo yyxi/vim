@@ -1,0 +1,40 @@
+rules:
+  - id: c-system-exec-in-grammar
+    pattern-either:
+      - pattern: system(...)
+      - pattern: popen(...)
+      - pattern: execve(...)
+      - pattern: execl(...)
+      - pattern: execvp(...)
+      - pattern: execlp(...)
+    message: >
+      Shell execution call (system/popen/exec*) found in C source. Tree-sitter grammar
+      parsers are pure parsing libraries and should never execute subprocesses. This
+      pattern in grammar source is unexpected and warrants immediate review.
+    severity: ERROR
+    languages:
+      - c
+
+  - id: c-socket-in-grammar
+    pattern-either:
+      - pattern: socket(...)
+      - pattern: connect(...)
+    message: >
+      Network socket call found in C source. Tree-sitter grammar parsers do not make
+      network connections; this is unexpected in grammar source and may indicate supply
+      chain tampering.
+    severity: ERROR
+    languages:
+      - c
+
+  - id: c-dlopen-in-grammar
+    pattern-either:
+      - pattern: dlopen(...)
+      - pattern: dlsym(...)
+    message: >
+      Dynamic library loading (dlopen/dlsym) in C source. Grammar parsers should be
+      self-contained; loading additional libraries at runtime from grammar code is
+      unexpected.
+    severity: ERROR
+    languages:
+      - c

@@ -3518,6 +3518,66 @@ def check(fix: bool) -> int:
     return 0 if ok else 1
 
 
+SCAN_TARGETS = (
+    os.path.join("vendor", "git", "worktrees"),
+    os.path.join("vendor", "plugins"),
+    os.path.join("vendor", "treesitter", "sources"),
+)
+SCAN_RULES_DIR = "rules"
+
+
+def scan(strict: bool, paths: Sequence[str]) -> int:
+    """Scan vendored third-party code for malicious patterns."""
+    invocation_directory = os.getcwd()
+    repository = repository_dir()
+    try:
+        home = home_dir()
+    except RuntimeError as exc:
+        warn(str(exc))
+        return 1
+    env = install_environment(home)
+
+    uv = resolve_required("uv", env)
+    if uv is None:
+        return 1
+
+    rules_dir = os.path.join(repository, SCAN_RULES_DIR)
+    if not os.path.isdir(rules_dir):
+        warn("rules directory not found: {0}; expected at {1}".format(SCAN_RULES_DIR, rules_dir))
+        return 1
+
+    if paths:
+        targets = [os.path.abspath(os.path.join(invocation_directory, path)) for path in paths]
+        invalid_targets = [
+            path for path in targets if not (os.path.isfile(path) or os.path.isdir(path))
+        ]
+        if invalid_targets:
+            for path in invalid_targets:
+                warn("scan target must be an existing file or directory: {0}".format(path))
+            return 1
+    else:
+        targets = [
+            os.path.join(repository, subdir)
+            for subdir in SCAN_TARGETS
+            if os.path.isdir(os.path.join(repository, subdir))
+        ]
+        if not targets:
+            warn("no vendor directories found; run ./manage install first")
+            return 1
+
+    semgrep_command = [
+        uv, *UV_RUN_CHECK, "semgrep",
+        "--config", SCAN_RULES_DIR,
+        "--severity", "WARNING",
+        "--no-git-ignore",
+    ]
+    if not strict:
+        semgrep_command.append("--error")
+    semgrep_command.extend(targets)
+
+    return 0 if run_logged_command(semgrep_command, env, repository) else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="manage")
     subparsers = parser.add_subparsers(dest="command", title="commands")
@@ -3544,6 +3604,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="format and apply safe fixes before running non-mutating checks",
     )
 
+    scan_parser = subparsers.add_parser(
+        "scan",
+        help="run semgrep security scan on vendored third-party code",
+        description=(
+            "Scan vendor directories, or explicit files and directories, for malicious "
+            "code patterns using semgrep rules from rules/. By default exits non-zero "
+            "only on ERROR-severity findings. Run ./manage install first to populate "
+            "vendor directories when no scan path is provided."
+        ),
+    )
+    scan_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="exit non-zero on WARNING findings in addition to ERROR findings",
+    )
+    scan_parser.add_argument(
+        "paths",
+        nargs="*",
+        help="optional files or directories to scan; defaults to managed vendor directories",
+    )
+
     return parser
 
 
@@ -3556,6 +3637,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.command == "check":
         return check(args.fix)
+
+    if args.command == "scan":
+        return scan(args.strict, args.paths)
 
     parser.print_help()
     return 0

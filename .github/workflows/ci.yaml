@@ -79,6 +79,8 @@ jobs:
             # tar xzvf nvim-macos.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
             # rm -f nvim-macos.tar.gz
           fi
+
+          uv sync --locked
       - name: install
         run: |
           ln -s "$(pwd)" ~/.vim
@@ -86,3 +88,6 @@ jobs:
       - name: check
         run: |
           ~/.vim/manage check
+      - name: scan
+        run: |
+          ~/.vim/manage scan

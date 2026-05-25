@@ -1,0 +1,19 @@
+rules:
+  - id: lua-discord-webhook
+    pattern-regex: "discord(?:app)?\\.com/api/webhooks/[0-9]+/"
+    message: >
+      Discord webhook URL embedded in Lua source. Plugins embedding webhook URLs
+      may exfiltrate data (tokens, credentials, system info) to an attacker-controlled
+      Discord channel.
+    severity: ERROR
+    languages:
+      - lua
+
+  - id: lua-ip-grabber-url
+    pattern-regex: "(api\\.ipify\\.org|checkip\\.amazonaws\\.com|icanhazip\\.com|ipecho\\.net/plain|wtfismyip\\.com)"
+    message: >
+      IP address lookup service URL found in Lua source. This pattern is used by
+      malicious scripts to exfiltrate the victim's IP address.
+    severity: ERROR
+    languages:
+      - lua

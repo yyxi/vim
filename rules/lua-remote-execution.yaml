@@ -1,0 +1,39 @@
+rules:
+  - id: lua-loadstring-with-http-url
+    patterns:
+      - pattern-either:
+          - pattern: loadstring(...)
+          - pattern: load(...)
+      - pattern-regex: "https?://"
+    message: >
+      loadstring/load called with an HTTP/HTTPS URL string — high-confidence indicator
+      of remote code execution. Legitimate Neovim plugins do not fetch and execute remote
+      Lua code at runtime.
+    severity: ERROR
+    languages:
+      - lua
+
+  - id: lua-loadstring-with-system
+    patterns:
+      - pattern-either:
+          - pattern: loadstring(...)
+          - pattern: load(...)
+      - pattern-either:
+          - pattern: vim.fn.system(...)
+          - pattern: io.popen(...)
+          - pattern: os.execute(...)
+    message: >
+      loadstring/load used in conjunction with a shell execution call. This pattern
+      is used to fetch and execute code from external sources or subprocesses.
+    severity: ERROR
+    languages:
+      - lua
+
+  - id: lua-pcall-loadstring
+    pattern: pcall(loadstring(...), ...)
+    message: >
+      pcall(loadstring(...)) silences errors from dynamic code execution. This pattern
+      is commonly used to hide failures when running injected or obfuscated code.
+    severity: WARNING
+    languages:
+      - lua
