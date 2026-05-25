@@ -34,7 +34,6 @@ PNPM_INSTALL_PRODUCTION = (
     "append-only",
 )
 CARGO_BUILD_RELEASE = ("build", "--release")
-NVIM_PLUGIN_SYNC = ("--headless", "+Lazy! restore", "+qa")
 LUA_CHECK_PATH = "lua/yyxi"
 LUA_CHECK_TARGETS = ("init.lua", LUA_CHECK_PATH)
 VENDOR_DIR_NAME = "vendor"
@@ -211,10 +210,6 @@ def link_neovim_config(home: str, repository: str) -> bool:
         return False
 
     return True
-
-
-def sync_neovim_plugins(nvim: str, env: Mapping[str, str], repository: str) -> bool:
-    return run_logged_command([nvim] + list(NVIM_PLUGIN_SYNC), env, repository)
 
 
 def run_captured_command(
@@ -2666,21 +2661,7 @@ def install(offline: bool) -> int:
         if not install_treesitter_runtime(env, repository, lock):
             ok = False
 
-    if offline:
-        if not check_neovim_config_link(home, repository):
-            ok = False
-        info("offline mode: skipped Lazy restore")
-        return 0 if ok else 1
-
     if not link_neovim_config(home, repository):
-        ok = False
-
-    nvim = shutil.which("nvim", path=env.get("PATH"))
-    if not nvim:
-        info("nvim not found; skipped Lazy restore")
-        return 0 if ok else 1
-
-    if ok and not sync_neovim_plugins(nvim, env, repository):
         ok = False
 
     return 0 if ok else 1
