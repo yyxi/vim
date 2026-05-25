@@ -3543,17 +3543,29 @@ def scan(strict: bool, paths: Sequence[str]) -> int:
 
     rules_dir = os.path.join(repository, SCAN_RULES_DIR)
     if not os.path.isdir(rules_dir):
-        warn("rules directory not found: {0}; expected at {1}".format(SCAN_RULES_DIR, rules_dir))
+        warn(
+            "rules directory not found: {0}; expected at {1}".format(
+                SCAN_RULES_DIR, rules_dir
+            )
+        )
         return 1
 
     if paths:
-        targets = [os.path.abspath(os.path.join(invocation_directory, path)) for path in paths]
+        targets = [
+            os.path.abspath(os.path.join(invocation_directory, path)) for path in paths
+        ]
         invalid_targets = [
-            path for path in targets if not (os.path.isfile(path) or os.path.isdir(path))
+            path
+            for path in targets
+            if not (os.path.isfile(path) or os.path.isdir(path))
         ]
         if invalid_targets:
             for path in invalid_targets:
-                warn("scan target must be an existing file or directory: {0}".format(path))
+                warn(
+                    "scan target must be an existing file or directory: {0}".format(
+                        path
+                    )
+                )
             return 1
     else:
         targets = [
@@ -3566,9 +3578,13 @@ def scan(strict: bool, paths: Sequence[str]) -> int:
             return 1
 
     semgrep_command = [
-        uv, *UV_RUN_CHECK, "semgrep",
-        "--config", SCAN_RULES_DIR,
-        "--severity", "WARNING",
+        uv,
+        *UV_RUN_CHECK,
+        "semgrep",
+        "--config",
+        SCAN_RULES_DIR,
+        "--severity",
+        "WARNING",
         "--no-git-ignore",
     ]
     if not strict:

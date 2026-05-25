@@ -105,7 +105,9 @@ describe('yyxi.utilities.environment', function()
 
     assert.same({
       '${3rd}/luv/library',
-      environment.join_path({ root, 'vendor', 'lazy', 'plenary.nvim', 'lua' }),
+      environment.normalize_path(
+        environment.join_path({ root, 'vendor', 'lazy', 'plenary.nvim', 'lua' })
+      ),
       environment.normalize_path(vim.fn.expand('~/missing')),
     }, environment.luarc_workspace_libraries(root))
 

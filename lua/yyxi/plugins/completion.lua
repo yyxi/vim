@@ -44,7 +44,11 @@ function M.setup()
       ['<CR>'] = { 'accept', 'fallback' },
       ['<Tab>'] = {
         function(cmp)
-          if not cmp.snippet_active({ direction = 1 }) and has_words_before() and not cmp.is_visible() then
+          if
+            not cmp.snippet_active({ direction = 1 })
+            and has_words_before()
+            and not cmp.is_visible()
+          then
             return cmp.show()
           end
         end,
