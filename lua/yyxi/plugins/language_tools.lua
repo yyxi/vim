@@ -10,9 +10,11 @@ function M.conform()
       json = { 'prettier' },
       json5 = { 'prettier' },
       jsonc = { 'prettier' },
-      -- lua = { 'stylua' },
+      lua = { 'stylua' },
       tex = { 'latexindent' },
       markdown = { 'prettier' },
+      go = {},
+      rust = {},
       sh = { 'shfmt' },
       typescript = { 'prettier' },
       typescriptreact = { 'prettier' },
@@ -52,7 +54,7 @@ function M.gtd()
 end
 
 function M.lsp_fix()
-  local fix = require('lsp-fix')
+  local fix = require('yyxi.lsp.fix')
 
   fix.setup({
     json5 = {
@@ -81,6 +83,11 @@ function M.lsp_fix()
         'eslint',
       },
     },
+    ['yaml.ansible'] = {
+      order = {
+        'eslint',
+      },
+    },
     typescript = {
       order = {
         'ts_ls',
@@ -93,25 +100,23 @@ function M.lsp_fix()
         'dockerls',
       },
     },
+    go = {
+      order = {
+        'gopls',
+      },
+    },
     python = {
       order = {
-        'ty',
-        'pyright',
+        { 'ty', 'pyright' },
         'ruff',
       },
     },
     vue = {
       order = {
-        'volar',
+        'vtsls',
         'eslint',
       },
     },
-    -- css = {
-    --   order = { 'stylelint_lsp' },
-    --   tab_width = function()
-    --     return vim.opt.shiftwidth:get()
-    --   end,
-    -- }
   })
 end
 
@@ -153,6 +158,97 @@ function M.lsp()
     vim.lsp.protocol.make_client_capabilities(),
     require('blink.cmp').get_lsp_capabilities({}, false)
   )
+
+  M.lsp_fix()
+
+  local fix = require('yyxi.lsp.fix')
+
+  local function versioned_document_argument(bufnr)
+    return {
+      uri = vim.uri_from_bufnr(bufnr),
+      version = vim.lsp.util.buf_versions[bufnr],
+    }
+  end
+
+  ---@alias yyxi.plugins.language_tools.CommandArguments lsp.LSPAny[]
+
+  ---@param command string
+  ---@param arguments yyxi.plugins.language_tools.CommandArguments | fun(ctx: yyxi.lsp.fix.Context): yyxi.plugins.language_tools.CommandArguments
+  ---@param timeout_ms? integer
+  ---@return yyxi.lsp.fix.Handler
+  local function workspace_command_handler(command, arguments, timeout_ms)
+    return function(ctx)
+      local resolved_arguments ---@type yyxi.plugins.language_tools.CommandArguments
+      if type(arguments) == 'function' then
+        resolved_arguments = arguments(ctx)
+      else
+        resolved_arguments = arguments
+      end
+
+      return fix.execute_workspace_command(ctx, {
+        command = command,
+        arguments = resolved_arguments,
+      }, timeout_ms)
+    end
+  end
+
+  local function gopls_code_action_handler(action_kind, timeout_ms)
+    return function(ctx)
+      local namespace = vim.lsp.diagnostic.get_namespace(ctx.client.id)
+      local diagnostics = vim.lsp.diagnostic.from(vim.diagnostic.get(ctx.bufnr, {
+        namespace = namespace,
+      }))
+
+      return fix.execute_code_action_kind(ctx, action_kind, timeout_ms, diagnostics)
+    end
+  end
+
+  fix.register('gopls', {
+    gopls_code_action_handler('source.fixAll', 3000),
+    gopls_code_action_handler('source.organizeImports', 3000),
+  })
+
+  fix.register('pyright', {
+    workspace_command_handler(
+      'pyright.organizeimports',
+      function(ctx) return { vim.uri_from_bufnr(ctx.bufnr) } end,
+      3000
+    ),
+  })
+
+  fix.register('ruff', {
+    workspace_command_handler(
+      'ruff.applyOrganizeImports',
+      function(ctx) return { versioned_document_argument(ctx.bufnr) } end,
+      3000
+    ),
+    workspace_command_handler(
+      'ruff.applyAutofix',
+      function(ctx) return { versioned_document_argument(ctx.bufnr) } end,
+      3000
+    ),
+  })
+
+  fix.register('vtsls', {
+    workspace_command_handler(
+      'typescript.organizeImports',
+      function(ctx) return { vim.api.nvim_buf_get_name(ctx.bufnr) } end,
+      3000
+    ),
+    workspace_command_handler(
+      'typescript.sortImports',
+      function(ctx) return { vim.api.nvim_buf_get_name(ctx.bufnr) } end,
+      3000
+    ),
+  })
+
+  fix.register('eslint', {
+    workspace_command_handler(
+      'eslint.applyAllFixes',
+      function(ctx) return { versioned_document_argument(ctx.bufnr) } end,
+      3000
+    ),
+  })
 
   local function unanimous_var_for_root(root_path, varname)
     local candidate ---@type any|nil
@@ -229,8 +325,6 @@ function M.lsp()
       "<cmd>lua vim.diagnostic.jump({ count = 1, float = true, focus = false, focusable = false, scope = 'cursor', close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter' } })<cr>",
       { noremap = true, silent = true, desc = 'Next Diagnostic' }
     )
-
-    require('lsp-fix').on_attach(client, bufnr)
 
     if client.name == 'ruff' then client.server_capabilities.hoverProvider = false end
 
@@ -365,6 +459,54 @@ function M.lsp()
 
       return true
     end),
+    gopls = ternary(is_installed('gopls'), function()
+      vim.lsp.config('gopls', {
+        capabilities = capabilities,
+        settings = {
+          gopls = {
+            analyses = {
+              unusedparams = true,
+            },
+            staticcheck = true,
+            usePlaceholders = true,
+            gofumpt = true,
+            vulncheck = 'Imports',
+          },
+        },
+      })
+
+      return true
+    end),
+    rust_analyzer = ternary(is_installed('rust-analyzer'), function()
+      local rust_analyzer_settings = {
+        cargo = {
+          allTargets = true,
+          autoreload = true,
+          buildScripts = {
+            enable = true,
+          },
+        },
+        procMacro = {
+          enable = true,
+        },
+      }
+
+      if is_installed('cargo-clippy') then
+        rust_analyzer_settings.check = {
+          command = 'clippy',
+          extraArgs = { '--no-deps' },
+        }
+      end
+
+      vim.lsp.config('rust_analyzer', {
+        capabilities = capabilities,
+        settings = {
+          ['rust-analyzer'] = rust_analyzer_settings,
+        },
+      })
+
+      return true
+    end),
     ty = ternary(is_installed('ty'), function()
       vim.lsp.config('ty', {
         capabilities = capabilities,
@@ -383,14 +525,6 @@ function M.lsp()
     pyright = ternary(is_installed('pyright-langserver'), function()
       vim.lsp.config('pyright', {
         capabilities = capabilities,
-        fix = {
-          function(bufnr, client)
-            client.request_sync('workspace/executeCommand', {
-              command = 'pyright.organizeimports',
-              arguments = { vim.uri_from_bufnr(bufnr) },
-            }, 3000, bufnr)
-          end,
-        },
       })
 
       return true
@@ -398,30 +532,6 @@ function M.lsp()
     ruff = ternary(is_installed('ruff'), function()
       vim.lsp.config('ruff', {
         capabilities = capabilities,
-        fix = {
-          function(bufnr, client)
-            client.request_sync('workspace/executeCommand', {
-              command = 'ruff.applyOrganizeImports',
-              arguments = {
-                {
-                  uri = vim.uri_from_bufnr(bufnr),
-                  version = vim.lsp.util.buf_versions[bufnr],
-                },
-              },
-            }, 3000, bufnr)
-          end,
-          function(bufnr, client)
-            client.request_sync('workspace/executeCommand', {
-              command = 'ruff.applyAutofix',
-              arguments = {
-                {
-                  uri = vim.uri_from_bufnr(bufnr),
-                  version = vim.lsp.util.buf_versions[bufnr],
-                },
-              },
-            }, 3000, bufnr)
-          end,
-        },
       })
 
       return true
@@ -429,7 +539,8 @@ function M.lsp()
     vtsls = ternary(is_installed('vtsls'), function()
       local vue_language_server_path =
         environment.node_package_path('@vue/language-server', environment.repository_root())
-      local hasVolar = is_installed('vue-language-server') and vue_language_server_path ~= nil
+      local can_use_vue_typescript_plugin = is_installed('vue-language-server')
+        and vue_language_server_path ~= nil
 
       -- https://github.com/yioneko/vtsls/blob/main/packages/service/configuration.schema.json
       local tsWorkspaceConfiguration = {
@@ -494,25 +605,12 @@ function M.lsp()
 
       vim.lsp.config('vtsls', {
         capabilities = capabilities,
-        fix = {
-          function(bufnr, client)
-            client.request_sync('workspace/executeCommand', {
-              command = 'typescript.organizeImports',
-              arguments = { vim.api.nvim_buf_get_name(bufnr) },
-            }, 3000, bufnr)
-
-            client.request_sync('workspace/executeCommand', {
-              command = 'typescript.sortImportsImports',
-              arguments = { vim.api.nvim_buf_get_name(bufnr) },
-            }, 3000, bufnr)
-          end,
-        },
         filetypes = concat({
           'typescript',
           'javascript',
           'javascriptreact',
           'typescriptreact',
-        }, hasVolar and { 'vue' } or {}),
+        }, can_use_vue_typescript_plugin and { 'vue' } or {}),
         -- init_options = {},
         settings = {
           typescript = tsWorkspaceConfiguration,
@@ -521,17 +619,23 @@ function M.lsp()
             typescript = tsWorkspaceConfiguration,
             javascript = tsWorkspaceConfiguration,
             autoUseWorkspaceTsdk = false,
-            tsserver = vim.tbl_deep_extend('force', { useSyntaxServer = 'always' }, hasVolar and {
+            tsserver = vim.tbl_deep_extend(
+              'force',
+              { useSyntaxServer = 'always' },
+              can_use_vue_typescript_plugin
+                  and {
 
-              globalPlugins = {
-                {
-                  name = '@vue/typescript-plugin',
-                  location = vue_language_server_path,
-                  languages = { 'vue', 'typescript' },
-                  configNamespace = 'typescript',
-                },
-              },
-            } or {}),
+                    globalPlugins = {
+                      {
+                        name = '@vue/typescript-plugin',
+                        location = vue_language_server_path,
+                        languages = { 'vue', 'typescript' },
+                        configNamespace = 'typescript',
+                      },
+                    },
+                  }
+                or {}
+            ),
           },
           -- completions = {
           --   completeFunctionCalls = true,
@@ -580,21 +684,6 @@ function M.lsp()
           --   useFlatConfig = true,
           -- },
           useFlatConfig = true,
-        },
-        fix = {
-          function(bufnr, client)
-            local params = {
-              command = 'eslint.applyAllFixes',
-              arguments = {
-                {
-                  uri = vim.uri_from_bufnr(bufnr),
-                  version = vim.lsp.util.buf_versions[bufnr],
-                },
-              },
-            }
-
-            client.request_sync('workspace/executeCommand', params, 3000, bufnr)
-          end,
         },
       })
 

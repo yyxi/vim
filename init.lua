@@ -352,19 +352,14 @@ local plugin_specs = {
       },
       { 'nvim-telescope/telescope.nvim' },
     },
-    config = function() require('yyxi.plugins.language_tools').lsp() end,
-  },
-  {
-    dir = '~/.vim/local/lsp-fix',
-    dependencies = { 'neovim/nvim-lspconfig' },
     keys = {
       {
         '<leader>F',
-        function() require('lsp-fix').fix() end,
+        function() require('yyxi.lsp.fix').fix() end,
         desc = 'Fix',
       },
     },
-    config = function() require('yyxi.plugins.language_tools').lsp_fix() end,
+    config = function() require('yyxi.plugins.language_tools').lsp() end,
   },
   {
     'stevearc/conform.nvim',
