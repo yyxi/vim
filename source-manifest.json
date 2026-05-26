@@ -66,6 +66,27 @@
         }
       }
     },
+    "tree-sitter-json5": {
+      "url": "https://github.com/Joakker/tree-sitter-json5.git",
+      "commit": "aa630ef48903ab99e406a8acd2e2933077cc34e1",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "json5": {
+            "location": ".",
+            "parser": "json5",
+            "requiredQueries": [
+              "highlights",
+              "injections"
+            ]
+          }
+        }
+      }
+    },
     "tree-sitter-markdown": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-markdown.git",
       "commit": "f969cd3ae3f9fbd4e43205431d0ae286014c05b5",

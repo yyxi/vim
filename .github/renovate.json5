@@ -1,0 +1,89 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+
+  extends: ['config:recommended', 'schedule:weekly'],
+
+  enabledManagers: ['npm', 'pep621'],
+
+  constraintsFiltering: 'strict',
+  dependencyDashboard: true,
+  dependencyDashboardAutoclose: true,
+  dependencyDashboardApproval: false,
+  dependencyDashboardFooter: '',
+  dependencyDashboardHeader: '',
+  dependencyDashboardLabels: [],
+  internalChecksFilter: 'strict',
+  labels: [],
+
+  semanticCommits: 'enabled',
+  semanticCommitType: 'chore',
+  semanticCommitScope: 'deps',
+
+  automerge: false,
+  automergeType: 'pr',
+  platformAutomerge: true,
+  platformCommit: 'enabled',
+
+  rangeStrategy: 'auto',
+
+  minimumReleaseAge: '15 days',
+  minimumReleaseAgeBehaviour: 'timestamp-required',
+
+  ignorePaths: [
+    '**/node_modules/**',
+    '**/vendor/**',
+    '**/.firecrawl/**',
+    '**/tmp/**',
+    'source-manifest.json',
+  ],
+
+  lockFileMaintenance: {
+    enabled: true,
+  },
+
+  postUpdateOptions: ['pnpmDedupe'],
+  prConcurrentLimit: 10,
+  prCreation: 'immediate',
+  prFooter: '',
+  prHeader: '',
+  prHourlyLimit: 2,
+  rebaseWhen: 'behind-base-branch',
+  updateNotScheduled: true,
+
+  vulnerabilityAlerts: {
+    assignees: ['yyxi'],
+    enabled: true,
+    automerge: true,
+    dependencyDashboardApproval: false,
+    minimumReleaseAge: null,
+    prCreation: 'immediate',
+    rangeStrategy: 'update-lockfile',
+    schedule: ['at any time'],
+    semanticCommitType: 'fix',
+    vulnerabilityFixStrategy: 'lowest',
+  },
+
+  packageRules: [
+    {
+      matchManagers: ['pep621'],
+      matchDepTypes: ['requires-python'],
+      rangeStrategy: 'widen',
+    },
+    {
+      matchManagers: ['pep621'],
+      matchDepTypes: ['requires-python'],
+      matchUpdateTypes: ['minor', 'patch'],
+      automerge: true,
+    },
+    {
+      matchUpdateTypes: ['lockFileMaintenance'],
+      automerge: true,
+    },
+    {
+      matchManagers: ['npm', 'pep621'],
+      matchUpdateTypes: ['patch'],
+      matchCurrentVersion: '!/^0\./',
+      automerge: true,
+    },
+  ],
+}
