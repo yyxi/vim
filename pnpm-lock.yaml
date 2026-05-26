@@ -7,52 +7,52 @@ importers:
     configDependencies: {}
     packageManagerDependencies:
       '@pnpm/exe':
-        specifier: 11.2.2
-        version: 11.2.2
+        specifier: 11.3.0
+        version: 11.3.0
       pnpm:
-        specifier: 11.2.2
-        version: 11.2.2
+        specifier: 11.3.0
+        version: 11.3.0
 
 packages:
 
-  '@pnpm/exe@11.2.2':
-    resolution: {integrity: sha512-9AGho6f10GYF/XHvnpO6wnzDIAiHNSs2PyOTelrNNyUiHwfTVtnJoXwRz/6yPJAYOF3erhPauv5oxf62uh581w==}
+  '@pnpm/exe@11.3.0':
+    resolution: {integrity: sha512-1ItrG3GdA8HC7IUMy79SmYqynjjfwXtIMlbpx9MzrU3ZXMYMfw3yuwjIXW7Aw2z0rRxxa2KtTYcLxqjIaVjUmg==}
     hasBin: true
 
-  '@pnpm/linux-arm64@11.2.2':
-    resolution: {integrity: sha512-cMEqyEwpghHb1UggKuowTuGKvbWe1Ra6bK3SF9CWoIrz36mzQz3FXxYXx1Theo8lmkwWH2MZdUGHKgtUoqEGKg==}
+  '@pnpm/linux-arm64@11.3.0':
+    resolution: {integrity: sha512-+VwGD4/l+TrGKwKeGhSkqzO6eJxK7CkYAoh18ORvBMeYXOlWYF66423VyRbrSK67dtvZ2O0nZ82sA5pxVUUWvQ==}
     cpu: [arm64]
     os: [linux]
 
-  '@pnpm/linux-x64@11.2.2':
-    resolution: {integrity: sha512-AShxDdan9wfAFbIGAO5YnbGRf3zuETOZVMuWqmx4mJLaAOR3kiA3Rwhzj3jyTsAoodn7Xdaxq9G1M3FpB92mkQ==}
+  '@pnpm/linux-x64@11.3.0':
+    resolution: {integrity: sha512-/Csxm8VN18Hcs7vSA83rSk/TTytIVZjgx4K61uLeREClxC7DjAlAc+3jmH9BM615vbUZws821otlWytHRTdVkQ==}
     cpu: [x64]
     os: [linux]
 
-  '@pnpm/linuxstatic-arm64@11.2.2':
-    resolution: {integrity: sha512-m7BCdqFdMFo3fkiOpcOLa70c3Ppy5OKv78HXSIfzL4ajHBdPQfmv03VgC3U08l1ST/EeQFuSt+Za0azmOJyYqA==}
+  '@pnpm/linuxstatic-arm64@11.3.0':
+    resolution: {integrity: sha512-A+wiDUs+8pitTZw0FjWqdqVk4xXvvM3TwVagh6il54EtPr+JS/BkCc5S1lBYJp+ei2H27TBsfXX7Ff/qFfIC2g==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@pnpm/linuxstatic-x64@11.2.2':
-    resolution: {integrity: sha512-UABTQUhdn6eCx/IlGVrdwklKT00pTHrjLNXdviP4OReJa1trM5HDWcDnreIg89ghCFmee+UTBKDx1FYlLON8EQ==}
+  '@pnpm/linuxstatic-x64@11.3.0':
+    resolution: {integrity: sha512-6TuJt6AlUMZbdC3IQfBVKPgUnX9IDEra5DCS2jMHmu26bJZnzEgee8YLuC3j1/xTPrRVbF9Oo5nMbmxUVOCYew==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@pnpm/macos-arm64@11.2.2':
-    resolution: {integrity: sha512-EakwHSWIxzza6fO6zQkmkUphoadjer9VXCsWRax1D4qNWmChKfn2muYFj6BOChS999lwb4fb42gc61Nbx0X6iw==}
+  '@pnpm/macos-arm64@11.3.0':
+    resolution: {integrity: sha512-MXY3ml1zmFn6m710krku0lrTdapuyD44ipKxwaMVylmIJV/U2Co8tielk2p5KEY2pyHBgR8tBTXnvoTnQZ+tvA==}
     cpu: [arm64]
     os: [darwin]
 
-  '@pnpm/win-arm64@11.2.2':
-    resolution: {integrity: sha512-eXzlXAnwRAI9Uff1U2pfTJxC78vL8aGxU/fsUt/RzWjS09xMQZ2qtAunKg869fAi6xfsquDbogkdTZA3163lIw==}
+  '@pnpm/win-arm64@11.3.0':
+    resolution: {integrity: sha512-lGjVPngNxeWwlugcO5cAdqWYpnVQ9JMo3gnvUICWsiXRaVi9QYf9aQNNDE8h3E5J+wFQn8zCTv9X3x1eDauFBw==}
     cpu: [arm64]
     os: [win32]
 
-  '@pnpm/win-x64@11.2.2':
-    resolution: {integrity: sha512-X74bQ4bvjSCYapcupRsGrse8cAg7XhPKXRn1o1qOouux1nJquz9lh2h5uKz8GPx816OUsYo9FS8DV3N9W+L8QA==}
+  '@pnpm/win-x64@11.3.0':
+    resolution: {integrity: sha512-mq5PnEYv4sCAbIWG2vuicN4qlnxf+epXVpuoBEWR+BhwUS8Bb6GgCcRfhaj9AZW8cAxIz2XXkgb4OvJRAer/4A==}
     cpu: [x64]
     os: [win32]
 
@@ -116,45 +116,45 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
-  pnpm@11.2.2:
-    resolution: {integrity: sha512-NuZiH61QYXiTZFXnAke4gI707CV5ep9DepMoGgIEhOJgf2pGmiLpgph8PbuIZuMHFRSrEKShdJ4G7c0ewRhDbw==}
+  pnpm@11.3.0:
+    resolution: {integrity: sha512-LEA9ZZRScodnKx9wVjQ6H3w2NANqZ/+r/MKz11ldhDdo+HhxSNG1fPeVbJBga70ZKFfDY68Z6W0tDsnsV0HSFQ==}
     engines: {node: '>=22.13'}
     hasBin: true
 
 snapshots:
 
-  '@pnpm/exe@11.2.2':
+  '@pnpm/exe@11.3.0':
     dependencies:
       '@reflink/reflink': 0.1.19
       detect-libc: 2.1.2
     optionalDependencies:
-      '@pnpm/linux-arm64': 11.2.2
-      '@pnpm/linux-x64': 11.2.2
-      '@pnpm/linuxstatic-arm64': 11.2.2
-      '@pnpm/linuxstatic-x64': 11.2.2
-      '@pnpm/macos-arm64': 11.2.2
-      '@pnpm/win-arm64': 11.2.2
-      '@pnpm/win-x64': 11.2.2
+      '@pnpm/linux-arm64': 11.3.0
+      '@pnpm/linux-x64': 11.3.0
+      '@pnpm/linuxstatic-arm64': 11.3.0
+      '@pnpm/linuxstatic-x64': 11.3.0
+      '@pnpm/macos-arm64': 11.3.0
+      '@pnpm/win-arm64': 11.3.0
+      '@pnpm/win-x64': 11.3.0
 
-  '@pnpm/linux-arm64@11.2.2':
+  '@pnpm/linux-arm64@11.3.0':
     optional: true
 
-  '@pnpm/linux-x64@11.2.2':
+  '@pnpm/linux-x64@11.3.0':
     optional: true
 
-  '@pnpm/linuxstatic-arm64@11.2.2':
+  '@pnpm/linuxstatic-arm64@11.3.0':
     optional: true
 
-  '@pnpm/linuxstatic-x64@11.2.2':
+  '@pnpm/linuxstatic-x64@11.3.0':
     optional: true
 
-  '@pnpm/macos-arm64@11.2.2':
+  '@pnpm/macos-arm64@11.3.0':
     optional: true
 
-  '@pnpm/win-arm64@11.2.2':
+  '@pnpm/win-arm64@11.3.0':
     optional: true
 
-  '@pnpm/win-x64@11.2.2':
+  '@pnpm/win-x64@11.3.0':
     optional: true
 
   '@reflink/reflink-darwin-arm64@0.1.19':
@@ -194,7 +194,7 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
-  pnpm@11.2.2: {}
+  pnpm@11.3.0: {}
 
 ---
 lockfileVersion: '9.0'
@@ -215,7 +215,7 @@ importers:
         version: 0.3.0
       '@vue/language-server':
         specifier: ^3.2.9
-        version: 3.2.9(typescript@6.0.3)
+        version: 3.3.0(typescript@5.9.3)
       neovim:
         specifier: ^5.4.0
         version: 5.4.0
@@ -334,26 +334,26 @@ packages:
   '@vue/compiler-dom@3.5.34':
     resolution: {integrity: sha512-EbF/T++k0e2MMZlJsBhzK8Sgwt0HcIPOhzn1CTB/lv6sQcyk+OWf8YeiLxZp3ro7MbbLcAfAJ6sEvjFWuNgUCw==}
 
-  '@vue/language-core@3.2.9':
-    resolution: {integrity: sha512-ie0ojt/0fU/GfIogh+zgHbaYRPlt9S+cLOxcWwF7nTSFh897BVgnFKL2byT4kpp1mlqYWZ2psGwSniyE2xsxYw==}
+  '@vue/language-core@3.3.0':
+    resolution: {integrity: sha512-EyUxq1b8Yoxk6hQ6X33BIRnfFLb9Rbm9w/8G8y6uMxlQu7CW7yy9JS/z54xSpIvBvVWX6Lt5v1aBGwmrqD4aJw==}
 
   '@vue/language-plugin-pug@3.2.9':
     resolution: {integrity: sha512-EaRtg3/1TQo9D20nBex1G3NtWElJbSgiiisZe6TwiNKpSCRwFmmvuAkz+AfMmsQc53si3zbkApU8RF0o6ULQag==}
 
-  '@vue/language-server@3.2.9':
-    resolution: {integrity: sha512-zC99h1wn4jVNIRzNnn6waFRzHZitlLIIqSE8+YgAwIeut6zsWtyh9fO3yWbtPGfxLM4pIMEeIWOZ6c+MjPbciQ==}
+  '@vue/language-server@3.3.0':
+    resolution: {integrity: sha512-aELU2BdTPIvdvCHZu+0e3Fjxt8PDT2BKQhK+PBVWLkk3fBzBxCc1i7QD+GkhRQHwwdmFS7Uy1N6AO2QssjXrVg==}
     hasBin: true
     peerDependencies:
       typescript: '*'
 
-  '@vue/language-service@3.2.9':
-    resolution: {integrity: sha512-qo697o86iK/5g9YStut2TWqO9D5H5mTbrQy1/h8s2Xf/bNprrVer9zCx7EJ7VcnT2v1Csp/kQjfD9m93XmIOmQ==}
+  '@vue/language-service@3.3.0':
+    resolution: {integrity: sha512-d8z7PxTjtdwD0++NVuv0NtlWqoaZMq0GAdziffmFjszZ53i0MteG8pdNAj4w8F0F0aCWansLH8bpr9j3bvmFxg==}
 
   '@vue/shared@3.5.34':
     resolution: {integrity: sha512-24uqU4OIiX29ryC3MeWid/Xf2fa2EFRUVLb77nRhk+UrTVrh/XiGtFAFmJBAtBRbjwNdsPRP+jj/OL27Eg1NDA==}
 
-  '@vue/typescript-plugin@3.2.9':
-    resolution: {integrity: sha512-I3IQ+jbLlvSMyViV0yxbJgMG4em6UlSgfIVLk4KNMWddSyo4CFjrjm3BLm76vV/8snRb3dKmeYfQPm7axYlMuw==}
+  '@vue/typescript-plugin@3.3.0':
+    resolution: {integrity: sha512-pU0faHaw1jyx2AXlAJsOnIhN1ko8K68ONaoDF+HHDzhWzsMg1NxCPKAEjZW42CVUc7bN+an2euIDmcQ44ojZkQ==}
 
   acorn@7.4.1:
     resolution: {integrity: sha512-nQyp0o1/mNdbTO1PO6kHkwSrmgZ0MT/jCCpNiwbUjGoRN4dlBhqJtoQuCnEOKzgTVwg0ZWiCoQy6SxMebQVh8A==}
@@ -576,8 +576,8 @@ packages:
     resolution: {integrity: sha512-TFYA4jnP7PVbmlBIfhlSe+WKxs9dklXMTEGcBCIvLhE/Tn3H6Gk1norupVW7m5Cnd4bLcr08AytbyV/xj7f/kQ==}
     engines: {node: '>= 12.0.0'}
 
-  lru-cache@11.3.6:
-    resolution: {integrity: sha512-Gf/KoL3C/MlI7Bt0PGI9I+TeTC/I6r/csU58N4BSNc4lppLBeKsOdFYkK+dX0ABDUMJNfCHTyPpzwwO21Awd3A==}
+  lru-cache@11.4.0:
+    resolution: {integrity: sha512-W+R+kFL4HgVxONq2bhXPi3bGpzGe/yEhVOp233qw9wCRtgncJ15P3bC+e4zZMu4Cq7d+WAJjXGW0uUkifhcatA==}
     engines: {node: 20 || >=22}
 
   lru-cache@6.0.0:
@@ -729,11 +729,6 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@6.0.3:
-    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   uglify-js@3.19.3:
     resolution: {integrity: sha512-v3Xu+yuwBXisp6QYTcH4UbH+xYJXqnq2m/LtQVWKWzYc1iehYnLixoQDN9FH6/j9/oybfd6W9Ghwkl8+UMKTKQ==}
     engines: {node: '>=0.8.0'}
@@ -855,8 +850,8 @@ packages:
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
 
-  vue-component-meta@3.2.9:
-    resolution: {integrity: sha512-18FIQDctfCwpuTrMmAZJXR7fM48wrXNVcWrrhKgvARz2Sr8i1gIQ7gZdUaQwC9hfTxa9S0wIauPSf1et2xp0vQ==}
+  vue-component-meta@3.3.0:
+    resolution: {integrity: sha512-xy36SKEbQywtpl2ohvrco8HwI9GJhyCowyuPYDuBMAaCZqUyuK/d6c9XVSUjtjXSDXUb66kxLBn5hrXK1DNXWw==}
     peerDependencies:
       typescript: '*'
     peerDependenciesMeta:
@@ -886,6 +881,11 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
 snapshots:
 
   '@ansible/ansible-language-server@26.5.0':
@@ -904,7 +904,7 @@ snapshots:
       vscode-languageserver-textdocument: 1.0.12
       vscode-languageserver-types: 3.17.5
       vscode-uri: 3.1.0
-      yaml: 2.8.3
+      yaml: 2.9.0
 
   '@babel/helper-string-parser@7.27.1': {}
 
@@ -1038,7 +1038,7 @@ snapshots:
       '@vue/compiler-core': 3.5.34
       '@vue/shared': 3.5.34
 
-  '@vue/language-core@3.2.9':
+  '@vue/language-core@3.3.0':
     dependencies:
       '@volar/language-core': 2.4.28
       '@vue/compiler-dom': 3.5.34
@@ -1056,19 +1056,19 @@ snapshots:
       pug-parser: 6.0.0
       vscode-languageserver-textdocument: 1.0.12
 
-  '@vue/language-server@3.2.9(typescript@6.0.3)':
+  '@vue/language-server@3.3.0(typescript@5.9.3)':
     dependencies:
       '@volar/language-server': 2.4.28
-      '@vue/language-core': 3.2.9
-      '@vue/language-service': 3.2.9
-      '@vue/typescript-plugin': 3.2.9(typescript@6.0.3)
-      typescript: 6.0.3
+      '@vue/language-core': 3.3.0
+      '@vue/language-service': 3.3.0
+      '@vue/typescript-plugin': 3.3.0(typescript@5.9.3)
+      typescript: 5.9.3
       vscode-uri: 3.1.0
 
-  '@vue/language-service@3.2.9':
+  '@vue/language-service@3.3.0':
     dependencies:
       '@volar/language-service': 2.4.28
-      '@vue/language-core': 3.2.9
+      '@vue/language-core': 3.3.0
       '@vue/shared': 3.5.34
       path-browserify: 1.0.1
       volar-service-css: 0.0.71(@volar/language-service@2.4.28)
@@ -1083,13 +1083,13 @@ snapshots:
 
   '@vue/shared@3.5.34': {}
 
-  '@vue/typescript-plugin@3.2.9(typescript@6.0.3)':
+  '@vue/typescript-plugin@3.3.0(typescript@5.9.3)':
     dependencies:
       '@volar/typescript': 2.4.28
-      '@vue/language-core': 3.2.9
+      '@vue/language-core': 3.3.0
       '@vue/shared': 3.5.34
       path-browserify: 1.0.1
-      vue-component-meta: 3.2.9(typescript@6.0.3)
+      vue-component-meta: 3.3.0(typescript@5.9.3)
     transitivePeerDependencies:
       - typescript
 
@@ -1308,7 +1308,7 @@ snapshots:
       safe-stable-stringify: 2.5.0
       triple-beam: 1.4.1
 
-  lru-cache@11.3.6: {}
+  lru-cache@11.4.0: {}
 
   lru-cache@6.0.0:
     dependencies:
@@ -1354,7 +1354,7 @@ snapshots:
 
   path-scurry@2.0.2:
     dependencies:
-      lru-cache: 11.3.6
+      lru-cache: 11.4.0
       minipass: 7.1.3
 
   picomatch@2.3.2: {}
@@ -1425,8 +1425,6 @@ snapshots:
   typescript@4.9.5: {}
 
   typescript@5.9.3: {}
-
-  typescript@6.0.3: {}
 
   uglify-js@3.19.3:
     optional: true
@@ -1582,13 +1580,13 @@ snapshots:
 
   vscode-uri@3.1.0: {}
 
-  vue-component-meta@3.2.9(typescript@6.0.3):
+  vue-component-meta@3.3.0(typescript@5.9.3):
     dependencies:
       '@volar/typescript': 2.4.28
-      '@vue/language-core': 3.2.9
+      '@vue/language-core': 3.3.0
       path-browserify: 1.0.1
     optionalDependencies:
-      typescript: 6.0.3
+      typescript: 5.9.3
 
   winston-transport@4.9.0:
     dependencies:
@@ -1630,3 +1628,5 @@ snapshots:
       yaml: 2.8.3
 
   yaml@2.8.3: {}
+
+  yaml@2.9.0: {}
