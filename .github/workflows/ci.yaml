@@ -7,17 +7,18 @@ on:
     branches:
       - trunk
 env:
+  NEOVIM_VERSION: v0.12.2
   TREE_SITTER_VERSION: v0.26.1
+  STYLUA_VERSION: v2.5.2
+  LUA_LANGUAGE_SERVER_VERSION: 3.18.2
 
 jobs:
-  continuous-integration:
-    runs-on: ubuntu-latest
-    # name: continuous-integration-${{ matrix.os }}
-    # runs-on: ${{ matrix.os }}
-    # strategy:
-    #   matrix:
-    #     # os: [macos-latest, ubuntu-latest]
-    #     os: [ubuntu-latest]
+  checks:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v6
       - name: restore managed vendor cache
@@ -55,41 +56,68 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-          if [ "$RUNNER_OS" == "Linux" ]; then
+          if [ "$RUNNER_OS" = "Linux" ]; then
             sudo apt-get update
-            sudo apt-get install -y zsh bc unzip
-
-            mkdir -p "$HOME/.neovim-dist"
-            curl -fsSL -o nvim-linux-x86_64.tar.gz https://github.com/neovim/neovim/releases/download/v0.12.2/nvim-linux-x86_64.tar.gz
-            tar xzf nvim-linux-x86_64.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
-            rm -f nvim-linux-x86_64.tar.gz
-
-            curl -fsSL -o tree-sitter.gz "https://github.com/tree-sitter/tree-sitter/releases/download/${TREE_SITTER_VERSION}/tree-sitter-linux-x64.gz"
-            gzip -d tree-sitter.gz
-            mv tree-sitter "$HOME/.local/bin/tree-sitter"
-            chmod +x "$HOME/.local/bin/tree-sitter"
-
-            stylua_version=v2.5.2
-            curl -fsSL -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/${stylua_version}/stylua-linux-x86_64.zip"
-            unzip -q stylua.zip -d "$HOME/.local/bin"
-            rm -f stylua.zip
-            chmod +x "$HOME/.local/bin/stylua"
-
-            lua_ls_version=3.18.2
-            mkdir -p "$HOME/.local/share/lua-language-server"
-            curl -fsSL -o lua-language-server.tar.gz "https://github.com/LuaLS/lua-language-server/releases/download/${lua_ls_version}/lua-language-server-${lua_ls_version}-linux-x64.tar.gz"
-            tar xzf lua-language-server.tar.gz -C "$HOME/.local/share/lua-language-server"
-            rm -f lua-language-server.tar.gz
-            ln -sf "$HOME/.local/share/lua-language-server/bin/lua-language-server" "$HOME/.local/bin/lua-language-server"
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install bash zsh bc gnu-sed stylua lua-language-server
-            brew install neovim --HEAD
-            # mkdir -p "$HOME/.neovim-dist"
-            # curl -sLO https://github.com/neovim/neovim/releases/download/nightly/nvim-macos.tar.gz
-            # xattr -c nvim-macos.tar.gz
-            # tar xzvf nvim-macos.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
-            # rm -f nvim-macos.tar.gz
+            sudo apt-get install -y unzip
+          elif [ "$RUNNER_OS" != "macOS" ]; then
+            echo "unsupported runner OS: $RUNNER_OS" >&2
+            exit 1
           fi
+
+          case "$RUNNER_OS/$RUNNER_ARCH" in
+            Linux/X64)
+              nvim_archive='nvim-linux-x86_64.tar.gz'
+              tree_sitter_archive='tree-sitter-linux-x64.gz'
+              stylua_archive='stylua-linux-x86_64.zip'
+              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-linux-x64.tar.gz"
+              ;;
+            Linux/ARM64)
+              nvim_archive='nvim-linux-arm64.tar.gz'
+              tree_sitter_archive='tree-sitter-linux-arm64.gz'
+              stylua_archive='stylua-linux-aarch64.zip'
+              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-linux-arm64.tar.gz"
+              ;;
+            macOS/X64)
+              nvim_archive='nvim-macos-x86_64.tar.gz'
+              tree_sitter_archive='tree-sitter-macos-x64.gz'
+              stylua_archive='stylua-macos-x86_64.zip'
+              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-darwin-x64.tar.gz"
+              ;;
+            macOS/ARM64)
+              nvim_archive='nvim-macos-arm64.tar.gz'
+              tree_sitter_archive='tree-sitter-macos-arm64.gz'
+              stylua_archive='stylua-macos-aarch64.zip'
+              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-darwin-arm64.tar.gz"
+              ;;
+            *)
+              echo "unsupported runner platform: ${RUNNER_OS}/${RUNNER_ARCH}" >&2
+              exit 1
+              ;;
+          esac
+
+          rm -rf "$HOME/.neovim-dist"
+          mkdir -p "$HOME/.neovim-dist"
+          curl -fsSL -o nvim.tar.gz "https://github.com/neovim/neovim/releases/download/${NEOVIM_VERSION}/${nvim_archive}"
+          tar xzf nvim.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
+          rm -f nvim.tar.gz
+          ln -sf "$HOME/.neovim-dist/bin/nvim" "$HOME/.local/bin/nvim"
+
+          curl -fsSL -o tree-sitter.gz "https://github.com/tree-sitter/tree-sitter/releases/download/${TREE_SITTER_VERSION}/${tree_sitter_archive}"
+          gzip -d -c tree-sitter.gz > "$HOME/.local/bin/tree-sitter"
+          rm -f tree-sitter.gz
+          chmod +x "$HOME/.local/bin/tree-sitter"
+
+          curl -fsSL -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/${STYLUA_VERSION}/${stylua_archive}"
+          unzip -q -o stylua.zip -d "$HOME/.local/bin"
+          rm -f stylua.zip
+          chmod +x "$HOME/.local/bin/stylua"
+
+          rm -rf "$HOME/.local/share/lua-language-server"
+          mkdir -p "$HOME/.local/share/lua-language-server"
+          curl -fsSL -o lua-language-server.tar.gz "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LANGUAGE_SERVER_VERSION}/${lua_ls_archive}"
+          tar xzf lua-language-server.tar.gz -C "$HOME/.local/share/lua-language-server"
+          rm -f lua-language-server.tar.gz
+          ln -sf "$HOME/.local/share/lua-language-server/bin/lua-language-server" "$HOME/.local/bin/lua-language-server"
 
           uv sync --locked
       - name: install
@@ -115,3 +143,16 @@ jobs:
             vendor/git/worktrees
             vendor/treesitter
           key: managed-vendor-${{ runner.os }}-${{ runner.arch }}-${{ env.TREE_SITTER_VERSION }}-${{ hashFiles('source-manifest.json', 'manage') }}
+
+  continuous-integration:
+    if: ${{ always() }}
+    needs:
+      - checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: fail if any required job did not succeed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
+        run: exit 1
+      - name: pass if all required jobs succeeded
+        if: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')) }}
+        run: exit 0
