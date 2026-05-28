@@ -14,6 +14,15 @@ local function temp_file(lines)
   return path
 end
 
+---@param root string
+---@param relative_path string
+---@param lines string[]
+local function write_file(root, relative_path, lines)
+  local path = vim.fs.joinpath(root, relative_path)
+  vim.fn.mkdir(vim.fs.dirname(path), 'p')
+  assert.equals(0, vim.fn.writefile(lines, path))
+end
+
 describe('yyxi.utilities.dotenv', function()
   it('parses assignments into the supplied environment', function()
     local env = {}
@@ -59,5 +68,20 @@ describe('yyxi.utilities.dotenv', function()
 
     assert.same({}, loaded)
     assert.same({}, env)
+  end)
+
+  it('loads default repository dotenv files from the provided root', function()
+    local root = vim.fn.tempname()
+    vim.fn.mkdir(root, 'p')
+    write_file(root, '.env', { 'ALPHA=one', 'SHARED=base' })
+    write_file(root, '.env.local', { 'BETA=two', 'SHARED=local' })
+
+    local env = {}
+    local loaded = dotenv.load_defaults(root, env)
+
+    vim.fn.delete(root, 'rf')
+
+    assert.same({ ALPHA = 'one', BETA = 'two', SHARED = 'local' }, loaded)
+    assert.same(loaded, env)
   end)
 end)

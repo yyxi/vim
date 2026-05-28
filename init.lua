@@ -35,50 +35,17 @@ autocmd! nvim.popupmenu
 ]])
 
 local environment = require('yyxi.utilities.environment')
+local eol_markers = require('yyxi.utilities.eol_markers')
 local filetypes = require('yyxi.utilities.filetypes')
+local sensitive_files = require('yyxi.plugins.sensitive_files')
 
 environment.configure()
+eol_markers.configure()
+sensitive_files.configure()
 
 require('editorconfig').properties.quote_type = function(bufnr, value)
   if value == 'single' or value == 'double' then vim.b[bufnr].quote_type = value end
 end
-
-local list_eol_namespace = vim.api.nvim_create_namespace('list_eol')
-
----@param bufnr integer
-local function list_eol_refresh(bufnr)
-  vim.api.nvim_buf_clear_namespace(bufnr, list_eol_namespace, 0, -1)
-  local topline = vim.fn.line('w0') - 1
-  local botline = vim.fn.line('w$')
-  for lnum = topline, botline - 1 do
-    local line = vim.api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1]
-    if line ~= '' then
-      vim.api.nvim_buf_set_extmark(bufnr, list_eol_namespace, lnum, #line, {
-        virt_text = { { '↳', 'NonText' } },
-        virt_text_pos = 'overlay',
-        hl_mode = 'combine',
-      })
-    end
-  end
-end
-
-local prose_group = vim.api.nvim_create_augroup('ProseSettings', { clear = true })
-
-vim.api.nvim_create_autocmd('FileType', {
-  group = prose_group,
-  pattern = { 'markdown', 'text' },
-  callback = function(args)
-    vim.opt_local.wrap = true
-    -- vim.opt_local.conceallevel = 2
-    -- vim.opt_local.concealcursor = ''
-
-    vim.api.nvim_create_autocmd({ 'BufWinEnter', 'TextChanged', 'TextChangedI', 'WinScrolled' }, {
-      group = prose_group,
-      buffer = args.buf,
-      callback = function(args) list_eol_refresh(args.buf) end,
-    })
-  end,
-})
 
 vim.diagnostic.config({
   virtual_text = false,
@@ -130,33 +97,33 @@ vim.o.autoread = true
 vim.o.background = 'dark'
 vim.o.backspace = 'indent,eol,start'
 vim.o.backup = true
-vim.o.backupcopy = 'yes'
-vim.o.backupdir = vim.fn.expand('~/.vim/tmp/backup')
+vim.o.backupcopy = 'auto'
+vim.o.backupdir = environment.repository_path({ 'tmp', 'backup' })
 vim.o.breakindent = true
-vim.o.breakindentopt = 'shift:0,min:0,sbr'
+vim.o.breakindentopt = 'list:-1'
 vim.o.clipboard = 'unnamedplus'
 vim.o.cmdheight = 2
-vim.o.colorcolumn = ''
-vim.o.compatible = false
 vim.o.cursorline = false
-vim.o.directory = vim.fn.expand('~/.vim/tmp/sessions')
+vim.o.directory = environment.repository_path({ 'tmp', 'swap' })
 vim.o.display = 'lastline'
 vim.o.encoding = 'utf-8'
 vim.o.errorbells = false
 vim.o.expandtab = true
+vim.o.exrc = false
 vim.o.fileencoding = 'utf-8'
-vim.o.fillchars = vim.o.fillchars .. 'fold: '
+vim.o.fillchars = 'eob: ,fold:╌'
 vim.o.foldcolumn = '0'
 vim.o.foldenable = true
 vim.o.foldlevelstart = 99
-vim.o.formatoptions = 'jcroqln'
+vim.o.formatoptions = 'rqnl1j'
+vim.o.formatlistpat = [[^\s*[0-9\-\+\*]\+[\.\)]*\s\+]]
 vim.o.guicursor = 'n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20,a:Cursor/lCursor'
 vim.o.hidden = true
-vim.o.history = 5000
 vim.o.hlsearch = true
 vim.o.ignorecase = true
 vim.o.inccommand = 'split'
 vim.o.incsearch = true
+vim.o.infercase = true
 vim.o.iskeyword = '@,48-57,_,192-255,-'
 vim.o.joinspaces = false
 vim.o.langremap = false
@@ -166,21 +133,24 @@ vim.o.linebreak = true
 vim.o.list = false
 vim.o.listchars = 'tab:¨¨,eol:↳,trail:·'
 vim.o.matchtime = 2
+vim.o.modeline = false
+vim.o.modelines = 0
+vim.o.modelineexpr = false
 vim.o.mouse = 'a'
-vim.o.mousemoveevent = true
 vim.o.nrformats = 'bin,hex'
 vim.o.number = false
 vim.o.numberwidth = 6
 vim.o.pumblend = 10
+vim.o.pumborder = 'rounded'
 vim.o.pumheight = 20
+vim.o.pummaxwidth = 100
 vim.o.relativenumber = false
 vim.o.ruler = false
 vim.o.scrolljump = 1
 vim.o.scrolloff = 0
-vim.o.secure = true
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h"
 vim.o.shiftwidth = 2
-vim.o.shortmess = 'AIOTWacfilmnortxs'
+vim.o.shortmess = 'ICFOSWaco'
 vim.o.showbreak = ''
 vim.o.showmatch = false
 vim.o.showmode = false
@@ -193,30 +163,29 @@ vim.o.smartindent = true
 vim.o.smarttab = true
 vim.o.softtabstop = 2
 vim.o.spell = false
+vim.o.spelloptions = 'camel'
 vim.o.splitbelow = true
 vim.o.splitkeep = 'screen'
 vim.o.splitright = true
 vim.o.startofline = false
-vim.o.swapfile = false
+vim.o.swapfile = true
 vim.o.tabpagemax = 50
 vim.o.tabstop = 2
 vim.o.termguicolors = true
 vim.o.timeout = true
 vim.o.timeoutlen = 500
-vim.o.ttyfast = true
-vim.o.undodir = vim.fn.expand('~/.vim/tmp/undo')
+vim.o.undodir = environment.repository_path({ 'tmp', 'undo' })
 vim.o.undofile = true
 vim.o.updatetime = 250
 vim.o.virtualedit = 'block'
-vim.o.virtualedit = 'block'
-vim.o.virtualedit = 'onemore'
 vim.o.visualbell = false
-vim.o.whichwrap = 'b,s,<,>,h,l'
+vim.o.whichwrap = 'b,s,<,>'
 vim.o.wildignore =
   '*/.git/*,*/.hg/*,*/.svn/*,*.aux,*.out,*.toc,*.jpg,*.bmp,*.gif,*.luac,*.o,*.obj,*.exe,*.dll,*.manifest,*.spl,*.py[co]'
 vim.o.wildmenu = true
 vim.o.wildmode = 'longest:full,full'
 vim.o.winblend = 10
+vim.o.winborder = 'rounded'
 vim.o.wrap = false
 vim.o.wrapscan = false
 

@@ -1,5 +1,7 @@
 local uv = vim.uv or vim.loop
 
+local environment = require('yyxi.utilities.environment')
+
 local M = {
   values = {},
 }
@@ -90,14 +92,13 @@ function M.load_files(files, env)
   return loaded
 end
 
----@param home? string
+---@param root? string
 ---@param env? yyxi.utilities.dotenv.Environment
 ---@return table<string, string>
-function M.load_defaults(home, env)
-  home = home or vim.fn.expand('~')
+function M.load_defaults(root, env)
   local files = {
-    home .. '/.vim/.env',
-    home .. '/.vim/.env.local',
+    environment.repository_path({ '.env' }, root),
+    environment.repository_path({ '.env.local' }, root),
   }
 
   return M.load_files(files, env)
