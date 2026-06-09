@@ -8,3 +8,5 @@ childConcurrency: 1
 minimumReleaseAge: 10080
 strictDepBuilds: true
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  - volar-service-pug@0.0.71
