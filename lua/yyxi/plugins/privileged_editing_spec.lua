@@ -123,7 +123,7 @@ describe('yyxi.plugins.privileged_editing', function()
   end)
 
   it(
-    'classifies unreadable and unwritable regular files and symlink candidates distinctly',
+    'classifies unreadable and unwritable regular files and symlinked regular-file targets consistently',
     function()
       local dir, unreadable = temp_path('unreadable.txt')
       local unwritable = dir .. '/unwritable.txt'
@@ -144,7 +144,8 @@ describe('yyxi.plugins.privileged_editing', function()
 
       assert.equals(constants.STATE_CANDIDATE_READ, unreadable_result.kind)
       assert.equals(constants.STATE_CANDIDATE_WRITE, unwritable_result.kind)
-      assert.equals(constants.STATE_UNSUPPORTED_FILETYPE, link_result.kind)
+      assert.equals(constants.STATE_CANDIDATE_WRITE, link_result.kind)
+      assert.equals('file', link_result.filetype)
     end
   )
 
@@ -159,11 +160,11 @@ describe('yyxi.plugins.privileged_editing', function()
     end)
 
     p.set_run_sudo_impl(function(argv)
-      assert.same({ 'stat', '-c', '%f', path }, argv)
+      assert.same({ 'test', '-f', path }, argv)
       return {
         code = 0,
         signal = 0,
-        stdout = '81a0\n',
+        stdout = '',
         stderr = '',
       }
     end)
@@ -188,11 +189,11 @@ describe('yyxi.plugins.privileged_editing', function()
     end)
 
     p.set_run_sudo_impl(function(argv)
-      assert.same({ 'stat', '-c', '%f', path }, argv)
+      assert.same({ 'test', '-f', path }, argv)
       return {
         code = 0,
         signal = 0,
-        stdout = '81a0\n',
+        stdout = '',
         stderr = '',
       }
     end)
@@ -203,30 +204,64 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.is_true(result.exists)
   end)
 
-  it('classifies permission-denied lstat symlinks as unsupported filetypes', function()
-    local _, path = temp_path('hidden-link')
-    local uv = vim.uv or vim.loop
-    local real_fs_lstat = uv.fs_lstat
+  it(
+    'classifies permission-denied lstat symlinked regular-file targets as candidate-read',
+    function()
+      local _, path = temp_path('hidden-link')
+      local uv = vim.uv or vim.loop
+      local real_fs_lstat = uv.fs_lstat
 
-    stub(uv, 'fs_lstat', function(candidate)
-      if candidate == path then return nil, 'EACCES: permission denied: ' .. candidate, 'EACCES' end
-      return real_fs_lstat(candidate)
-    end)
+      stub(uv, 'fs_lstat', function(candidate)
+        if candidate == path then
+          return nil, 'EACCES: permission denied: ' .. candidate, 'EACCES'
+        end
+        return real_fs_lstat(candidate)
+      end)
 
-    p.set_run_sudo_impl(function(argv)
-      assert.same({ 'stat', '-c', '%f', path }, argv)
-      return {
-        code = 0,
-        signal = 0,
-        stdout = 'a1ff\n',
-        stderr = '',
-      }
-    end)
+      p.set_run_sudo_impl(function(argv)
+        assert.same({ 'test', '-f', path }, argv)
+        return {
+          code = 0,
+          signal = 0,
+          stdout = '',
+          stderr = '',
+        }
+      end)
 
-    local result = p.preclassify_path(path)
+      local result = p.preclassify_path(path)
+
+      assert.equals(constants.STATE_CANDIDATE_READ, result.kind)
+      assert.equals('file', result.filetype)
+    end
+  )
+
+  it('classifies broken symlinks as unsupported filetypes', function()
+    local dir, target = temp_path('missing-target.txt')
+    local link = dir .. '/broken-link.txt'
+    symlink(target, link)
+
+    local result = p.preclassify_path(link)
 
     assert.equals(constants.STATE_UNSUPPORTED_FILETYPE, result.kind)
     assert.equals('link', result.filetype)
+  end)
+
+  it('compares managed names and alias paths by underlying identity', function()
+    local dir = make_temp_dir()
+    local real_dir = dir .. '/real'
+    local alias_dir = dir .. '/alias'
+    local path = real_dir .. '/managed.txt'
+    local alias_path = alias_dir .. '/managed.txt'
+    local other_path = real_dir .. '/other.txt'
+    table.insert(temp_dirs, dir)
+    assert.equals(1, vim.fn.mkdir(real_dir, 'p'))
+    symlink(real_dir, alias_dir)
+    write_bytes(path, 'value\n')
+    write_bytes(other_path, 'other\n')
+
+    assert.is_true(p.same_path_identity(p.managed_buffer_name(path), alias_path))
+    assert.is_true(p.same_path_identity(path, alias_path))
+    assert.is_false(p.same_path_identity(p.managed_buffer_name(path), other_path))
   end)
 
   it('falls back to candidate-read when permission-denied probing stays inconclusive', function()
@@ -240,16 +275,7 @@ describe('yyxi.plugins.privileged_editing', function()
     end)
 
     p.set_run_sudo_impl(function(argv)
-      if argv[1] == 'stat' then
-        return {
-          code = 1,
-          signal = 0,
-          stdout = '',
-          stderr = 'stat: permission denied',
-        }
-      end
-
-      assert.same({ 'test', '-e', path }, argv)
+      assert.same({ 'test', '-f', path }, argv)
       return {
         code = 2,
         signal = 0,
@@ -281,15 +307,6 @@ describe('yyxi.plugins.privileged_editing', function()
       end)
 
       p.set_run_sudo_impl(function(argv)
-        if argv[1] == 'stat' then
-          return {
-            code = 1,
-            signal = 0,
-            stdout = '',
-            stderr = 'sudo: a password is required',
-          }
-        end
-
         if argv[1] == 'test' then
           return {
             code = 1,
@@ -326,16 +343,34 @@ describe('yyxi.plugins.privileged_editing', function()
     end)
 
     p.set_run_sudo_impl(function(argv)
-      if argv[1] == 'stat' then
+      if vim.deep_equal(argv, { 'test', '-f', path }) then
         return {
           code = 1,
           signal = 0,
           stdout = '',
-          stderr = 'stat: cannot stat',
+          stderr = '',
         }
       end
 
-      if argv[1] == 'test' then
+      if vim.deep_equal(argv, { 'test', '-d', path }) then
+        return {
+          code = 1,
+          signal = 0,
+          stdout = '',
+          stderr = '',
+        }
+      end
+
+      if vim.deep_equal(argv, { 'test', '-L', path }) then
+        return {
+          code = 1,
+          signal = 0,
+          stdout = '',
+          stderr = '',
+        }
+      end
+
+      if vim.deep_equal(argv, { 'test', '-e', path }) then
         return {
           code = 1,
           signal = 0,
@@ -370,11 +405,11 @@ describe('yyxi.plugins.privileged_editing', function()
     end)
 
     p.set_run_sudo_impl(function(argv)
-      if argv[1] == 'stat' then
+      if vim.deep_equal(argv, { 'test', '-f', path }) then
         return {
           code = 0,
           signal = 0,
-          stdout = '81a0\n',
+          stdout = '',
           stderr = '',
         }
       end
@@ -402,10 +437,8 @@ describe('yyxi.plugins.privileged_editing', function()
   end)
 
   it('keeps unsupported filetypes under module-controlled write rejection', function()
-    local dir, target = temp_path('target.txt')
-    local link = dir .. '/target-link.txt'
-    write_bytes(target, 'value\n')
-    chmod(target, '444')
+    local dir, target = temp_path('missing-target.txt')
+    local link = dir .. '/broken-link.txt'
     symlink(target, link)
 
     local buffer = vim.api.nvim_create_buf(true, false)
@@ -616,7 +649,8 @@ describe('yyxi.plugins.privileged_editing', function()
     )
 
     assert.equals(constants.STATE_MANAGED, vim.b[buffer].privileged_editing_state)
-    assert.equals(p.managed_buffer_name(path), vim.api.nvim_buf_get_name(buffer))
+    assert.is_true(p.is_managed_buffer_name(vim.api.nvim_buf_get_name(buffer)))
+    assert.is_true(p.same_path_identity(p.path_of(buffer), path))
     assert.same({ 'loaded later' }, vim.api.nvim_buf_get_lines(buffer, 0, -1, false))
   end)
 
@@ -635,7 +669,8 @@ describe('yyxi.plugins.privileged_editing', function()
       )
 
       assert.equals(constants.STATE_UNSUPPORTED_FILETYPE, vim.b[buffer].privileged_editing_state)
-      assert.equals(p.managed_buffer_name(path), vim.api.nvim_buf_get_name(buffer))
+      assert.is_true(p.is_managed_buffer_name(vim.api.nvim_buf_get_name(buffer)))
+      assert.is_true(p.same_path_identity(p.path_of(buffer), path))
     end
   )
 
@@ -754,7 +789,7 @@ describe('yyxi.plugins.privileged_editing', function()
     p.finalize_candidate_read(buffer, path)
 
     assert.equals(constants.STATE_BLOCKED_READ, vim.b[buffer].privileged_editing_state)
-    assert.equals(p.normalize_path(path), vim.api.nvim_buf_get_name(buffer))
+    assert.is_true(p.same_path_identity(vim.api.nvim_buf_get_name(buffer), path))
     assert.is_true(vim.bo[buffer].readonly)
     assert.is_false(vim.bo[buffer].modifiable)
     assert.matches('permission denied', vim.b[buffer].privileged_editing_reason)
@@ -891,6 +926,49 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.same({ message }, errors)
   end)
 
+  it('allows alias-equivalent whole-buffer writes through BufWriteCmd dispatch', function()
+    local dir = make_temp_dir()
+    local real_dir = dir .. '/real'
+    local alias_dir = dir .. '/alias'
+    local path = real_dir .. '/managed.txt'
+    local alias_path = alias_dir .. '/managed.txt'
+    table.insert(temp_dirs, dir)
+    assert.equals(1, vim.fn.mkdir(real_dir, 'p'))
+    symlink(real_dir, alias_dir)
+    write_bytes(path, 'orig\n')
+    chmod(path, '444')
+
+    local buffer = edit_file(path)
+    table.insert(buffers_to_wipe, buffer)
+    local state = p.ensure_buffer_state(buffer)
+    state.kind = constants.STATE_CANDIDATE_WRITE
+    state.path = p.normalize_path(path)
+    vim.api.nvim_buf_set_lines(buffer, 0, -1, false, { 'changed' })
+
+    local observed = {}
+    p.set_run_sudo_impl(function(argv, opts)
+      observed.argv = argv
+      observed.stdin = opts.stdin
+      chmod(path, '644')
+      write_bytes(path, opts.stdin)
+      return {
+        code = 0,
+        signal = 0,
+        stdout = '',
+        stderr = '',
+      }
+    end)
+
+    local ok, message = p.handle_buf_write_request(buffer, alias_path)
+
+    assert.is_true(ok)
+    assert.equals('Privileged write succeeded for ' .. p.normalize_path(path) .. '.', message)
+    assert.same({ 'tee', p.normalize_path(path) }, observed.argv)
+    assert.equals('changed\n', observed.stdin)
+    assert.equals('changed\n', read_bytes(path))
+    assert.is_true(p.same_path_identity(alias_path, path))
+  end)
+
   it('rejects saveas before managed-path mutation', function()
     local dir, path = temp_path('managed.txt')
     local other = dir .. '/other.txt'
@@ -911,7 +989,7 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.matches('path mutation is unsupported', message)
     assert.same({ message }, errors)
     assert.equals(p.normalize_path(path), state.path)
-    assert.equals(p.normalize_path(path), p.path_of(buffer))
+    assert.is_true(p.same_path_identity(p.path_of(buffer), path))
     assert.equals(0, vim.fn.filereadable(other))
   end)
 
@@ -947,7 +1025,7 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.equals(constants.STATE_PLAIN, vim.b[buffer].privileged_editing_state)
     assert.is_true(vim.bo[buffer].swapfile)
     assert.is_true(vim.bo[buffer].undofile)
-    assert.equals(p.normalize_path(plain_path), vim.api.nvim_buf_get_name(buffer))
+    assert.is_true(p.same_path_identity(vim.api.nvim_buf_get_name(buffer), plain_path))
     assert.matches('no longer requires sudo', notifications[#notifications].message)
   end)
 
@@ -1066,11 +1144,8 @@ describe('yyxi.plugins.privileged_editing', function()
       constants.STATE_CANDIDATE_WRITE,
       vim.b[privileged_buffer].privileged_editing_state
     )
-    assert.equals(
-      p.managed_buffer_name(privileged_path),
-      vim.api.nvim_buf_get_name(privileged_buffer)
-    )
-    assert.equals(p.normalize_path(privileged_path), p.path_of(privileged_buffer))
+    assert.is_true(p.is_managed_buffer_name(vim.api.nvim_buf_get_name(privileged_buffer)))
+    assert.is_true(p.same_path_identity(p.path_of(privileged_buffer), privileged_path))
 
     vim.cmd('wall')
 

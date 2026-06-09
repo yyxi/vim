@@ -5,14 +5,17 @@ local M = {}
 -- Contract:
 -- - only preauthorized, non-interactive sudo is supported;
 -- - authentication happens outside Neovim via the normal terminal/PAM flow;
--- - only existing regular files are supported for privileged I/O;
--- - supported writes are same-path whole-buffer writes only;
+-- - only existing regular-file targets are supported for privileged I/O, including symlink paths whose
+--   resolved target is an existing regular file;
+-- - supported writes are same-underlying-path whole-buffer writes only;
 -- - supported buffers are text buffers with 'binary' off and 'fileencoding' unset or 'utf-8';
--- - privileged file creation, :saveas, :write {other-path}, ranged writes, and non-regular files are rejected.
+-- - privileged file creation, :saveas, :write {other-path}, ranged writes, broken symlinks, and
+--   non-regular targets are rejected.
 --
 -- Design choices that are easy to miss:
 -- - exact privileged operations run first; 'sudo -n true' is only a secondary classifier after failure;
--- - existing files are written directly with 'tee' so the target inode and its metadata stay in place;
+-- - existing files are written directly with 'tee' so the opened path and the resolved target inode stay in
+--   place;
 -- - no temporary privileged content files are used in the normal path;
 -- - swapfile and persistent undo are disabled for candidate and managed privileged buffers;
 -- - write-capable privileged buffers use a synthetic 'sudo://' name so :w and :wall reach BufWriteCmd instead
@@ -25,7 +28,6 @@ local M = {}
 local utf8_validator = require('yyxi.utilities.utf8_validator')
 
 local uv = vim.uv or vim.loop
-local bit = bit or rawget(_G, 'bit32')
 
 local GROUP_NAME = 'PrivilegedEditing'
 local MANAGED_NAME_PREFIX = 'sudo://'
@@ -98,6 +100,8 @@ end
 local function clear_announcements(bufnr) ensure_buffer_state(bufnr).announcements = {} end
 
 local attach_buffer_handlers
+local nearest_existing_parent
+local same_path_identity
 local run_sudo
 local run_sudo_true
 
@@ -159,7 +163,11 @@ end
 
 local function ensure_real_buffer_name(bufnr, path)
   local name = normalize_path(path)
-  if raw_name_of(bufnr) == name then return true end
+  local raw_name = raw_name_of(bufnr)
+  if raw_name == name then return true end
+  if not is_managed_buffer_name(raw_name) and same_path_identity(raw_name, name) then
+    return true
+  end
 
   local state = ensure_buffer_state(bufnr)
   state.renaming = true
@@ -183,6 +191,51 @@ local function lstat_path(path)
   return entry, extract_errno_name(error_message, errname)
 end
 
+local function stat_path(path)
+  if path == '' then return nil, nil end
+
+  local entry, error_message, errname = uv.fs_stat(path)
+  return entry, extract_errno_name(error_message, errname)
+end
+
+local function realpath_path(path)
+  if path == '' then return nil, nil end
+
+  local resolved_path, error_message, errname = uv.fs_realpath(path)
+  if not resolved_path then return nil, extract_errno_name(error_message, errname) end
+  return normalize_path(resolved_path), nil
+end
+
+-- Normalize aliasing through existing ancestors so `/var/...` and `/private/var/...`
+-- compare equal without replacing the user-facing path that the feature preserves.
+local function canonical_path_identity(path)
+  path = normalize_path(path)
+  if path == '' then return '' end
+
+  local resolved_path = realpath_path(path)
+  if resolved_path then return resolved_path end
+
+  local parent = nearest_existing_parent(path)
+  if not parent then return path end
+
+  local resolved_parent = realpath_path(parent)
+  if not resolved_parent then return path end
+
+  return resolved_parent .. path:sub(#parent + 1)
+end
+
+local function normalize_identity_path(path)
+  if is_managed_buffer_name(path) then return resolve_path(path) end
+  return normalize_path(path)
+end
+
+same_path_identity = function(lhs, rhs)
+  lhs = normalize_identity_path(lhs)
+  rhs = normalize_identity_path(rhs)
+  if lhs == rhs then return true end
+  return canonical_path_identity(lhs) == canonical_path_identity(rhs)
+end
+
 local function is_file_buffer(bufnr)
   if vim.bo[bufnr].buftype ~= '' then return false end
 
@@ -190,13 +243,13 @@ local function is_file_buffer(bufnr)
   if name == '' or is_uri_path(name) then return false end
 
   local path = path_of(bufnr)
-  local lstat = lstat_path(path)
-  if lstat and lstat.type == 'directory' then return false end
+  local entry = stat_path(path)
+  if entry and entry.type == 'directory' then return false end
 
   return true
 end
 
-local function nearest_existing_parent(path)
+nearest_existing_parent = function(path)
   local current = normalize_path(path)
   if current == '' then return nil end
 
@@ -253,55 +306,92 @@ local function permission_denied_existing_regular_file(path, filetype)
   })
 end
 
-local function sudo_probe_path_filetype(path)
-  -- Use raw mode bits rather than localized filetype text. That keeps the probe
-  -- locale-independent across hosts where `stat -c %F` would not print English.
-  -- The probe still stays read-only and exact-argv.
-  local result = run_sudo({ 'stat', '-c', '%f', path })
-  if result.code ~= 0 then return nil end
+local function is_effectively_unsupported_special_path(path)
+  if is_unsupported_special_path(path) then return true end
 
-  local mode_bits = tonumber(vim.trim(result.stdout), 16)
-  if not mode_bits then return nil end
-
-  local filetype_bits = bit.band(mode_bits, 0xF000)
-  if filetype_bits == 0x8000 then return 'file' end
-  if filetype_bits == 0x4000 then return 'directory' end
-  if filetype_bits == 0xA000 then return 'link' end
-  if filetype_bits == 0x1000 then return 'fifo' end
-  if filetype_bits == 0x2000 then return 'char' end
-  if filetype_bits == 0x6000 then return 'block' end
-  if filetype_bits == 0xC000 then return 'socket' end
-  return 'other'
+  local resolved_path = realpath_path(path)
+  return resolved_path ~= nil and is_unsupported_special_path(resolved_path)
 end
 
--- A permission-denied lstat can mean either "existing file behind an unreadable
--- directory" or "missing path under an unreadable directory". A second sudo-side
--- existence probe keeps those two cases distinct. If that probe itself becomes
--- ambiguous because sudo is not currently authorized, the path stays on the
--- conservative existing-file side and the later exact read will surface the real
--- failure mode.
-local function sudo_probe_path_exists(path)
-  local result = run_sudo({ 'test', '-e', path }, {
+local function sudo_probe_test(path, predicate)
+  local result = run_sudo({ 'test', predicate, path }, {
     stdout = false,
     stderr = false,
   })
 
   if result.code == 0 then return true end
-  if result.code ~= 1 then return nil end
-
-  local classifier = run_sudo_true()
-  if classifier.code == 0 then return false end
+  if result.code == 1 then return false end
   return nil
 end
 
+-- A permission-denied stat can mean either "existing path behind an unreadable
+-- directory" or "missing path under an unreadable directory". Probe the effective
+-- target type with portable `test` predicates that follow symlinks for `-f` and
+-- `-d`, while `-L` still preserves existing broken-symlink detection. If all tests
+-- report false, one final `sudo -n true` distinguishes a genuinely missing path
+-- from an unauthorized probe.
+local function sudo_probe_path_filetype(path)
+  local is_file = sudo_probe_test(path, '-f')
+  if is_file == true then return 'file', true end
+  if is_file == nil then return nil, nil end
+
+  local is_directory = sudo_probe_test(path, '-d')
+  if is_directory == true then return 'directory', true end
+  if is_directory == nil then return nil, nil end
+
+  local is_link = sudo_probe_test(path, '-L')
+  if is_link == true then return 'link', true end
+  if is_link == nil then return nil, nil end
+
+  local exists = sudo_probe_test(path, '-e')
+  if exists == true then return 'other', true end
+  if exists == nil then return nil, nil end
+
+  local classifier = run_sudo_true()
+  if classifier.code == 0 then return nil, false end
+  return nil, nil
+end
+
+local function classify_existing_path(path, filetype, readable, writable)
+  if filetype == 'directory' then
+    return preclassification(STATE_IGNORE, path, true, false, false, { filetype = filetype })
+  end
+
+  if is_effectively_unsupported_special_path(path) or filetype ~= 'file' then
+    return preclassification(STATE_UNSUPPORTED_FILETYPE, path, true, readable, writable, {
+      filetype = filetype,
+    })
+  end
+
+  if readable and writable then
+    return preclassification(STATE_PLAIN, path, true, readable, writable, {
+      filetype = filetype,
+    })
+  end
+
+  if not readable then
+    return preclassification(STATE_CANDIDATE_READ, path, true, readable, writable, {
+      filetype = filetype,
+    })
+  end
+
+  return preclassification(STATE_CANDIDATE_WRITE, path, true, readable, writable, {
+    filetype = filetype,
+  })
+end
+
 local function classify_permission_denied_path(path)
-  local filetype = sudo_probe_path_filetype(path)
+  local filetype, exists = sudo_probe_path_filetype(path)
+  if exists == false then
+    return preclassification(STATE_UNSUPPORTED_CREATE, path, false, false, false)
+  end
+
   if filetype == 'directory' then
     return preclassification(STATE_IGNORE, path, true, false, false, { filetype = filetype })
   end
 
   if filetype then
-    if is_unsupported_special_path(path) or filetype ~= 'file' then
+    if is_effectively_unsupported_special_path(path) or filetype ~= 'file' then
       return preclassification(
         STATE_UNSUPPORTED_FILETYPE,
         path,
@@ -315,10 +405,6 @@ local function classify_permission_denied_path(path)
     return permission_denied_existing_regular_file(path, filetype)
   end
 
-  local exists = sudo_probe_path_exists(path)
-  if exists == false then
-    return preclassification(STATE_UNSUPPORTED_CREATE, path, false, false, false)
-  end
   return permission_denied_existing_regular_file(path)
 end
 
@@ -348,41 +434,32 @@ local function preclassify_path(path)
     return preclassification(STATE_IGNORE, path, false, false, false)
   end
 
-  local entry, stat_error = lstat_path(path)
-  if entry then
-    if entry.type == 'directory' then
-      return preclassification(STATE_IGNORE, path, true, false, false, { filetype = entry.type })
+  local lstat_entry, lstat_error = lstat_path(path)
+  if lstat_entry then
+    local effective_entry = lstat_entry
+
+    if lstat_entry.type == 'link' then
+      local resolved_entry, effective_error = stat_path(path)
+      if not resolved_entry then
+        if is_permission_denied_errno(effective_error) then
+          return classify_permission_denied_path(path)
+        end
+        return preclassification(STATE_UNSUPPORTED_FILETYPE, path, true, false, false, {
+          filetype = lstat_entry.type,
+        })
+      end
+      effective_entry = resolved_entry
     end
 
     local readable = vim.fn.filereadable(path) == 1
     local writable = vim.fn.filewritable(path) == 1
-    if readable and writable then
-      return preclassification(STATE_PLAIN, path, true, readable, writable, {
-        filetype = entry.type,
-      })
-    end
-
-    if is_unsupported_special_path(path) or entry.type ~= 'file' then
-      return preclassification(STATE_UNSUPPORTED_FILETYPE, path, true, readable, writable, {
-        filetype = entry.type,
-      })
-    end
-
-    if not readable then
-      return preclassification(STATE_CANDIDATE_READ, path, true, readable, writable, {
-        filetype = entry.type,
-      })
-    end
-
-    return preclassification(STATE_CANDIDATE_WRITE, path, true, readable, writable, {
-      filetype = entry.type,
-    })
+    return classify_existing_path(path, effective_entry.type, readable, writable)
   end
 
-  if is_permission_denied_errno(stat_error) then return classify_permission_denied_path(path) end
+  if is_permission_denied_errno(lstat_error) then return classify_permission_denied_path(path) end
 
   local parent = nearest_existing_parent(path)
-  if is_missing_path_errno(stat_error) and parent and vim.fn.filewritable(parent) == 2 then
+  if is_missing_path_errno(lstat_error) and parent and vim.fn.filewritable(parent) == 2 then
     return preclassification(STATE_PLAIN, path, false, false, true, { parent = parent })
   end
 
@@ -789,7 +866,7 @@ local function handle_buf_write_request(bufnr, requested_path)
   local normalized_requested_path = resolve_path(requested_path)
   if normalized_requested_path == '' then normalized_requested_path = canonical_path end
 
-  if normalized_requested_path ~= canonical_path then
+  if not same_path_identity(normalized_requested_path, canonical_path) then
     return reject_with_error(
       unsupported_alternate_path_message(canonical_path, normalized_requested_path)
     )
@@ -975,8 +1052,19 @@ local function finalize_buffer(bufnr)
   local state = ensure_buffer_state(bufnr)
   if is_terminal_without_reread(state.kind) then return end
 
-  local path = path_of(bufnr)
-  if path == '' then return end
+  local current_path = path_of(bufnr)
+  if current_path == '' then return end
+
+  local path = current_path
+  local stored_path = state.path
+  if
+    state.kind ~= nil
+    and state.kind ~= STATE_PLAIN
+    and type(stored_path) == 'string'
+    and stored_path ~= ''
+  then
+    if same_path_identity(stored_path, current_path) then path = stored_path end
+  end
 
   local pre = preclassify_path(path)
   if pre.kind == STATE_PLAIN then
@@ -1067,7 +1155,8 @@ function M.configure()
         local name = raw_name_of(bufnr)
         if name == '' or is_managed_buffer_name(name) or is_uri_path(name) then return end
 
-        local path = path_of(bufnr)
+        local state = ensure_buffer_state(bufnr)
+        local path = state.path or path_of(bufnr)
         pre_read_prepare(bufnr, path)
         finalize_buffer(bufnr)
       end)
@@ -1100,6 +1189,7 @@ M._private = {
   managed_buffer_name = managed_buffer_name,
   is_managed_buffer_name = is_managed_buffer_name,
   path_of = path_of,
+  same_path_identity = same_path_identity,
   preclassify_path = preclassify_path,
   nearest_existing_parent = nearest_existing_parent,
   is_unsupported_special_path = is_unsupported_special_path,
