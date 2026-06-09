@@ -159,11 +159,11 @@ describe('yyxi.plugins.privileged_editing', function()
     end)
 
     p.set_run_sudo_impl(function(argv)
-      assert.same({ 'stat', '-c', '%F', path }, argv)
+      assert.same({ 'stat', '-c', '%f', path }, argv)
       return {
         code = 0,
         signal = 0,
-        stdout = 'regular file\n',
+        stdout = '81a0\n',
         stderr = '',
       }
     end)
@@ -177,6 +177,32 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.equals('file', result.filetype)
   end)
 
+  it('parses errno names from lstat error strings when errname is absent', function()
+    local _, path = temp_path('hidden.txt')
+    local uv = vim.uv or vim.loop
+    local real_fs_lstat = uv.fs_lstat
+
+    stub(uv, 'fs_lstat', function(candidate)
+      if candidate == path then return nil, 'EACCES: permission denied: ' .. candidate end
+      return real_fs_lstat(candidate)
+    end)
+
+    p.set_run_sudo_impl(function(argv)
+      assert.same({ 'stat', '-c', '%f', path }, argv)
+      return {
+        code = 0,
+        signal = 0,
+        stdout = '81a0\n',
+        stderr = '',
+      }
+    end)
+
+    local result = p.preclassify_path(path)
+
+    assert.equals(constants.STATE_CANDIDATE_READ, result.kind)
+    assert.is_true(result.exists)
+  end)
+
   it('classifies permission-denied lstat symlinks as unsupported filetypes', function()
     local _, path = temp_path('hidden-link')
     local uv = vim.uv or vim.loop
@@ -188,11 +214,11 @@ describe('yyxi.plugins.privileged_editing', function()
     end)
 
     p.set_run_sudo_impl(function(argv)
-      assert.same({ 'stat', '-c', '%F', path }, argv)
+      assert.same({ 'stat', '-c', '%f', path }, argv)
       return {
         code = 0,
         signal = 0,
-        stdout = 'symbolic link\n',
+        stdout = 'a1ff\n',
         stderr = '',
       }
     end)
@@ -203,7 +229,7 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.equals('link', result.filetype)
   end)
 
-  it('falls back to candidate-read when permission-denied metadata probing fails', function()
+  it('falls back to candidate-read when permission-denied probing stays inconclusive', function()
     local _, path = temp_path('hidden.txt')
     local uv = vim.uv or vim.loop
     local real_fs_lstat = uv.fs_lstat
@@ -240,6 +266,55 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.is_false(result.writable)
   end)
 
+  it(
+    'keeps candidate-read when permission-denied existence probing is blocked by locked sudo',
+    function()
+      local _, path = temp_path('hidden.txt')
+      local uv = vim.uv or vim.loop
+      local real_fs_lstat = uv.fs_lstat
+
+      stub(uv, 'fs_lstat', function(candidate)
+        if candidate == path then
+          return nil, 'EACCES: permission denied: ' .. candidate, 'EACCES'
+        end
+        return real_fs_lstat(candidate)
+      end)
+
+      p.set_run_sudo_impl(function(argv)
+        if argv[1] == 'stat' then
+          return {
+            code = 1,
+            signal = 0,
+            stdout = '',
+            stderr = 'sudo: a password is required',
+          }
+        end
+
+        if argv[1] == 'test' then
+          return {
+            code = 1,
+            signal = 0,
+            stdout = '',
+            stderr = 'sudo: a password is required',
+          }
+        end
+
+        assert.same({ 'true' }, argv)
+        return {
+          code = 1,
+          signal = 0,
+          stdout = '',
+          stderr = 'sudo: a password is required',
+        }
+      end)
+
+      local result = p.preclassify_path(path)
+
+      assert.equals(constants.STATE_CANDIDATE_READ, result.kind)
+      assert.is_true(result.exists)
+    end
+  )
+
   it('classifies missing paths behind permission-denied traversal as unsupported create', function()
     local _, path = temp_path('missing.txt')
     local uv = vim.uv or vim.loop
@@ -260,9 +335,18 @@ describe('yyxi.plugins.privileged_editing', function()
         }
       end
 
-      assert.same({ 'test', '-e', path }, argv)
+      if argv[1] == 'test' then
+        return {
+          code = 1,
+          signal = 0,
+          stdout = '',
+          stderr = '',
+        }
+      end
+
+      assert.same({ 'true' }, argv)
       return {
-        code = 1,
+        code = 0,
         signal = 0,
         stdout = '',
         stderr = '',
@@ -290,7 +374,7 @@ describe('yyxi.plugins.privileged_editing', function()
         return {
           code = 0,
           signal = 0,
-          stdout = 'regular file\n',
+          stdout = '81a0\n',
           stderr = '',
         }
       end
@@ -355,6 +439,23 @@ describe('yyxi.plugins.privileged_editing', function()
     local result = p.preclassify_path(protected .. '/newfile.conf')
 
     assert.equals(constants.STATE_UNSUPPORTED_CREATE, result.kind)
+  end)
+
+  it('parses missing-path errno names from lstat error strings when errname is absent', function()
+    local _, path = temp_path('missing.txt')
+    local uv = vim.uv or vim.loop
+    local real_fs_lstat = uv.fs_lstat
+
+    stub(uv, 'fs_lstat', function(candidate)
+      if candidate == path then return nil, 'ENOENT: no such file or directory: ' .. candidate end
+      return real_fs_lstat(candidate)
+    end)
+
+    local result = p.preclassify_path(path)
+
+    assert.equals(constants.STATE_PLAIN, result.kind)
+    assert.is_false(result.exists)
+    assert.is_true(result.writable)
   end)
 
   it('keeps unsupported create under module-controlled write rejection', function()

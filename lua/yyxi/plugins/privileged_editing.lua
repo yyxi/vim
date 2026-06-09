@@ -25,6 +25,7 @@ local M = {}
 local utf8_validator = require('yyxi.utilities.utf8_validator')
 
 local uv = vim.uv or vim.loop
+local bit = bit or rawget(_G, 'bit32')
 
 local GROUP_NAME = 'PrivilegedEditing'
 local MANAGED_NAME_PREFIX = 'sudo://'
@@ -98,6 +99,7 @@ local function clear_announcements(bufnr) ensure_buffer_state(bufnr).announcemen
 
 local attach_buffer_handlers
 local run_sudo
+local run_sudo_true
 
 local function detach_buffer_autocmds(bufnr)
   local state = buffers[bufnr]
@@ -168,11 +170,17 @@ local function ensure_real_buffer_name(bufnr, path)
   return false, tostring(error_message)
 end
 
+local function extract_errno_name(error_message, errname)
+  if errname and errname ~= '' then return errname end
+  if type(error_message) ~= 'string' then return nil end
+  return error_message:match('^([A-Z0-9_]+):')
+end
+
 local function lstat_path(path)
   if path == '' then return nil, nil end
 
-  local entry, _, errname = uv.fs_lstat(path)
-  return entry, errname
+  local entry, error_message, errname = uv.fs_lstat(path)
+  return entry, extract_errno_name(error_message, errname)
 end
 
 local function is_file_buffer(bufnr)
@@ -246,25 +254,32 @@ local function permission_denied_existing_regular_file(path, filetype)
 end
 
 local function sudo_probe_path_filetype(path)
-  -- When plain lstat fails with EACCES/EPERM, the path may still be an existing
-  -- regular file hidden behind an unreadable directory. Probe the file type under
-  -- sudo first so existing inaccessible files are not misclassified as create
-  -- targets. If metadata probing is denied by sudoers, a later existence probe
-  -- keeps the path on the conservative existing-file side.
-  local result = run_sudo({ 'stat', '-c', '%F', path })
+  -- Use raw mode bits rather than localized filetype text. That keeps the probe
+  -- locale-independent across hosts where `stat -c %F` would not print English.
+  -- The probe still stays read-only and exact-argv.
+  local result = run_sudo({ 'stat', '-c', '%f', path })
   if result.code ~= 0 then return nil end
 
-  local filetype = vim.trim(result.stdout)
-  if filetype == 'regular file' then return 'file' end
-  if filetype == 'directory' then return 'directory' end
-  if filetype == 'symbolic link' then return 'link' end
-  return filetype
+  local mode_bits = tonumber(vim.trim(result.stdout), 16)
+  if not mode_bits then return nil end
+
+  local filetype_bits = bit.band(mode_bits, 0xF000)
+  if filetype_bits == 0x8000 then return 'file' end
+  if filetype_bits == 0x4000 then return 'directory' end
+  if filetype_bits == 0xA000 then return 'link' end
+  if filetype_bits == 0x1000 then return 'fifo' end
+  if filetype_bits == 0x2000 then return 'char' end
+  if filetype_bits == 0x6000 then return 'block' end
+  if filetype_bits == 0xC000 then return 'socket' end
+  return 'other'
 end
 
 -- A permission-denied lstat can mean either "existing file behind an unreadable
 -- directory" or "missing path under an unreadable directory". A second sudo-side
--- existence probe keeps those two cases distinct without collapsing both into
--- candidate-read or both into unsupported-create.
+-- existence probe keeps those two cases distinct. If that probe itself becomes
+-- ambiguous because sudo is not currently authorized, the path stays on the
+-- conservative existing-file side and the later exact read will surface the real
+-- failure mode.
 local function sudo_probe_path_exists(path)
   local result = run_sudo({ 'test', '-e', path }, {
     stdout = false,
@@ -272,7 +287,10 @@ local function sudo_probe_path_exists(path)
   })
 
   if result.code == 0 then return true end
-  if result.code == 1 then return false end
+  if result.code ~= 1 then return nil end
+
+  local classifier = run_sudo_true()
+  if classifier.code == 0 then return false end
   return nil
 end
 
@@ -683,7 +701,7 @@ local run_sudo_impl = default_run_sudo
 
 run_sudo = function(argv, opts) return run_sudo_impl(argv, opts or {}) end
 
-local function run_sudo_true() return run_sudo({ 'true' }, { stdout = false }) end
+run_sudo_true = function() return run_sudo({ 'true' }, { stdout = false }) end
 
 local function classify_failed_operation(action, path, exact_result)
   local detail = summarize_stderr(exact_result.stderr)
