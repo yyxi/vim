@@ -146,6 +146,29 @@ local function ternary(condition, true_value, false_value)
   return condition and true_value or false_value
 end
 
+local function ensure_vtsls_global_plugin(config, plugin)
+  local settings = config.settings or {}
+  config.settings = settings
+
+  local vtsls_settings = settings.vtsls or {}
+  settings.vtsls = vtsls_settings
+
+  local tsserver_settings = vtsls_settings.tsserver or {}
+  vtsls_settings.tsserver = tsserver_settings
+
+  local global_plugins = tsserver_settings.globalPlugins
+  if type(global_plugins) ~= 'table' then
+    tsserver_settings.globalPlugins = { plugin }
+    return
+  end
+
+  for _, existing_plugin in ipairs(global_plugins) do
+    if type(existing_plugin) == 'table' and existing_plugin.name == plugin.name then return end
+  end
+
+  table.insert(global_plugins, plugin)
+end
+
 function M.lsp()
   local is_installed = environment.has_executable
 
@@ -541,6 +564,14 @@ function M.lsp()
         environment.node_package_path('@vue/language-server', environment.repository_root())
       local can_use_vue_typescript_plugin = is_installed('vue-language-server')
         and vue_language_server_path ~= nil
+      local vue_typescript_plugin = can_use_vue_typescript_plugin
+          and {
+            name = '@vue/typescript-plugin',
+            location = vue_language_server_path,
+            languages = { 'vue', 'typescript' },
+            configNamespace = 'typescript',
+          }
+        or nil
 
       -- https://github.com/yioneko/vtsls/blob/main/packages/service/configuration.schema.json
       local tsWorkspaceConfiguration = {
@@ -619,23 +650,9 @@ function M.lsp()
             typescript = tsWorkspaceConfiguration,
             javascript = tsWorkspaceConfiguration,
             autoUseWorkspaceTsdk = false,
-            tsserver = vim.tbl_deep_extend(
-              'force',
-              { useSyntaxServer = 'always' },
-              can_use_vue_typescript_plugin
-                  and {
-
-                    globalPlugins = {
-                      {
-                        name = '@vue/typescript-plugin',
-                        location = vue_language_server_path,
-                        languages = { 'vue', 'typescript' },
-                        configNamespace = 'typescript',
-                      },
-                    },
-                  }
-                or {}
-            ),
+            tsserver = {
+              useSyntaxServer = 'always',
+            },
           },
           -- completions = {
           --   completeFunctionCalls = true,
@@ -645,6 +662,10 @@ function M.lsp()
           -- },
         },
         before_init = function(params, config)
+          if vue_typescript_plugin then
+            ensure_vtsls_global_plugin(config, vue_typescript_plugin)
+          end
+
           if params.rootUri then
             local root_path = vim.uri_to_fname(params.rootUri)
             local quotePreference = unanimous_var_for_root(root_path, 'quote_type') or 'auto'

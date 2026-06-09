@@ -37,11 +37,15 @@ autocmd! nvim.popupmenu
 local environment = require('yyxi.utilities.environment')
 local eol_markers = require('yyxi.utilities.eol_markers')
 local filetypes = require('yyxi.utilities.filetypes')
+local privileged_editing = require('yyxi.plugins.privileged_editing')
 local sensitive_files = require('yyxi.plugins.sensitive_files')
 
 environment.configure()
 eol_markers.configure()
 sensitive_files.configure()
+-- Configure early so the feature can classify and harden candidate buffers during the
+-- normal open lifecycle instead of relying on later repair for every path.
+privileged_editing.configure()
 
 require('editorconfig').properties.quote_type = function(bufnr, value)
   if value == 'single' or value == 'double' then vim.b[bufnr].quote_type = value end

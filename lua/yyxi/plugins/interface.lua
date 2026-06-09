@@ -2,6 +2,85 @@ local M = {}
 
 local exclusions = require('yyxi.utilities.exclusions')
 
+local PRIVILEGED_BUFFER_NAME_PREFIX = 'sudo://'
+local LUALINE_FILENAME_SHORTING_TARGET = 40
+local LUALINE_FILENAME_SYMBOLS = {
+  unnamed = '[No Name]',
+  modified = '[+]',
+  readonly = '[-]',
+}
+
+local function is_privileged_buffer_name(name)
+  return vim.startswith(name or '', PRIVILEGED_BUFFER_NAME_PREFIX)
+end
+
+-- Mirror the built-in lualine filename shortening logic closely enough to keep the
+-- current statusline shape. The built-in component treats 'sudo://' names as URIs,
+-- so it cannot derive the relative path we want for managed privileged buffers.
+local function shorten_path(path, sep, max_len)
+  local len = #path
+  if len <= max_len then return path end
+
+  local segments = vim.split(path, sep)
+  for idx = 1, #segments - 1 do
+    if len <= max_len then break end
+
+    local segment = segments[idx]
+    local shortened = segment:sub(1, vim.startswith(segment, '.') and 2 or 1)
+    segments[idx] = shortened
+    len = len - (#segment - #shortened)
+  end
+
+  return table.concat(segments, sep)
+end
+
+local function lualine_filename_display()
+  local name = vim.api.nvim_buf_get_name(0)
+  local display_path
+
+  if is_privileged_buffer_name(name) then
+    local canonical_path = vim.b.privileged_editing_path
+      or name:sub(#PRIVILEGED_BUFFER_NAME_PREFIX + 1)
+    display_path = vim.fn.fnamemodify(canonical_path, ':~:.')
+  else
+    display_path = vim.fn.expand('%:~:.')
+  end
+
+  if display_path == '' then display_path = LUALINE_FILENAME_SYMBOLS.unnamed end
+
+  local path_separator = package.config:sub(1, 1)
+  local windwidth = vim.go.laststatus == 3 and vim.go.columns or vim.fn.winwidth(0)
+  local estimated_space_available = windwidth - LUALINE_FILENAME_SHORTING_TARGET
+  display_path = shorten_path(display_path, path_separator, estimated_space_available)
+
+  local symbols = {}
+  if vim.bo.modified then table.insert(symbols, LUALINE_FILENAME_SYMBOLS.modified) end
+  if vim.bo.modifiable == false or vim.bo.readonly == true then
+    table.insert(symbols, LUALINE_FILENAME_SYMBOLS.readonly)
+  end
+
+  return display_path .. (#symbols > 0 and ' ' .. table.concat(symbols, '') or '')
+end
+
+local function lualine_filename_color()
+  if not is_privileged_buffer_name(vim.api.nvim_buf_get_name(0)) then return nil end
+
+  -- Reuse lualine's own visual-mode "a" highlight instead of hardcoding red.
+  -- With the default auto theme, that color ultimately comes from the current
+  -- colorscheme's first available foreground among Special, Boolean, or Constant,
+  -- then lualine applies its brightness/contrast adjustments when building the theme.
+  local ok, highlight = pcall(require('lualine.highlight').get_lualine_hl, 'lualine_a_visual')
+  if ok and type(highlight) == 'table' and highlight.bg then
+    return {
+      fg = highlight.fg,
+      bg = highlight.bg,
+      gui = 'bold',
+    }
+  end
+
+  return 'ErrorMsg'
+end
+
 function M.cybu()
   ---@type CybuConfig
   local opts = {
@@ -125,7 +204,12 @@ function M.lualine()
     sections = {
       lualine_a = { 'mode' },
       lualine_b = { 'branch' },
-      lualine_c = { { 'filename', path = 1 } },
+      lualine_c = {
+        {
+          lualine_filename_display,
+          color = lualine_filename_color,
+        },
+      },
       lualine_x = { 'encoding', 'fileformat', 'filetype' },
       lualine_y = { 'progress' },
       lualine_z = { 'location' },
@@ -133,7 +217,12 @@ function M.lualine()
     inactive_sections = {
       lualine_a = {},
       lualine_b = {},
-      lualine_c = { 'filename' },
+      lualine_c = {
+        {
+          lualine_filename_display,
+          color = lualine_filename_color,
+        },
+      },
       lualine_x = { 'location' },
       lualine_y = {},
       lualine_z = {},
