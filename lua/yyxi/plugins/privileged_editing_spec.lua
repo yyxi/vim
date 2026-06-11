@@ -1026,7 +1026,144 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.is_true(vim.bo[buffer].swapfile)
     assert.is_true(vim.bo[buffer].undofile)
     assert.is_true(p.same_path_identity(vim.api.nvim_buf_get_name(buffer), plain_path))
-    assert.matches('no longer requires sudo', notifications[#notifications].message)
+    assert.same({}, notifications)
+  end)
+
+  it('suppresses info notifications by default', function()
+    local _, path = temp_path('managed.txt')
+    write_bytes(path, 'value\n')
+    chmod(path, '444')
+
+    local notifications = {}
+    stub(
+      vim,
+      'notify',
+      function(message, level) table.insert(notifications, { message = message, level = level }) end
+    )
+
+    local buffer = vim.api.nvim_create_buf(true, false)
+    table.insert(buffers_to_wipe, buffer)
+    vim.api.nvim_set_current_buf(buffer)
+    vim.api.nvim_buf_set_name(buffer, path)
+
+    p.pre_read_prepare(buffer, path)
+    p.finalize_buffer(buffer)
+
+    assert.equals(constants.STATE_CANDIDATE_WRITE, vim.b[buffer].privileged_editing_state)
+    assert.same({}, notifications)
+  end)
+
+  it('emits info notifications when configured at INFO', function()
+    local _, path = temp_path('managed.txt')
+    write_bytes(path, 'value\n')
+    chmod(path, '444')
+
+    privileged_editing.configure({ log_level = vim.log.levels.INFO })
+
+    local notifications = {}
+    stub(
+      vim,
+      'notify',
+      function(message, level) table.insert(notifications, { message = message, level = level }) end
+    )
+
+    local buffer = vim.api.nvim_create_buf(true, false)
+    table.insert(buffers_to_wipe, buffer)
+    vim.api.nvim_set_current_buf(buffer)
+    vim.api.nvim_buf_set_name(buffer, path)
+
+    p.pre_read_prepare(buffer, path)
+    p.finalize_buffer(buffer)
+
+    assert.equals(constants.STATE_CANDIDATE_WRITE, vim.b[buffer].privileged_editing_state)
+    assert.equals(1, #notifications)
+    assert.equals(vim.log.levels.INFO, notifications[1].level)
+    assert.matches('Privileged write enabled', notifications[1].message)
+  end)
+
+  it('keeps warnings visible at the default WARN log level', function()
+    local _, path = temp_path('managed.txt')
+
+    local notifications = {}
+    stub(
+      vim,
+      'notify',
+      function(message, level) table.insert(notifications, { message = message, level = level }) end
+    )
+
+    local buffer = vim.api.nvim_create_buf(true, false)
+    table.insert(buffers_to_wipe, buffer)
+    vim.api.nvim_set_current_buf(buffer)
+
+    local ok, reason = p.enter_setup_failed(buffer, path, 'rename failed')
+
+    assert.is_false(ok)
+    assert.matches('setup failed', reason)
+    assert.equals(1, #notifications)
+    assert.equals(vim.log.levels.WARN, notifications[1].level)
+    assert.matches('setup failed', notifications[1].message)
+  end)
+
+  it('gates privileged write success echo behind the INFO log level', function()
+    local dir, warn_path = temp_path('managed-warn.txt')
+    local info_path = dir .. '/managed-info.txt'
+    write_bytes(warn_path, 'orig\n')
+    write_bytes(info_path, 'orig\n')
+    chmod(warn_path, '444')
+    chmod(info_path, '444')
+
+    local echoes = {}
+    stub(vim.api, 'nvim_echo', function(chunks) table.insert(echoes, chunks) end)
+
+    p.set_run_sudo_impl(function(argv, opts)
+      if argv[1] == 'tee' then
+        chmod(argv[2], '644')
+        write_bytes(argv[2], opts.stdin)
+        return {
+          code = 0,
+          signal = 0,
+          stdout = '',
+          stderr = '',
+        }
+      end
+
+      return {
+        code = 0,
+        signal = 0,
+        stdout = '',
+        stderr = '',
+      }
+    end)
+
+    local warn_buffer = edit_file(warn_path)
+    table.insert(buffers_to_wipe, warn_buffer)
+    vim.api.nvim_buf_set_lines(warn_buffer, 0, -1, false, { 'changed' })
+
+    vim.cmd('write')
+
+    assert.same({}, echoes)
+    assert.equals('changed\n', read_bytes(warn_path))
+
+    privileged_editing.configure({ log_level = vim.log.levels.INFO })
+
+    local info_buffer = edit_file(info_path)
+    table.insert(buffers_to_wipe, info_buffer)
+    vim.api.nvim_buf_set_lines(info_buffer, 0, -1, false, { 'changed again' })
+
+    vim.cmd('write')
+
+    local saw_privileged_success = false
+    for _, chunks in ipairs(echoes) do
+      if chunks[1] and type(chunks[1][1]) == 'string' then
+        if chunks[1][1]:match('Privileged write succeeded') then
+          saw_privileged_success = true
+          break
+        end
+      end
+    end
+
+    assert.is_true(saw_privileged_success)
+    assert.equals('changed again\n', read_bytes(info_path))
   end)
 
   it('keeps privileged-related unsupported states under managed-name rejection control', function()
@@ -1102,6 +1239,10 @@ describe('yyxi.plugins.privileged_editing', function()
     assert.equals(constants.STATE_SETUP_FAILED, vim.b[buffer].privileged_editing_state)
     assert.equals(p.managed_buffer_name(path), vim.api.nvim_buf_get_name(buffer))
     assert.matches('setup failed', vim.b[buffer].privileged_editing_reason)
+  end)
+
+  it('rejects invalid log levels', function()
+    assert.has_error(function() privileged_editing.configure({ log_level = 'warn' }) end)
   end)
 
   it('supports :wall across plain and privileged-write buffers', function()

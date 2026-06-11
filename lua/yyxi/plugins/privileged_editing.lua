@@ -31,6 +31,11 @@ local uv = vim.uv or vim.loop
 
 local GROUP_NAME = 'PrivilegedEditing'
 local MANAGED_NAME_PREFIX = 'sudo://'
+local DEFAULT_LOG_LEVEL = vim.log.levels.WARN
+
+local config = {
+  log_level = DEFAULT_LOG_LEVEL,
+}
 
 local STATE_IGNORE = 'ignore'
 local STATE_PLAIN = 'plain'
@@ -466,12 +471,54 @@ local function preclassify_path(path)
   return preclassification(STATE_UNSUPPORTED_CREATE, path, false, false, false, { parent = parent })
 end
 
+local function is_valid_log_level(level)
+  return type(level) == 'number' and level >= vim.log.levels.TRACE and level <= vim.log.levels.OFF
+end
+
+local function configure_logging(opts)
+  opts = opts or {}
+  if type(opts) ~= 'table' then
+    error('privileged_editing.configure: opts must be a table or nil')
+  end
+
+  local log_level = opts.log_level
+  if log_level == nil then
+    config.log_level = DEFAULT_LOG_LEVEL
+    return
+  end
+
+  if not is_valid_log_level(log_level) then
+    error(
+      string.format(
+        'privileged_editing.configure: opts.log_level must be one of vim.log.levels.* (got %s)',
+        vim.inspect(log_level)
+      )
+    )
+  end
+
+  config.log_level = log_level
+end
+
+local function should_log(level)
+  level = level or vim.log.levels.INFO
+  return level >= config.log_level
+end
+
+local function notify(message, level)
+  level = level or vim.log.levels.INFO
+  if not should_log(level) then return false end
+
+  vim.notify(message, level)
+  return true
+end
+
 local function emit_once(bufnr, key, message, level)
   local state = ensure_buffer_state(bufnr)
-  if state.announcements[key] then return end
+  if state.announcements[key] then return false end
+  if not notify(message, level) then return false end
 
   state.announcements[key] = true
-  vim.notify(message, level or vim.log.levels.INFO)
+  return true
 end
 
 local function harden_sensitive_buffer(bufnr)
@@ -904,7 +951,7 @@ attach_buffer_handlers = function(bufnr)
 
   attach_buffer_autocmd(bufnr, 'BufWriteCmd', function(args)
     local ok, message = handle_buf_write_request(args.buf, args.match or raw_name_of(args.buf))
-    if ok then vim.api.nvim_echo({ { message } }, true, {}) end
+    if ok and should_log(vim.log.levels.INFO) then vim.api.nvim_echo({ { message } }, true, {}) end
   end)
   attach_buffer_autocmd(
     bufnr,
@@ -975,7 +1022,7 @@ local function finalize_candidate_read(bufnr, path)
   local ok, message = read_privileged_into_buffer(bufnr, path)
   if not ok then
     set_blocked_read_state(bufnr, path, message)
-    vim.notify(message, vim.log.levels.ERROR)
+    notify(message, vim.log.levels.ERROR)
     return
   end
 
@@ -996,7 +1043,7 @@ local function finalize_candidate_read(bufnr, path)
     return
   end
 
-  vim.notify(message, vim.log.levels.INFO)
+  notify(message, vim.log.levels.INFO)
 end
 
 local function clear_feature_for_plain_buffer(bufnr)
@@ -1108,7 +1155,9 @@ local function finalize_buffer(bufnr)
   if pre.kind == STATE_CANDIDATE_WRITE then finalize_supported_candidate_write(bufnr, path) end
 end
 
-function M.configure()
+function M.configure(opts)
+  configure_logging(opts)
+
   if augroup_id ~= nil then pcall(vim.api.nvim_del_augroup_by_id, augroup_id) end
   augroup_id = vim.api.nvim_create_augroup(GROUP_NAME, { clear = true })
 
