@@ -365,42 +365,111 @@ function M.lsp()
     end,
   })
 
+  local function harper_config(filetypes, linters)
+    return {
+      cmd = { 'harper-ls', '--stdio' },
+      root_markers = { '.harper-dictionary.txt', '.git' },
+      capabilities = capabilities,
+      filetypes = filetypes,
+      settings = {
+        ['harper-ls'] = {
+          userDictPath = '',
+          fileDictPath = '',
+          linters = linters,
+          codeActions = {
+            ForceStable = false,
+          },
+          markdown = {
+            IgnoreLinkTitle = false,
+          },
+          diagnosticSeverity = 'hint',
+          isolateEnglish = false,
+          dialect = 'American',
+          maxFileLength = 120000,
+        },
+      },
+    }
+  end
+
+  local harper_prose_linters = {
+    EllipsisLength = false,
+    LongSentences = false,
+    PhrasalVerbAsCompoundNoun = false,
+    SentenceCapitalization = false,
+    Spaces = false,
+    SpellCheck = false,
+    SpelledNumbers = false,
+    WrongQuotes = false,
+    UseTitleCase = false,
+  }
+
+  local harper_code_linters = vim.tbl_extend('force', harper_prose_linters, {
+    DisjointPrefixes = false,
+    ExpandAlloc = false,
+    ExpandArgument = false,
+    ExpandBecause = false,
+    ExpandControl = false,
+    ExpandDecl = false,
+    ExpandDependencies = false,
+    ExpandDeref = false,
+    ExpandForward = false,
+    ExpandGovt = false,
+    ExpandMemoryShorthands = false,
+    ExpandMinimum = false,
+    ExpandParameter = false,
+    ExpandPeople = false,
+    ExpandPointer = false,
+    ExpandPrevious = false,
+    ExpandStandardInputAndOutput = false,
+    ExpandThrough = false,
+    ExpandTimeShorthands = false,
+    ExpandWith = false,
+    ExpandWithout = false,
+    InflectedVerbAfterTo = false,
+    MergeWords = false,
+    NumericRangeEnDash = false,
+    OrthographicConsistency = false,
+    OxfordComma = false,
+    SplitWords = false,
+    ToDoHyphen = false,
+    ToTwoToo = false,
+  })
+
   local handlers = {
     harper_ls = ternary(is_installed('harper-ls'), function()
-      vim.lsp.config('harper_ls', {
-        capabilities = capabilities,
-        filetypes = {
+      vim.lsp.config(
+        'harper_ls',
+        harper_config({
           'gitcommit',
           'markdown',
           'text',
-        },
-        settings = {
-          ['harper-ls'] = {
-            userDictPath = '',
-            fileDictPath = '',
-            linters = {
-              EllipsisLength = false,
-              LongSentences = false,
-              PhrasalVerbAsCompoundNoun = false,
-              SentenceCapitalization = false,
-              SpellCheck = false,
-              SpelledNumbers = false,
-              WrongQuotes = false,
-              UseTitleCase = false,
-            },
-            codeActions = {
-              ForceStable = false,
-            },
-            markdown = {
-              IgnoreLinkTitle = false,
-            },
-            diagnosticSeverity = 'hint',
-            isolateEnglish = false,
-            dialect = 'American',
-            maxFileLength = 120000,
-          },
-        },
-      })
+        }, harper_prose_linters)
+      )
+
+      return true
+    end),
+    harper_ls_code = ternary(is_installed('harper-ls'), function()
+      vim.lsp.config(
+        'harper_ls_code',
+        harper_config({
+          'c',
+          'cpp',
+          'go',
+          'haskell',
+          'javascript',
+          'javascriptreact',
+          'lua',
+          'nix',
+          'python',
+          'rust',
+          'sh',
+          'swift',
+          'toml',
+          'typescript',
+          'typescriptreact',
+          'zig',
+        }, harper_code_linters)
+      )
 
       return true
     end),
