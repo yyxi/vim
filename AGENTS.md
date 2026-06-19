@@ -14,6 +14,7 @@ This file records only non-obvious guidance for coding agents. Do not treat it a
 - Despite repository names and paths containing “vim”, this repository supports Neovim only.
 - `lazy.nvim` and `nvim-treesitter` are managed as locked local Git worktrees. Do not reintroduce lazy bootstrap cloning, do not add them back to `lazy-lock.json`, do not reintroduce `:Lazy restore` in `manage`, and do not create duplicate runtime checkouts under `vendor/lazy/` or a separate native-runtime directory.
 - `nvim-treesitter-textobjects` is query-corpus-only here. Do not load it as a plugin; `manage` copies selected `textobjects.scm` queries for `mini.ai`.
+- `fff` is backend-only here. Keep Telescope as the UI, keep FFF's `plugin/` runtime out of the managed sparse checkout, and preserve Telescope fallback when the optional FFF native build is unavailable.
 - `tree-sitter-sql` is the current Tree-sitter released-source exception. Do not switch it back to `main` or `generate = true`; `manage` intentionally installs its released queries with a small SQL-only normalization step.
 
 ## Ask before doing
