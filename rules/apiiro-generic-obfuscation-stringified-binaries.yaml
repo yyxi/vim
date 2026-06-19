@@ -1,5 +1,8 @@
 rules:
   - id: generic-obfuscation-stringified-binaries
+    paths:
+      exclude:
+        - "/vendor/git/worktrees/fff/crates/fff-core/tests/grep_integration.rs"
     pattern-either:
 
       # Windows executable
