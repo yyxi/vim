@@ -1705,13 +1705,40 @@
         "nativeBuild": {
           "kind": "cargo",
           "optional": true,
-          "minimumCargoVersion": "1.85.0"
+          "minimumCargoVersion": "1.85.0",
+          "package": "blink-cmp-fuzzy",
+          "artifactStem": "target/release/libblink_cmp_fuzzy"
         }
       },
       "allowedDirtyPaths": [
         "doc/tags",
         "target"
       ]
+    },
+    "fff": {
+      "url": "https://github.com/dmtrKovalenko/fff.git",
+      "commit": "797c045aa93e03e3cec3497a76afe7cb0106bdc2",
+      "ref": "refs/tags/v0.9.5",
+      "files": [
+        ".cargo",
+        "Cargo.lock",
+        "Cargo.toml",
+        "LICENSE",
+        "crates",
+        "lua"
+      ],
+      "allowedDirtyPaths": [
+        "target"
+      ],
+      "plugin": {
+        "nativeBuild": {
+          "kind": "cargo",
+          "optional": true,
+          "package": "fff-nvim",
+          "artifactStem": "target/release/libfff_nvim",
+          "features": []
+        }
+      }
     }
   },
   "treesitter": {

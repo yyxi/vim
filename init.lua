@@ -483,6 +483,10 @@ local plugin_specs = {
         'nvim-telescope/telescope-fzf-native.nvim',
         dir = environment.git_worktree_path('telescope-fzf-native.nvim'),
       },
+      {
+        'dmtrKovalenko/fff',
+        dir = environment.git_worktree_path('fff'),
+      },
       'nvim-treesitter/nvim-treesitter',
       -- 'neovim/nvim-lspconfig',
       'gbprod/yanky.nvim',
@@ -504,9 +508,17 @@ local plugin_specs = {
         '<cmd>Telescope lsp_workspace_symbols<cr>',
         desc = 'Workspace Symbols',
       },
-      { '<leader>g', '<cmd>Telescope live_grep<cr>', desc = 'Grep' },
+      {
+        '<leader>g',
+        function() require('yyxi.plugins.telescope_fff').live_grep() end,
+        desc = 'Grep',
+      },
       { '<leader>y', '<cmd>Telescope yank_history<cr>', desc = 'Yank History' },
-      { '<leader>e', '<cmd>Telescope find_files<cr>', desc = 'Edit' },
+      {
+        '<leader>e',
+        function() require('yyxi.plugins.telescope_fff').find_files() end,
+        desc = 'Edit',
+      },
       { '<leader>b', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
       {
         '<leader>d',

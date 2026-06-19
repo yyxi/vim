@@ -34,7 +34,7 @@ PNPM_INSTALL_PRODUCTION = (
     "--reporter",
     "append-only",
 )
-CARGO_BUILD_RELEASE = ("build", "--release")
+CARGO_BUILD_RELEASE = ("build", "--release", "--locked")
 LUA_CHECK_PATH = "lua/yyxi"
 LUA_CHECK_TARGETS = ("init.lua", LUA_CHECK_PATH)
 VENDOR_DIR_NAME = "vendor"
@@ -399,6 +399,10 @@ def validated_relative_subpath_or_current(path: str) -> Optional[str]:
     return normalized
 
 
+def has_native_library_extension(path: str) -> bool:
+    return path.endswith((".so", ".dylib", ".dll"))
+
+
 def treesitter_released_source_files(released_source: JSONMapping) -> Sequence[str]:
     value = released_source.get("files", [])
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
@@ -725,6 +729,51 @@ def validate_source_settings(source_id: str, source: JSONMapping) -> bool:
                     )
                 )
                 return False
+            if kind == "cargo":
+                package = native_build.get("package")
+                if package is not None and (
+                    not isinstance(package, str) or not package
+                ):
+                    warn(
+                        "source {0} plugin.nativeBuild.package must be a non-empty string".format(
+                            source_id
+                        )
+                    )
+                    return False
+                artifact_stem = native_build_cargo_artifact_stem(native_build)
+                if artifact_stem is None:
+                    warn(
+                        "source {0} plugin.nativeBuild.artifactStem must be a non-empty worktree-relative path without a native library extension".format(
+                            source_id
+                        )
+                    )
+                    return False
+                features = native_build.get("features")
+                if features is not None:
+                    if not isinstance(features, list):
+                        warn(
+                            "source {0} plugin.nativeBuild.features must be a list of non-empty strings".format(
+                                source_id
+                            )
+                        )
+                        return False
+                    seen_features: set[str] = set()
+                    for item in features:
+                        if not isinstance(item, str) or not item:
+                            warn(
+                                "source {0} plugin.nativeBuild.features must be a list of non-empty strings".format(
+                                    source_id
+                                )
+                            )
+                            return False
+                        if item in seen_features:
+                            warn(
+                                "source {0} plugin.nativeBuild.features must not repeat feature names".format(
+                                    source_id
+                                )
+                            )
+                            return False
+                        seen_features.add(item)
 
     return True
 
@@ -3078,6 +3127,43 @@ def native_build_minimum_cargo_version(
     return parse_version_tuple(value)
 
 
+def native_build_cargo_package(native_build: JSONMapping) -> Optional[str]:
+    value = native_build.get("package")
+    return value if isinstance(value, str) and value else None
+
+
+def native_build_cargo_artifact_stem(native_build: JSONMapping) -> Optional[str]:
+    value = native_build.get("artifactStem")
+    if not isinstance(value, str) or not value:
+        return None
+    normalized = validated_relative_subpath(value)
+    if normalized is None or has_native_library_extension(normalized):
+        return None
+    return normalized
+
+
+def native_build_cargo_features(native_build: JSONMapping) -> Sequence[str]:
+    value = native_build.get("features")
+    if not isinstance(value, list):
+        return ()
+    features: list[str] = []
+    for item in value:
+        if isinstance(item, str) and item:
+            features.append(item)
+    return tuple(features)
+
+
+def native_build_cargo_command(native_build: JSONMapping) -> Sequence[str]:
+    command = [*CARGO_BUILD_RELEASE]
+    package = native_build_cargo_package(native_build)
+    if package is not None:
+        command.extend(["-p", package])
+    features = native_build_cargo_features(native_build)
+    if features:
+        command.extend(["--features", ",".join(features)])
+    return command
+
+
 def cargo_version(
     cargo: str, env: Mapping[str, str], repository: str
 ) -> Optional[tuple[int, int, int]]:
@@ -3131,11 +3217,12 @@ def native_plugin_artifact_path(
 ) -> Optional[str]:
     kind = native_build.get("kind")
     if kind == "cargo":
-        return os.path.join(
-            worktree,
-            "target",
-            "release",
-            "libblink_cmp_fuzzy" + native_library_extension(),
+        artifact_stem = native_build_cargo_artifact_stem(native_build)
+        if artifact_stem is None:
+            return None
+        return (
+            os.path.join(worktree, *artifact_stem.split("/"))
+            + native_library_extension()
         )
     if kind == "luasnip_jsregexp":
         return os.path.join(worktree, "deps", "luasnip-jsregexp.so")
@@ -3149,7 +3236,10 @@ def native_build_revision_path(
 ) -> Optional[str]:
     kind = native_build.get("kind")
     if kind == "cargo":
-        return os.path.join(worktree, "target", "release", ".manage-native-build")
+        artifact_path = native_plugin_artifact_path(worktree, native_build)
+        if artifact_path is None:
+            return None
+        return os.path.join(os.path.dirname(artifact_path), ".manage-native-build")
     if kind == "luasnip_jsregexp":
         return os.path.join(worktree, "deps", "jsregexp", ".manage-native-build")
     if kind == "make":
@@ -3193,6 +3283,22 @@ def native_build_revision_text(
                 relative_path, dependency_source_id, dependency_commit
             )
         )
+    if native_build.get("kind") == "cargo":
+        package = native_build_cargo_package(native_build)
+        if package is not None:
+            lines.append("cargo package {0}".format(package))
+        artifact_stem = native_build_cargo_artifact_stem(native_build)
+        if artifact_stem is None:
+            warn(
+                "source {0} plugin.nativeBuild.artifactStem must be a non-empty worktree-relative path without a native library extension".format(
+                    source_id
+                )
+            )
+            return None
+        lines.append("cargo artifactStem {0}".format(artifact_stem))
+        features = native_build_cargo_features(native_build)
+        if features:
+            lines.append("cargo features {0}".format(",".join(features)))
     lines.extend(native_build_platform_signature_lines())
     return "\n".join(lines)
 
@@ -3385,7 +3491,7 @@ def build_native_plugin_runtime(
                     ),
                 )
         if run_logged_command(
-            [cargo, *CARGO_BUILD_RELEASE],
+            [cargo, *native_build_cargo_command(native_build)],
             env,
             worktree,
             show_success_output_on_stderr=False,
