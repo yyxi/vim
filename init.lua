@@ -47,6 +47,14 @@ sensitive_files.configure()
 -- normal open lifecycle instead of relying on later repair for every path.
 privileged_editing.configure()
 
+vim.api.nvim_create_autocmd('TermOpen', {
+  desc = 'Disable terminal buffers',
+  callback = function(args)
+    vim.notify('terminal buffers are disabled', vim.log.levels.ERROR)
+    vim.api.nvim_buf_delete(args.buf, { force = true })
+  end,
+})
+
 require('editorconfig').properties.quote_type = function(bufnr, value)
   if value == 'single' or value == 'double' then vim.b[bufnr].quote_type = value end
 end
