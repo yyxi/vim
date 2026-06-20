@@ -1175,6 +1175,26 @@
         }
       }
     },
+    "tree-sitter-regex": {
+      "url": "https://github.com/tree-sitter/tree-sitter-regex.git",
+      "commit": "b2ac15e27fce703d2f37a79ccd94a5c0cbe9720b",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "regex": {
+            "location": ".",
+            "parser": "regex",
+            "requiredQueries": [
+              "highlights"
+            ]
+          }
+        }
+      }
+    },
     "nvim-treesitter-textobjects": {
       "url": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects.git",
       "commit": "851e865342e5a4cb1ae23d31caf6e991e1c99f1e",
