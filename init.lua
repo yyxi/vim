@@ -326,11 +326,6 @@ local plugin_specs = {
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
-      {
-        'b0o/schemastore.nvim',
-        dir = environment.git_worktree_path('schemastore.nvim'),
-        config = noop,
-      },
       { 'nvim-telescope/telescope.nvim' },
     },
     keys = {

@@ -2,8 +2,10 @@
 """Small management CLI for this Neovim configuration."""
 
 import argparse
+import dataclasses
 import hashlib
 import json
+import math
 import os
 import platform
 import re
@@ -50,6 +52,43 @@ SOURCE_MANIFEST_NAME = "source-manifest.json"
 TREE_SITTER_MINIMUM_VERSION = (0, 26, 1)
 TREE_SITTER_RUNTIME_SITE = os.path.join("vendor", "treesitter")
 TREE_SITTER_RELEASED_SOURCES_DIR = "sources"
+SCHEMASTORE_SOURCE_ID = "schemastore"
+SCHEMA_CATALOG_GENERATOR_VERSION = 2
+SCHEMA_CATALOG_DIR = os.path.join("vendor", "schemas")
+SCHEMA_CATALOG_LUA_NAME = "catalog.lua"
+SCHEMA_CATALOG_METADATA_NAME = "metadata.json"
+SCHEMA_CATALOG_SRC_CATALOG = os.path.join("src", "api", "json", "catalog.json")
+SCHEMA_CATALOG_SRC_SCHEMAS = os.path.join("src", "schemas", "json")
+SCHEMASTORE_URL_PATTERN = re.compile(
+    r"^https?://(?:www|json)\.schemastore\.org/(?P<tail>.+?)(?:\.json)?$"
+)
+LUA_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+LUA_RESERVED_WORDS = frozenset(
+    {
+        "and",
+        "break",
+        "do",
+        "else",
+        "elseif",
+        "end",
+        "false",
+        "for",
+        "function",
+        "goto",
+        "if",
+        "in",
+        "local",
+        "nil",
+        "not",
+        "or",
+        "repeat",
+        "return",
+        "then",
+        "true",
+        "until",
+        "while",
+    }
+)
 DOWNLOAD_USER_AGENT = "yyxi-vim"
 MAX_AUTOMATIC_DOWNLOAD_RETRY_DELAY_SECONDS = 300
 DEFAULT_GIT_REMOTE = "origin"
@@ -2904,6 +2943,353 @@ def read_text_file(path: str) -> Optional[str]:
         return None
 
 
+def schema_catalog_root(repository: str) -> str:
+    return os.path.join(repository, SCHEMA_CATALOG_DIR)
+
+
+def schema_catalog_lua_path(repository: str) -> str:
+    return os.path.join(schema_catalog_root(repository), SCHEMA_CATALOG_LUA_NAME)
+
+
+def schema_catalog_metadata_path(repository: str) -> str:
+    return os.path.join(schema_catalog_root(repository), SCHEMA_CATALOG_METADATA_NAME)
+
+
+def schemastore_worktree(repository: str, lock: JSONMapping) -> Optional[str]:
+    return source_worktree_by_id(repository, lock, SCHEMASTORE_SOURCE_ID)
+
+
+def schemastore_catalog_json_path(repository: str, lock: JSONMapping) -> Optional[str]:
+    worktree = schemastore_worktree(repository, lock)
+    if worktree is None:
+        return None
+    return os.path.join(worktree, SCHEMA_CATALOG_SRC_CATALOG)
+
+
+def schemastore_schemas_dir(repository: str, lock: JSONMapping) -> Optional[str]:
+    worktree = schemastore_worktree(repository, lock)
+    if worktree is None:
+        return None
+    return os.path.join(worktree, SCHEMA_CATALOG_SRC_SCHEMAS)
+
+
+def repository_relative_posix(repository: str, path: str) -> Optional[str]:
+    try:
+        relative = os.path.relpath(path, repository)
+    except ValueError:
+        return None
+    return relative.replace(os.sep, "/")
+
+
+# Result kind for classify_schemastore_url. "kept" pairs with a non-None path;
+# "external" and "missing" pair with None. These cases partition every URL.
+SchemaUrlKind: TypeAlias = Literal["kept", "external", "missing"]
+
+
+def classify_schemastore_url(
+    url: object, repository: str, schemas_dir: str, schemas_dir_real: str
+) -> tuple[SchemaUrlKind, Optional[str]]:
+    if not isinstance(url, str):
+        return "external", None
+    match = SCHEMASTORE_URL_PATTERN.match(url)
+    if match is None:
+        return "external", None
+    absolute = os.path.join(schemas_dir, match.group("tail") + ".json")
+    real = os.path.realpath(absolute)
+    if not real.startswith(schemas_dir_real + os.sep):
+        # Defensive: a hostile catalog URL that resolves outside the vendored
+        # tree (e.g. via ../) is treated as missing rather than kept.
+        return "missing", None
+    if not os.path.isfile(real):
+        return "missing", None
+    return "kept", repository_relative_posix(repository, real)
+
+
+@dataclasses.dataclass
+class SchemaClassificationCounts:
+    entries_external: int = 0
+    entries_missing: int = 0
+    versions_external: int = 0
+    versions_missing: int = 0
+
+
+def classify_schema_entries(
+    catalog: JSONMapping, repository: str, schemas_dir: str
+) -> tuple[list[JSONObject], SchemaClassificationCounts]:
+    raw_entries = catalog.get("schemas")
+    if not isinstance(raw_entries, list):
+        return [], SchemaClassificationCounts()
+
+    schemas_dir_real = os.path.realpath(schemas_dir)
+    entries: list[JSONObject] = []
+    counts = SchemaClassificationCounts()
+
+    for raw in raw_entries:
+        if not isinstance(raw, dict):
+            continue
+        kind, relative = classify_schemastore_url(
+            raw.get("url"), repository, schemas_dir, schemas_dir_real
+        )
+        if kind == "external":
+            counts.entries_external += 1
+            continue
+        if kind == "missing" or relative is None:
+            counts.entries_missing += 1
+            continue
+        entry: JSONObject = {"path": relative}
+        for key in ("name", "description", "fileMatch"):
+            value = raw.get(key)
+            if value is not None:
+                entry[key] = value
+        raw_versions = raw.get("versions")
+        if isinstance(raw_versions, dict):
+            kept: JSONObject = {}
+            for version_key, version_url in raw_versions.items():
+                if not isinstance(version_key, str):
+                    continue
+                v_kind, v_relative = classify_schemastore_url(
+                    version_url, repository, schemas_dir, schemas_dir_real
+                )
+                if v_kind == "external":
+                    counts.versions_external += 1
+                elif v_kind == "missing" or v_relative is None:
+                    counts.versions_missing += 1
+                else:
+                    kept[version_key] = v_relative
+            if kept:
+                entry["versions"] = kept
+        entries.append(entry)
+
+    return entries, counts
+
+
+def lua_quote(value: str) -> str:
+    buffer: list[str] = ["'"]
+    for char in value:
+        code = ord(char)
+        if char == "\\":
+            buffer.append("\\\\")
+        elif char == "'":
+            buffer.append("\\'")
+        elif char == "\n":
+            buffer.append("\\n")
+        elif char == "\r":
+            buffer.append("\\r")
+        elif char == "\t":
+            buffer.append("\\t")
+        elif code < 32 or code == 127:
+            buffer.append("\\{0:d}".format(code))
+        else:
+            buffer.append(char)
+    buffer.append("'")
+    return "".join(buffer)
+
+
+def lua_table_key(key: str) -> str:
+    if LUA_IDENTIFIER_PATTERN.match(key) and key not in LUA_RESERVED_WORDS:
+        return key
+    return "[" + lua_quote(key) + "]"
+
+
+def dump_lua(value: object, indent: int = 0) -> str:
+    if value is None:
+        return "nil"
+    # bool must come before int since bool is a subclass of int.
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        # Lua has no literal for NaN/inf; refuse rather than emit broken syntax.
+        if not math.isfinite(value):
+            raise ValueError("cannot serialize non-finite float: {0!r}".format(value))
+        return repr(value)
+    if isinstance(value, str):
+        return lua_quote(value)
+    if isinstance(value, list):
+        if not value:
+            return "{}"
+        pad = "  " * (indent + 1)
+        body = ",\n".join(pad + dump_lua(item, indent + 1) for item in value)
+        return "{\n" + body + ",\n" + "  " * indent + "}"
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        pad = "  " * (indent + 1)
+        items: list[str] = []
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError("Lua table keys must be strings")
+            items.append(
+                "{0}{1} = {2}".format(
+                    pad, lua_table_key(key), dump_lua(item, indent + 1)
+                )
+            )
+        return "{\n" + ",\n".join(items) + ",\n" + "  " * indent + "}"
+    raise TypeError("cannot serialize {0!r}".format(type(value).__name__))
+
+
+def write_schema_catalog_lua(path: str, entries: Sequence[JSONMapping]) -> bool:
+    body = dump_lua({"entries": list(entries)})
+    content = (
+        "-- !! AUTO-GENERATED by ./manage install -- DO NOT EDIT !!\n"
+        "-- stylua: ignore start\n"
+        "return " + body + "\n"
+        "-- stylua: ignore end\n"
+    )
+    try:
+        with open(path, "w", encoding="utf-8") as file:
+            file.write(content)
+    except OSError as exc:
+        warn("unable to write {0}: {1}".format(path, exc))
+        return False
+    return True
+
+
+def schema_catalog_metadata_signature(commit: str, catalog_sha256: str) -> JSONObject:
+    return {
+        "sourceId": SCHEMASTORE_SOURCE_ID,
+        "generatorVersion": SCHEMA_CATALOG_GENERATOR_VERSION,
+        "commit": commit,
+        "catalogSha256": catalog_sha256,
+    }
+
+
+def schema_catalog_state_ok(
+    repository: str, lock: JSONMapping, emit_warnings: bool
+) -> bool:
+    expected_commit = source_commit_by_id(lock, SCHEMASTORE_SOURCE_ID)
+    catalog_json = schemastore_catalog_json_path(repository, lock)
+    if expected_commit is None or catalog_json is None:
+        return True
+
+    lua_path = schema_catalog_lua_path(repository)
+    metadata_path = schema_catalog_metadata_path(repository)
+
+    if not os.path.isfile(lua_path):
+        if emit_warnings:
+            warn("schema catalog missing: {0}; run ./manage install".format(lua_path))
+        return False
+
+    metadata = read_json_object_file(metadata_path, emit_warnings=emit_warnings)
+    if metadata is None:
+        return False
+
+    catalog_sha = sha256_file(catalog_json, emit_warnings=emit_warnings)
+    if catalog_sha is None:
+        return False
+
+    expected = schema_catalog_metadata_signature(expected_commit, catalog_sha)
+    for key, value in expected.items():
+        if metadata.get(key) != value:
+            if emit_warnings:
+                warn(
+                    "schema catalog state mismatch ({0}); run ./manage install".format(
+                        key
+                    )
+                )
+            return False
+    return True
+
+
+def materialize_schema_catalog(repository: str, lock: JSONMapping) -> bool:
+    expected_commit = source_commit_by_id(lock, SCHEMASTORE_SOURCE_ID)
+    catalog_json = schemastore_catalog_json_path(repository, lock)
+    schemas_dir = schemastore_schemas_dir(repository, lock)
+    if expected_commit is None or catalog_json is None or schemas_dir is None:
+        return True
+
+    if schema_catalog_state_ok(repository, lock, emit_warnings=False):
+        return True
+
+    if not os.path.isfile(catalog_json):
+        warn(
+            "schemastore catalog missing: {0}; run ./manage install --refresh".format(
+                catalog_json
+            )
+        )
+        return False
+    if not os.path.isdir(schemas_dir):
+        warn(
+            "schemastore schemas directory missing: {0}; "
+            "run ./manage install --refresh".format(schemas_dir)
+        )
+        return False
+
+    catalog = read_json_object_file(catalog_json, emit_warnings=True)
+    if catalog is None:
+        return False
+
+    catalog_sha = sha256_file(catalog_json)
+    if catalog_sha is None:
+        return False
+
+    entries, counts = classify_schema_entries(catalog, repository, schemas_dir)
+    if not entries:
+        warn("schema catalog produced zero entries; refusing to publish")
+        return False
+
+    root = schema_catalog_root(repository)
+    parent = os.path.dirname(root)
+    try:
+        os.makedirs(parent, exist_ok=True)
+    except OSError as exc:
+        warn("unable to create {0}: {1}".format(parent, exc))
+        return False
+
+    info(
+        "materializing schema catalog ({0} entries kept; dropped {1} entries "
+        "({2} missing, {3} external) and {4} version aliases ({5} missing, "
+        "{6} external))".format(
+            len(entries),
+            counts.entries_missing + counts.entries_external,
+            counts.entries_missing,
+            counts.entries_external,
+            counts.versions_missing + counts.versions_external,
+            counts.versions_missing,
+            counts.versions_external,
+        )
+    )
+    with tempfile.TemporaryDirectory(
+        prefix=".{0}.{1}.".format(SCHEMASTORE_SOURCE_ID, os.getpid()), dir=parent
+    ) as staging_root:
+        staged_root = os.path.join(staging_root, "install")
+        try:
+            os.makedirs(staged_root, exist_ok=True)
+        except OSError as exc:
+            warn("unable to create staging directory: {0}".format(exc))
+            return False
+
+        if not write_schema_catalog_lua(
+            os.path.join(staged_root, SCHEMA_CATALOG_LUA_NAME), entries
+        ):
+            return False
+
+        metadata: JSONObject = dict(
+            schema_catalog_metadata_signature(expected_commit, catalog_sha)
+        )
+        metadata["entries"] = len(entries)
+        metadata["entriesMissing"] = counts.entries_missing
+        metadata["entriesExternal"] = counts.entries_external
+        metadata["versionsMissing"] = counts.versions_missing
+        metadata["versionsExternal"] = counts.versions_external
+        try:
+            with open(
+                os.path.join(staged_root, SCHEMA_CATALOG_METADATA_NAME),
+                "w",
+                encoding="utf-8",
+            ) as file:
+                json.dump(metadata, file, indent=2, sort_keys=True)
+                file.write("\n")
+        except OSError as exc:
+            warn("unable to write schema catalog metadata: {0}".format(exc))
+            return False
+
+        if not replace_directory(root, staged_root):
+            return False
+    return True
+
+
 def install_managed_state_ok(
     env: Mapping[str, str],
     repository: str,
@@ -2916,6 +3302,8 @@ def install_managed_state_ok(
     if not treesitter_released_sources_state_ok(
         repository, lock, emit_warnings=emit_warnings
     ):
+        ok = False
+    if not schema_catalog_state_ok(repository, lock, emit_warnings=emit_warnings):
         ok = False
     if not native_plugin_artifacts_state_ok(
         repository, lock, emit_warnings=emit_warnings
@@ -2972,6 +3360,8 @@ def install(offline: bool, refresh: bool) -> int:
             if not materialize_git_sources(env, repository, lock, refresh):
                 ok = False
             if not materialize_treesitter_released_sources(repository, lock):
+                ok = False
+            if not materialize_schema_catalog(repository, lock):
                 ok = False
             if not install_native_plugin_artifacts(env, repository, lock):
                 ok = False
@@ -3919,6 +4309,7 @@ def check(fix: bool) -> int:
 SCAN_TARGETS = (
     os.path.join("vendor", "git", "worktrees"),
     os.path.join("vendor", "plugins"),
+    os.path.join("vendor", "schemas"),
     os.path.join("vendor", "treesitter", "sources"),
 )
 SCAN_RULES_DIR = "rules"

@@ -506,13 +506,11 @@ function M.lsp()
     yamlls = ternary(is_installed('yaml-language-server'), function()
       vim.lsp.config('yamlls', {
         capabilities = capabilities,
+        handlers = { ['vscode/content'] = require('yyxi.lsp.schema_content_handler').handler },
         settings = {
           yaml = {
-            schemas = vim.list_extend({
-              ['https://json.schemastore.org/lefthook.json'] = {
-                '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
-              },
-            }, require('schemastore').yaml.schemas()),
+            schemas = require('yyxi.utilities.offline_schemas').yaml.schemas(),
+            schemaStore = { enable = false },
             validate = { enable = true },
           },
         },
@@ -526,6 +524,12 @@ function M.lsp()
             end
           end
         end,
+        on_init = function(client)
+          -- Tell yamlls to forward every http(s) schema request to us as a
+          -- vscode/content request. Without this, yamlls calls request_light
+          -- directly and produces ENOTFOUND diagnostics when offline.
+          client.notify('yaml/registerContentRequest')
+        end,
       })
 
       return true
@@ -533,9 +537,17 @@ function M.lsp()
     jsonls = ternary(is_installed('vscode-json-language-server'), function()
       vim.lsp.config('jsonls', {
         capabilities = capabilities,
+        handlers = { ['vscode/content'] = require('yyxi.lsp.schema_content_handler').handler },
+        init_options = {
+          provideFormatter = true,
+          -- Only `file` is handled server-side; http(s) URLs are routed back to
+          -- us via `vscode/content`, where we serve vendored content or `{}`.
+          handledSchemaProtocols = { 'file' },
+        },
         settings = {
           json = {
-            schemas = require('schemastore').json.schemas(),
+            schemas = require('yyxi.utilities.offline_schemas').json.schemas(),
+            schemaDownload = { enable = false },
             validate = { enable = true },
           },
         },

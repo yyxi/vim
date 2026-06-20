@@ -1243,16 +1243,13 @@
         "LICENSE.md"
       ]
     },
-    "schemastore.nvim": {
-      "url": "https://github.com/b0o/schemastore.nvim.git",
-      "commit": "988a3aafe6d8bb0f71c54aa79e2c65a79aa08837",
-      "ref": "refs/heads/main",
-      "allowedDirtyPaths": [
-        "doc/tags"
-      ],
+    "schemastore": {
+      "url": "https://github.com/SchemaStore/schemastore.git",
+      "commit": "40bc7f0b802c45e431ccb3bb2eec01eb654383f8",
+      "ref": "refs/heads/master",
       "files": [
-        "doc",
-        "lua",
+        "src/api/json/catalog.json",
+        "src/schemas/json",
         "LICENSE",
         "NOTICE"
       ]
