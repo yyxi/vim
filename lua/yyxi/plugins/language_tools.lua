@@ -528,7 +528,7 @@ function M.lsp()
           -- Tell yamlls to forward every http(s) schema request to us as a
           -- vscode/content request. Without this, yamlls calls request_light
           -- directly and produces ENOTFOUND diagnostics when offline.
-          client.notify('yaml/registerContentRequest')
+          client:notify('yaml/registerContentRequest')
         end,
       })
 

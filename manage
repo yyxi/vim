@@ -53,7 +53,7 @@ TREE_SITTER_MINIMUM_VERSION = (0, 26, 1)
 TREE_SITTER_RUNTIME_SITE = os.path.join("vendor", "treesitter")
 TREE_SITTER_RELEASED_SOURCES_DIR = "sources"
 SCHEMASTORE_SOURCE_ID = "schemastore"
-SCHEMA_CATALOG_GENERATOR_VERSION = 2
+SCHEMA_CATALOG_GENERATOR_VERSION = 3
 SCHEMA_CATALOG_DIR = os.path.join("vendor", "schemas")
 SCHEMA_CATALOG_LUA_NAME = "catalog.lua"
 SCHEMA_CATALOG_METADATA_NAME = "metadata.json"
@@ -62,6 +62,19 @@ SCHEMA_CATALOG_SRC_SCHEMAS = os.path.join("src", "schemas", "json")
 SCHEMASTORE_URL_PATTERN = re.compile(
     r"^https?://(?:www|json)\.schemastore\.org/(?P<tail>.+?)(?:\.json)?$"
 )
+# Curated rescue list: upstream catalog entries whose `url` points off-host but
+# whose schema body has *also* been mirrored under src/schemas/json/. Each key
+# is the verbatim catalog URL; each value is the vendored filename. When the
+# file exists at install time the override fires and the entry survives with a
+# file:// URL; when it doesn't, the entry falls back to the normal drop path.
+SCHEMA_CATALOG_OVERRIDES: Dict[str, str] = {
+    "https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json": "lefthook.json",
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/pyproject.json": "pyproject.json",
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/uv.json": "uv.json",
+    "https://docs.renovatebot.com/renovate-schema.json": "renovate.json",
+    "https://raw.githubusercontent.com/jesseduffield/lazygit/master/schema/config.json": "lazygit.json",
+    "https://raw.githubusercontent.com/DavidAnson/markdownlint/main/schema/markdownlint-config-schema.json": "markdownlint.json",
+}
 LUA_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 LUA_RESERVED_WORDS = frozenset(
     {
@@ -3009,8 +3022,32 @@ def classify_schemastore_url(
 class SchemaClassificationCounts:
     entries_external: int = 0
     entries_missing: int = 0
+    entries_overridden: int = 0
     versions_external: int = 0
     versions_missing: int = 0
+
+
+def resolve_schema_catalog_override(
+    url: object, repository: str, schemas_dir: str, schemas_dir_real: str
+) -> Optional[str]:
+    """Return the repo-relative POSIX path for an overridden URL, or None.
+
+    Honors the same path-traversal containment as classify_schemastore_url.
+    A stale override (file gone from the vendored tree) returns None so the
+    entry falls back to the regular classification path.
+    """
+    if not isinstance(url, str):
+        return None
+    filename = SCHEMA_CATALOG_OVERRIDES.get(url)
+    if filename is None:
+        return None
+    absolute = os.path.join(schemas_dir, filename)
+    real = os.path.realpath(absolute)
+    if not real.startswith(schemas_dir_real + os.sep):
+        return None
+    if not os.path.isfile(real):
+        return None
+    return repository_relative_posix(repository, real)
 
 
 def classify_schema_entries(
@@ -3027,13 +3064,26 @@ def classify_schema_entries(
     for raw in raw_entries:
         if not isinstance(raw, dict):
             continue
+        url = raw.get("url")
         kind, relative = classify_schemastore_url(
-            raw.get("url"), repository, schemas_dir, schemas_dir_real
+            url, repository, schemas_dir, schemas_dir_real
         )
-        if kind == "external":
-            counts.entries_external += 1
-            continue
-        if kind == "missing" or relative is None:
+        if kind != "kept":
+            override_relative = resolve_schema_catalog_override(
+                url, repository, schemas_dir, schemas_dir_real
+            )
+            if override_relative is not None:
+                relative = override_relative
+                counts.entries_overridden += 1
+            elif kind == "external":
+                counts.entries_external += 1
+                continue
+            else:
+                counts.entries_missing += 1
+                continue
+        if relative is None:
+            # Defensive: classify_schemastore_url("kept", ...) always pairs
+            # with a non-None path, but typing allows None.
             counts.entries_missing += 1
             continue
         entry: JSONObject = {"path": relative}
@@ -3146,12 +3196,24 @@ def write_schema_catalog_lua(path: str, entries: Sequence[JSONMapping]) -> bool:
     return True
 
 
+def schema_catalog_overrides_sha256() -> str:
+    """SHA-256 of the override map as canonical JSON. Including this in the
+    state signature means editing SCHEMA_CATALOG_OVERRIDES forces regeneration
+    on the next install, without anyone having to remember to bump the
+    generator version."""
+    serialized = json.dumps(
+        SCHEMA_CATALOG_OVERRIDES, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(serialized).hexdigest()
+
+
 def schema_catalog_metadata_signature(commit: str, catalog_sha256: str) -> JSONObject:
     return {
         "sourceId": SCHEMASTORE_SOURCE_ID,
         "generatorVersion": SCHEMA_CATALOG_GENERATOR_VERSION,
         "commit": commit,
         "catalogSha256": catalog_sha256,
+        "overridesSha256": schema_catalog_overrides_sha256(),
     }
 
 
@@ -3238,10 +3300,11 @@ def materialize_schema_catalog(repository: str, lock: JSONMapping) -> bool:
         return False
 
     info(
-        "materializing schema catalog ({0} entries kept; dropped {1} entries "
-        "({2} missing, {3} external) and {4} version aliases ({5} missing, "
-        "{6} external))".format(
+        "materializing schema catalog ({0} entries kept including {1} via "
+        "override; dropped {2} entries ({3} missing, {4} external) and {5} "
+        "version aliases ({6} missing, {7} external))".format(
             len(entries),
+            counts.entries_overridden,
             counts.entries_missing + counts.entries_external,
             counts.entries_missing,
             counts.entries_external,
@@ -3271,6 +3334,7 @@ def materialize_schema_catalog(repository: str, lock: JSONMapping) -> bool:
         metadata["entries"] = len(entries)
         metadata["entriesMissing"] = counts.entries_missing
         metadata["entriesExternal"] = counts.entries_external
+        metadata["entriesOverridden"] = counts.entries_overridden
         metadata["versionsMissing"] = counts.versions_missing
         metadata["versionsExternal"] = counts.versions_external
         try:
