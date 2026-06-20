@@ -53,6 +53,22 @@ function M.gtd()
   require('gtd').setup({})
 end
 
+function M.lsp_format()
+  local format = require('yyxi.lsp.format')
+
+  format.setup({
+    -- TOML buffers attach both tombi (Rust LSP) and vscode-eslint-language-server,
+    -- and conform iterates attached clients by `client.id` (startup race). Pin
+    -- the order so tombi formats first and eslint applies project rules after.
+    toml = {
+      order = {
+        'tombi',
+        'eslint',
+      },
+    },
+  })
+end
+
 function M.lsp_fix()
   local fix = require('yyxi.lsp.fix')
 
@@ -69,7 +85,7 @@ function M.lsp_fix()
     },
     toml = {
       order = {
-        'taplo',
+        'tombi',
         'eslint',
       },
     },
@@ -183,6 +199,7 @@ function M.lsp()
   )
 
   M.lsp_fix()
+  M.lsp_format()
 
   local fix = require('yyxi.lsp.fix')
 
@@ -551,6 +568,31 @@ function M.lsp()
             validate = { enable = true },
           },
         },
+      })
+
+      return true
+    end),
+    tombi = ternary(is_installed('tombi'), function()
+      vim.lsp.config('tombi', {
+        capabilities = capabilities,
+        -- --offline is a hard guard inside Tombi: every http(s) schema fetch is
+        -- short-circuited before it leaves the process. No vscode/content
+        -- handler is needed, in contrast to jsonls/yamlls above.
+        --
+        -- Schema associations are pushed at attach time via tombi/associateSchema,
+        -- sourced from the same offline catalog as jsonls/yamlls. See
+        -- lua/yyxi/lsp/tombi_schema_overlay.lua. The user's project-level
+        -- tombi.toml still wins, since our entries use the default `force = false`.
+        cmd = { 'tombi', 'lsp', '--offline' },
+        filetypes = { 'toml' },
+        root_markers = {
+          'tombi.toml',
+          '.tombi.toml',
+          'pyproject.toml',
+          'Cargo.toml',
+          '.git',
+        },
+        on_init = function(client) require('yyxi.lsp.tombi_schema_overlay').attach(client) end,
       })
 
       return true

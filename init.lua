@@ -345,7 +345,7 @@ local plugin_specs = {
     keys = {
       {
         '<leader>f',
-        function() require('conform').format({ async = true, lsp_format = 'first' }) end,
+        function() require('yyxi.lsp.format').run() end,
         desc = 'Format',
       },
     },
