@@ -53,6 +53,22 @@ function M.gtd()
   require('gtd').setup({})
 end
 
+function M.lsp_format()
+  local format = require('yyxi.lsp.format')
+
+  format.setup({
+    -- TOML buffers attach both tombi (Rust LSP) and vscode-eslint-language-server,
+    -- and conform iterates attached clients by `client.id` (startup race). Pin
+    -- the order so tombi formats first and eslint applies project rules after.
+    toml = {
+      order = {
+        'tombi',
+        'eslint',
+      },
+    },
+  })
+end
+
 function M.lsp_fix()
   local fix = require('yyxi.lsp.fix')
 
@@ -69,7 +85,7 @@ function M.lsp_fix()
     },
     toml = {
       order = {
-        'taplo',
+        'tombi',
         'eslint',
       },
     },
@@ -183,6 +199,7 @@ function M.lsp()
   )
 
   M.lsp_fix()
+  M.lsp_format()
 
   local fix = require('yyxi.lsp.fix')
 
@@ -506,13 +523,11 @@ function M.lsp()
     yamlls = ternary(is_installed('yaml-language-server'), function()
       vim.lsp.config('yamlls', {
         capabilities = capabilities,
+        handlers = { ['vscode/content'] = require('yyxi.lsp.schema_content_handler').handler },
         settings = {
           yaml = {
-            schemas = vim.list_extend({
-              ['https://json.schemastore.org/lefthook.json'] = {
-                '/{.lefthook,lefthook,lefthook-local,.lefthook-local}.{yml,yaml,toml,json}',
-              },
-            }, require('schemastore').yaml.schemas()),
+            schemas = require('yyxi.utilities.offline_schemas').yaml.schemas(),
+            schemaStore = { enable = false },
             validate = { enable = true },
           },
         },
@@ -526,6 +541,12 @@ function M.lsp()
             end
           end
         end,
+        on_init = function(client)
+          -- Tell yamlls to forward every http(s) schema request to us as a
+          -- vscode/content request. Without this, yamlls calls request_light
+          -- directly and produces ENOTFOUND diagnostics when offline.
+          client:notify('yaml/registerContentRequest')
+        end,
       })
 
       return true
@@ -533,12 +554,45 @@ function M.lsp()
     jsonls = ternary(is_installed('vscode-json-language-server'), function()
       vim.lsp.config('jsonls', {
         capabilities = capabilities,
+        handlers = { ['vscode/content'] = require('yyxi.lsp.schema_content_handler').handler },
+        init_options = {
+          provideFormatter = true,
+          -- Only `file` is handled server-side; http(s) URLs are routed back to
+          -- us via `vscode/content`, where we serve vendored content or `{}`.
+          handledSchemaProtocols = { 'file' },
+        },
         settings = {
           json = {
-            schemas = require('schemastore').json.schemas(),
+            schemas = require('yyxi.utilities.offline_schemas').json.schemas(),
+            schemaDownload = { enable = false },
             validate = { enable = true },
           },
         },
+      })
+
+      return true
+    end),
+    tombi = ternary(is_installed('tombi'), function()
+      vim.lsp.config('tombi', {
+        capabilities = capabilities,
+        -- --offline is a hard guard inside Tombi: every http(s) schema fetch is
+        -- short-circuited before it leaves the process. No vscode/content
+        -- handler is needed, in contrast to jsonls/yamlls above.
+        --
+        -- Schema associations are pushed at attach time via tombi/associateSchema,
+        -- sourced from the same offline catalog as jsonls/yamlls. See
+        -- lua/yyxi/lsp/tombi_schema_overlay.lua. The user's project-level
+        -- tombi.toml still wins, since our entries use the default `force = false`.
+        cmd = { 'tombi', 'lsp', '--offline' },
+        filetypes = { 'toml' },
+        root_markers = {
+          'tombi.toml',
+          '.tombi.toml',
+          'pyproject.toml',
+          'Cargo.toml',
+          '.git',
+        },
+        on_init = function(client) require('yyxi.lsp.tombi_schema_overlay').attach(client) end,
       })
 
       return true

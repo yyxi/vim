@@ -24,7 +24,6 @@
     "${env:HOME}/.vim/vendor/git/worktrees/zen-mode.nvim/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/nvim-lspconfig/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/none-ls.nvim/lua",
-    "${env:HOME}/.vim/vendor/git/worktrees/schemastore.nvim/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/telescope.nvim/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/lualine.nvim/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/telescope-ui-select.nvim/lua",

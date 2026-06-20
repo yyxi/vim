@@ -1175,6 +1175,26 @@
         }
       }
     },
+    "tree-sitter-regex": {
+      "url": "https://github.com/tree-sitter/tree-sitter-regex.git",
+      "commit": "b2ac15e27fce703d2f37a79ccd94a5c0cbe9720b",
+      "ref": "refs/heads/master",
+      "files": [
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "regex": {
+            "location": ".",
+            "parser": "regex",
+            "requiredQueries": [
+              "highlights"
+            ]
+          }
+        }
+      }
+    },
     "nvim-treesitter-textobjects": {
       "url": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects.git",
       "commit": "851e865342e5a4cb1ae23d31caf6e991e1c99f1e",
@@ -1243,16 +1263,13 @@
         "LICENSE.md"
       ]
     },
-    "schemastore.nvim": {
-      "url": "https://github.com/b0o/schemastore.nvim.git",
-      "commit": "988a3aafe6d8bb0f71c54aa79e2c65a79aa08837",
-      "ref": "refs/heads/main",
-      "allowedDirtyPaths": [
-        "doc/tags"
-      ],
+    "schemastore": {
+      "url": "https://github.com/SchemaStore/schemastore.git",
+      "commit": "40bc7f0b802c45e431ccb3bb2eec01eb654383f8",
+      "ref": "refs/heads/master",
       "files": [
-        "doc",
-        "lua",
+        "src/api/json/catalog.json",
+        "src/schemas/json",
         "LICENSE",
         "NOTICE"
       ]

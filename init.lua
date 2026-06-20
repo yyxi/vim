@@ -36,7 +36,7 @@ autocmd! nvim.popupmenu
 
 local environment = require('yyxi.utilities.environment')
 local eol_markers = require('yyxi.utilities.eol_markers')
-local filetypes = require('yyxi.utilities.filetypes')
+local filetypes = require('yyxi.plugins.filetypes')
 local privileged_editing = require('yyxi.plugins.privileged_editing')
 local sensitive_files = require('yyxi.plugins.sensitive_files')
 
@@ -46,6 +46,14 @@ sensitive_files.configure()
 -- Configure early so the feature can classify and harden candidate buffers during the
 -- normal open lifecycle instead of relying on later repair for every path.
 privileged_editing.configure()
+
+vim.api.nvim_create_autocmd('TermOpen', {
+  desc = 'Disable terminal buffers',
+  callback = function(args)
+    vim.notify('terminal buffers are disabled', vim.log.levels.ERROR)
+    vim.api.nvim_buf_delete(args.buf, { force = true })
+  end,
+})
 
 require('editorconfig').properties.quote_type = function(bufnr, value)
   if value == 'single' or value == 'double' then vim.b[bufnr].quote_type = value end
@@ -318,11 +326,6 @@ local plugin_specs = {
     cmd = { 'LspInfo', 'LspInstall', 'LspStart' },
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
-      {
-        'b0o/schemastore.nvim',
-        dir = environment.git_worktree_path('schemastore.nvim'),
-        config = noop,
-      },
       { 'nvim-telescope/telescope.nvim' },
     },
     keys = {
@@ -342,7 +345,7 @@ local plugin_specs = {
     keys = {
       {
         '<leader>f',
-        function() require('conform').format({ async = true, lsp_format = 'first' }) end,
+        function() require('yyxi.lsp.format').run() end,
         desc = 'Format',
       },
     },

@@ -3,6 +3,7 @@ packages:
 
 allowBuilds:
   core-js: false
+  tombi: true
 blockExoticSubdeps: true
 childConcurrency: 1
 minimumReleaseAge: 10080

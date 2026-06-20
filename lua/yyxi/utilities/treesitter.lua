@@ -1,4 +1,4 @@
-local filetypes = require('yyxi.utilities.filetypes')
+local filetypes = require('yyxi.plugins.filetypes')
 
 local M = {}
 

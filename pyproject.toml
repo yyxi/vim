@@ -1,22 +1,18 @@
 [project]
 name = "vim"
 version = "0.1.0"
-dependencies = ["pynvim>=0.5.2", "pip>=25.1.1", "ruff>=0.15.12", "ty>=0.0.34"]
 requires-python = ">=3.12,<3.15"
+dependencies = ["pip>=25.1.1", "pynvim>=0.5.2", "ruff>=0.15.12", "ty>=0.0.34"]
+
+[dependency-groups]
+dev = ["semgrep>=1.90.0"]
+
+[tool.setuptools]
+py-modules = []
 
 [tool.uv]
 managed = true
 exclude-newer = "10 days"
 
-[dependency-groups]
-dev = ["semgrep>=1.90.0"]
-
 [tool.uv.workspace]
 members = []
-
-[tool.setuptools]
-py-modules = []
-
-# Development checks:
-# ./manage check
-# ./manage check --fix
