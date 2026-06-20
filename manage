@@ -3393,7 +3393,10 @@ def install(offline: bool, refresh: bool) -> int:
 
     ok = True
     if offline:
-        info("offline mode: verifying local state only")
+        info(
+            "offline mode: verifying local state; will regenerate local-only "
+            "derived artifacts if their vendored sources are present"
+        )
         if os.path.exists(os.path.join(repository, "pyproject.toml")):
             info("offline mode: skipped uv production sync")
         if os.path.exists(os.path.join(repository, "package.json")):
@@ -3408,6 +3411,24 @@ def install(offline: bool, refresh: bool) -> int:
     if lock is None:
         ok = False
     elif offline:
+        # Rebuild local-only derived artifacts whose vendored source is on
+        # disk. Only the schema catalog qualifies today: it is a pure
+        # JSON-to-Lua transform over `vendor/git/worktrees/schemastore/`
+        # using only the Python stdlib, so producing it under --offline
+        # still honors the "no fetch, no external toolchain" contract.
+        # Peer derived artifacts are deliberately excluded:
+        #   * treesitter parsers and supplemental queries need the
+        #     `tree-sitter` CLI plus a C compiler;
+        #   * native plugin artifacts need `cargo`, `make`, or similar.
+        # Those toolchains are not guaranteed under --offline, so we leave
+        # them to `install_managed_state_ok` to flag.
+        #
+        # If the schemastore source itself is missing, materialize early-
+        # returns True (no-op) and `git_sources_state_ok` inside
+        # `install_managed_state_ok` is what fails hard — the schema check
+        # would otherwise vacuously pass with "no source configured".
+        if not materialize_schema_catalog(repository, lock):
+            ok = False
         if not install_managed_state_ok(env, repository, lock, emit_warnings=True):
             ok = False
         if not link_neovim_config(home, repository):
@@ -4464,7 +4485,7 @@ def build_parser() -> argparse.ArgumentParser:
     install_mode.add_argument(
         "--offline",
         action="store_true",
-        help="verify already-local managed state only; do not fetch, build, or download; still ensure the Neovim config link exists",
+        help="verify already-local managed state and rebuild the schema catalog from the vendored schemastore worktree when missing; never fetch or invoke external toolchains; still ensure the Neovim config link",
     )
     install_mode.add_argument(
         "--refresh",
