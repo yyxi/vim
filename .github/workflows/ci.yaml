@@ -41,7 +41,7 @@ jobs:
             vendor/treesitter
           key: managed-vendor-${{ runner.os }}-${{ runner.arch }}-${{ env.TREE_SITTER_VERSION }}-${{ hashFiles('source-manifest.json', 'manage') }}
       - name: install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           cache-dependency-glob: |
             pyproject.toml
@@ -56,7 +56,7 @@ jobs:
           node-version: lts/*
           package-manager-cache: false
       - name: install pnpm
-        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           cache: true
           cache_dependency_path: pnpm-lock.yaml
