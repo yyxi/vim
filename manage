@@ -2608,7 +2608,7 @@ def query_dependency_data(parser_data: JSONMapping) -> JSONObject:
 def install_treesitter_runtime(
     env: Mapping[str, str], repository: str, lock: JSONMapping
 ) -> bool:
-    if treesitter_runtime_state_ok(repository, lock, emit_warnings=False):
+    if treesitter_runtime_state_ok(repository, lock, emit_warnings=False, env=env):
         return True
     if not check_tree_sitter_cli(env, repository, treesitter_minimum_cli_version(lock)):
         return False
@@ -3359,6 +3359,7 @@ def install_managed_state_ok(
     repository: str,
     lock: JSONMapping,
     emit_warnings: bool,
+    check_tree_sitter_cli_version: bool = True,
 ) -> bool:
     ok = True
     if not git_sources_state_ok(env, repository, lock, emit_warnings=emit_warnings):
@@ -3373,8 +3374,9 @@ def install_managed_state_ok(
         repository, lock, emit_warnings=emit_warnings
     ):
         ok = False
+    treesitter_check_env = env if check_tree_sitter_cli_version else None
     if not treesitter_runtime_state_ok(
-        repository, lock, emit_warnings=emit_warnings, env=env
+        repository, lock, emit_warnings=emit_warnings, env=treesitter_check_env
     ):
         ok = False
     return ok
@@ -3411,17 +3413,17 @@ def install(offline: bool, refresh: bool) -> int:
     if lock is None:
         ok = False
     elif offline:
-        # Rebuild local-only derived artifacts whose vendored source is on
-        # disk. Only the schema catalog qualifies today: it is a pure
-        # JSON-to-Lua transform over `vendor/git/worktrees/schemastore/`
-        # using only the Python stdlib, so producing it under --offline
-        # still honors the "no fetch, no external toolchain" contract.
-        # Peer derived artifacts are deliberately excluded:
-        #   * treesitter parsers and supplemental queries need the
-        #     `tree-sitter` CLI plus a C compiler;
-        #   * native plugin artifacts need `cargo`, `make`, or similar.
-        # Those toolchains are not guaranteed under --offline, so we leave
-        # them to `install_managed_state_ok` to flag.
+        # Rebuild local-only derived artifacts whose source is already on disk.
+        # The schema catalog is a pure JSON-to-Lua transform over the vendored
+        # schemastore worktree. The Treesitter runtime can also be rebuilt
+        # offline from managed local sources when the installed `tree-sitter`
+        # CLI satisfies the pinned minimum version; if that CLI is missing or
+        # too old, offline mode warns and skips only that runtime rebuild so the
+        # same version check is retried on the next run.
+        #
+        # Native plugin artifacts still need `cargo`, `make`, or similar
+        # toolchains and may require dependency state that offline mode cannot
+        # acquire, so we leave them to `install_managed_state_ok` to flag.
         #
         # If the schemastore source itself is missing, materialize early-
         # returns True (no-op) and `git_sources_state_ok` inside
@@ -3429,7 +3431,23 @@ def install(offline: bool, refresh: bool) -> int:
         # would otherwise vacuously pass with "no source configured".
         if not materialize_schema_catalog(repository, lock):
             ok = False
-        if not install_managed_state_ok(env, repository, lock, emit_warnings=True):
+        tree_sitter_cli_ok = check_tree_sitter_cli(
+            env, repository, treesitter_minimum_cli_version(lock)
+        )
+        if tree_sitter_cli_ok:
+            if not install_treesitter_runtime(env, repository, lock):
+                ok = False
+        else:
+            warn(
+                "offline mode: skipped Treesitter runtime install because tree-sitter CLI is missing or too old"
+            )
+        if not install_managed_state_ok(
+            env,
+            repository,
+            lock,
+            emit_warnings=True,
+            check_tree_sitter_cli_version=tree_sitter_cli_ok,
+        ):
             ok = False
         if not link_neovim_config(home, repository):
             ok = False
@@ -4485,7 +4503,7 @@ def build_parser() -> argparse.ArgumentParser:
     install_mode.add_argument(
         "--offline",
         action="store_true",
-        help="verify already-local managed state and rebuild the schema catalog from the vendored schemastore worktree when missing; never fetch or invoke external toolchains; still ensure the Neovim config link",
+        help="verify already-local managed state, rebuild local-only derived artifacts, and never fetch; warn and skip Treesitter runtime rebuilds when tree-sitter is missing or too old; still ensure the Neovim config link",
     )
     install_mode.add_argument(
         "--refresh",
