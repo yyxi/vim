@@ -597,6 +597,13 @@ function M.lsp()
 
       return true
     end),
+    leanls = ternary(
+      is_installed('lean') or is_installed('lake') or is_installed('elan'),
+      function()
+        vim.lsp.config('leanls', require('yyxi.lsp.lean').config())
+        return true
+      end
+    ),
     lua_ls = ternary(is_installed('lua-language-server'), function()
       vim.lsp.config('lua_ls', {
         capabilities = capabilities,
@@ -707,9 +714,9 @@ function M.lsp()
           enumMemberValues = { enabled = true },
         },
         format = {
-          indentSize = vim.opt_local.shiftwidth:get(),
-          convertTabsToSpaces = vim.opt_local.expandtab:get(),
-          tabSize = vim.opt_local.tabstop:get(),
+          indentSize = vim.bo.shiftwidth,
+          convertTabsToSpaces = vim.bo.expandtab,
+          tabSize = vim.bo.tabstop,
           indentStyle = 2, -- 'Smart',
           semicolons = 'remove',
           trimTrailingWhitespace = false,
@@ -855,29 +862,13 @@ function M.lsp()
       -- root_markers = { '.git' },
     })
 
+    local enabled = {}
     for key, handler in pairs(handlers) do
       local value = handler()
-      if value then vim.lsp.enable(key) end
+      if value then table.insert(enabled, key) end
     end
+    vim.lsp.enable(enabled)
   end)
-end
-
-function M.lean()
-  ---@type lean.Config
-  local opts = { -- see below for full configuration options
-    mappings = false,
-    infoview = {
-      autoopen = false,
-    },
-    progress_bars = {
-      enable = false,
-    },
-    stderr = {
-      enable = false,
-    },
-  }
-
-  require('lean').setup(opts)
 end
 
 return M

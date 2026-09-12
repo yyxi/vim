@@ -120,6 +120,36 @@
         }
       }
     },
+    "tree-sitter-lean": {
+      "url": "https://github.com/Julian/tree-sitter-lean.git",
+      "commit": "259a2daf7a699cc047221f1e043e4d045fcd6be2",
+      "ref": "refs/heads/main",
+      "files": [
+        "queries",
+        "src",
+        "LICENSE"
+      ],
+      "treesitter": {
+        "parsers": {
+          "lean": {
+            "location": ".",
+            "parser": "lean",
+            "querySource": "tree-sitter-lean",
+            "queryPath": "queries",
+            "dependencies": [
+              "markdown"
+            ],
+            "requiredQueries": [
+              "highlights",
+              "injections",
+              "indents",
+              "folds",
+              "locals"
+            ]
+          }
+        }
+      }
+    },
     "tree-sitter-moonbit": {
       "url": "https://github.com/moonbitlang/tree-sitter-moonbit.git",
       "commit": "ebdb3f38d46309a3a7f81c2af357da05ec8a4470",
@@ -1408,25 +1438,6 @@
         "doc",
         "lua",
         "LICENSE"
-      ]
-    },
-    "lean.nvim": {
-      "url": "https://github.com/Julian/lean.nvim.git",
-      "commit": "3089040359942d58d70af5deaac1bbe63724c53a",
-      "ref": "refs/heads/main",
-      "allowedDirtyPaths": [
-        "doc/tags"
-      ],
-      "files": [
-        "autoload",
-        "doc",
-        "ftplugin",
-        "indent",
-        "lua",
-        "plugin",
-        "queries",
-        "syntax",
-        "COPYING"
       ]
     },
     "vim-matchup": {

@@ -294,6 +294,7 @@ function M.setup()
   hi('@lsp.type.typeParameter',
     { force = true, link = '@type.definition' })
   hi('@lsp.type.variable', { force = true, link = '@variable' })
+  hi('@lsp.type.leanSorryLike.lean', { force = true, link = '@keyword.exception' })
   hi('@lsp.typemod.variable.readonly',
     { force = true, link = '@constant' })
   hm('@lsp.typemod.function.async',
