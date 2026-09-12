@@ -1,6 +1,7 @@
 local M = {}
 
 local environment = require('yyxi.utilities.environment')
+local lsp_init_params = require('yyxi.lsp.init_params')
 
 function M.conform()
   ---@type conform.setupOpts
@@ -532,13 +533,12 @@ function M.lsp()
           },
         },
         before_init = function(params, config)
-          if params.rootUri then
-            local root_path = vim.uri_to_fname(params.rootUri)
-            local quotePreference = unanimous_var_for_root(root_path, 'quote_type') or 'auto'
+          local root_path = lsp_init_params.root_path(params)
+          if not root_path then return end
 
-            if quotePreference ~= 'auto' then
-              config.settings.yaml.format.singleQuote = quotePreference == 'single'
-            end
+          local quotePreference = unanimous_var_for_root(root_path, 'quote_type') or 'auto'
+          if quotePreference ~= 'auto' then
+            config.settings.yaml.format.singleQuote = quotePreference == 'single'
           end
         end,
         on_init = function(client)
@@ -796,8 +796,8 @@ function M.lsp()
             ensure_vtsls_global_plugin(config, vue_typescript_plugin)
           end
 
-          if params.rootUri then
-            local root_path = vim.uri_to_fname(params.rootUri)
+          local root_path = lsp_init_params.root_path(params)
+          if root_path then
             local quotePreference = unanimous_var_for_root(root_path, 'quote_type') or 'auto'
 
             -- :lua local client = vim.lsp.get_clients({name = 'vtsls'})[1]; if client then print(client.config.settings.javascript.preferences.quoteStyle) else print("vtsls not found") end
