@@ -3359,7 +3359,7 @@ def install_managed_state_ok(
     repository: str,
     lock: JSONMapping,
     emit_warnings: bool,
-    check_tree_sitter_cli_version: bool = True,
+    check_treesitter_runtime: bool = True,
 ) -> bool:
     ok = True
     if not git_sources_state_ok(env, repository, lock, emit_warnings=emit_warnings):
@@ -3374,9 +3374,8 @@ def install_managed_state_ok(
         repository, lock, emit_warnings=emit_warnings
     ):
         ok = False
-    treesitter_check_env = env if check_tree_sitter_cli_version else None
-    if not treesitter_runtime_state_ok(
-        repository, lock, emit_warnings=emit_warnings, env=treesitter_check_env
+    if check_treesitter_runtime and not treesitter_runtime_state_ok(
+        repository, lock, emit_warnings=emit_warnings, env=env
     ):
         ok = False
     return ok
@@ -3418,8 +3417,8 @@ def install(offline: bool, refresh: bool) -> int:
         # schemastore worktree. The Treesitter runtime can also be rebuilt
         # offline from managed local sources when the installed `tree-sitter`
         # CLI satisfies the pinned minimum version; if that CLI is missing or
-        # too old, offline mode warns and skips only that runtime rebuild so the
-        # same version check is retried on the next run.
+        # too old, offline mode warns and skips that runtime for this run so the
+        # same CLI and runtime checks are retried on the next run.
         #
         # Native plugin artifacts still need `cargo`, `make`, or similar
         # toolchains and may require dependency state that offline mode cannot
@@ -3434,19 +3433,28 @@ def install(offline: bool, refresh: bool) -> int:
         tree_sitter_cli_ok = check_tree_sitter_cli(
             env, repository, treesitter_minimum_cli_version(lock)
         )
-        if tree_sitter_cli_ok:
+        tree_sitter_sources_ok = git_sources_state_ok(
+            env, repository, lock, emit_warnings=False
+        ) and treesitter_released_sources_state_ok(
+            repository, lock, emit_warnings=False
+        )
+        if tree_sitter_cli_ok and tree_sitter_sources_ok:
             if not install_treesitter_runtime(env, repository, lock):
                 ok = False
+        elif not tree_sitter_cli_ok:
+            warn(
+                "offline mode: skipped Treesitter runtime install and validation because tree-sitter CLI is missing or too old"
+            )
         else:
             warn(
-                "offline mode: skipped Treesitter runtime install because tree-sitter CLI is missing or too old"
+                "offline mode: skipped Treesitter runtime install because managed source state is incomplete"
             )
         if not install_managed_state_ok(
             env,
             repository,
             lock,
             emit_warnings=True,
-            check_tree_sitter_cli_version=tree_sitter_cli_ok,
+            check_treesitter_runtime=tree_sitter_cli_ok,
         ):
             ok = False
         if not link_neovim_config(home, repository):
@@ -3460,16 +3468,25 @@ def install(offline: bool, refresh: bool) -> int:
                 "managed state already current; skipped source, build, and Treesitter install steps"
             )
         else:
-            if not materialize_git_sources(env, repository, lock, refresh):
+            git_sources_ready = materialize_git_sources(env, repository, lock, refresh)
+            if not git_sources_ready:
                 ok = False
-            if not materialize_treesitter_released_sources(repository, lock):
+            tree_sitter_released_sources_ready = (
+                materialize_treesitter_released_sources(repository, lock)
+            )
+            if not tree_sitter_released_sources_ready:
                 ok = False
             if not materialize_schema_catalog(repository, lock):
                 ok = False
             if not install_native_plugin_artifacts(env, repository, lock):
                 ok = False
-            if not install_treesitter_runtime(env, repository, lock):
-                ok = False
+            if git_sources_ready and tree_sitter_released_sources_ready:
+                if not install_treesitter_runtime(env, repository, lock):
+                    ok = False
+            else:
+                warn(
+                    "skipped Treesitter runtime install because managed source state is incomplete"
+                )
 
     if not link_neovim_config(home, repository):
         ok = False
@@ -4503,7 +4520,7 @@ def build_parser() -> argparse.ArgumentParser:
     install_mode.add_argument(
         "--offline",
         action="store_true",
-        help="verify already-local managed state, rebuild local-only derived artifacts, and never fetch; warn and skip Treesitter runtime rebuilds when tree-sitter is missing or too old; still ensure the Neovim config link",
+        help="verify already-local managed state, rebuild local-only derived artifacts, and never fetch; warn and skip Treesitter runtime work when tree-sitter is missing or too old; still ensure the Neovim config link",
     )
     install_mode.add_argument(
         "--refresh",
