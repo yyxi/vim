@@ -402,18 +402,6 @@ local plugin_specs = {
     end,
   },
   {
-    'Julian/lean.nvim',
-    dir = environment.git_worktree_path('lean.nvim'),
-    event = { 'BufReadPre *.lean', 'BufNewFile *.lean' },
-    ft = 'lean',
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-      'nvim-treesitter/nvim-treesitter',
-      'saghen/blink.cmp',
-    },
-    config = function() require('yyxi.plugins.language_tools').lean() end,
-  },
-  {
     'andymass/vim-matchup',
     dir = environment.git_worktree_path('vim-matchup'),
     dependencies = {
@@ -430,6 +418,8 @@ local plugin_specs = {
       vim.g.matchup_mouse_enabled = 0
       vim.g.matchup_matchparen_deferred = 1
       vim.g.matchup_matchparen_hi_surround_always = 0
+      -- Match keyword delimiters only in code, not comments or strings.
+      vim.g.matchup_delim_noskips = 1
       vim.g.matchup_motion_override_Npercent = 0
       vim.g.matchup_matchpref = { html = { nolists = 1, tagnameonly = 1 } }
       vim.g.matchup_matchparen_nomode = 'i'

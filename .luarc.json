@@ -14,7 +14,6 @@
     "${env:HOME}/.vim/vendor/git/worktrees/flash.nvim/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/fff/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/lazy.nvim/lua",
-    "${env:HOME}/.vim/vendor/git/worktrees/lean.nvim/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/nvim-ts-autotag/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/nvim-treesitter/lua",
     "${env:HOME}/.vim/vendor/git/worktrees/plenary.nvim/lua",
