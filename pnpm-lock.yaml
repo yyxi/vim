@@ -209,7 +209,7 @@ importers:
     dependencies:
       '@ansible/ansible-language-server':
         specifier: ^26.5.0
-        version: 26.5.0
+        version: 26.6.0
       '@vtsls/language-server':
         specifier: ^0.3.0
         version: 0.3.0
@@ -231,8 +231,8 @@ importers:
 
 packages:
 
-  '@ansible/ansible-language-server@26.5.0':
-    resolution: {integrity: sha512-dG3qBlnSr4g4tYZXTe9lus53nlv0rWvairSVPlyfxFYi1hSIdl54HaiL8vysEYiL/2GvjEPfxxXt8akMyI8XKw==}
+  '@ansible/ansible-language-server@26.6.0':
+    resolution: {integrity: sha512-DPTmckrnNCf8KdeSu9pE/mjnovSL28InnQhDS2lsuDrLI8obapMxAU0KLDYnC++aTjCK8bZhhkR5HFh3lDddqw==}
     engines: {node: '>=24.0', npm: '>=7.11.2'}
     hasBin: true
 
@@ -759,6 +759,10 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  shell-quote@1.10.0:
+    resolution: {integrity: sha512-w1aiOKwKuRgtwAReIIj89puqg+I7GvX4IbLrvmhXbzQsj1+Zwi4VO3+fa6ZF91TWSjIxoEkKnMeHcLEODK5ZXA==}
+    engines: {node: '>= 0.4'}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -976,7 +980,7 @@ packages:
 
 snapshots:
 
-  '@ansible/ansible-language-server@26.5.0':
+  '@ansible/ansible-language-server@26.6.0':
     dependencies:
       '@flatten-js/interval-tree': 2.0.3
       ajv: 8.20.0
@@ -986,6 +990,7 @@ snapshots:
       handlebars: 4.7.9
       ini: 7.0.0
       lodash: 4.18.1
+      shell-quote: 1.10.0
       uuid: 14.0.0
       vscode-languageserver: 9.0.1
       vscode-languageserver-protocol: 3.18.2
@@ -1519,6 +1524,8 @@ snapshots:
       lru-cache: 6.0.0
 
   semver@7.8.5: {}
+
+  shell-quote@1.10.0: {}
 
   source-map-js@1.2.1: {}
 
