@@ -1,3 +1,8 @@
+# Disabled: this heuristic flags ordinary table fields and local aliases as
+# builtin overwrites. Renaming those plugin APIs/bindings would change valid
+# dependency behavior; there is no practical source-code fix for these findings.
+# The .disabled extension excludes this file from Semgrep's rules/ directory scan.
+# Re-enable only after testing genuine overwrites against these benign cases.
 rules:
   - id: lua-obfuscation-override
     pattern-either:

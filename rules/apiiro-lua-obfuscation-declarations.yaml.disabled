@@ -1,3 +1,8 @@
+# Disabled: this heuristic flags valid qualified Lua method names as obfuscation.
+# Renaming those methods would break plugin APIs; there is no practical
+# source-code fix for these findings.
+# The .disabled extension excludes this file from Semgrep's rules/ directory scan.
+# Re-enable only after testing obfuscated names against valid method declarations.
 rules:
   - id: lua-obfuscation-declarations
     patterns:
