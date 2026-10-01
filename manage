@@ -1,4 +1,101 @@
 #!/usr/bin/env python3
+# Behavior specification
+# ======================
+# This standalone Python 3, standard-library CLI prepares and verifies this
+# Neovim configuration. It owns dependency acquisition and builds; Neovim
+# startup consumes the prepared runtime instead of installing or repairing it.
+# Repository paths are anchored to this script, not the working directory.
+# Explicit scan paths are the exception: relative paths use the caller's cwd.
+# Tools use the inherited environment and PATH, with existing local bin
+# directories prepended. The config link is $HOME/.config/nvim, not an
+# XDG_CONFIG_HOME-derived path; an existing conflicting entry is not replaced.
+#
+# Inputs and managed state
+# ------------------------
+# - source-manifest.json declares Git URLs, exact commits, repository/worktree
+#   locations, sparse selections (which source paths to check out), permitted
+#   generated paths, native builds, and Tree-sitter parser/query inputs.
+#   The loader validates these declarations before source consumers use them.
+# - Python and Node production packages follow their project manifests and
+#   lockfiles through uv and pnpm. Missing package managers are skipped;
+#   declared Git/build prerequisites are checked separately.
+# - Managed Git sources use bare repositories plus detached working copies,
+#   with worktree locks and sparse selections as declared. Pinning a commit is
+#   not permission to discard local source edits. allowedDirtyPaths identifies
+#   the exceptions accepted by cleanliness checks and permitted native outputs.
+# - vendor/plugins contains checked-in, trimmed plugin snapshots. Installation
+#   does not acquire, update, copy, or repair them; check verifies their layout
+#   and provenance metadata. Plugin specifications remain in init.lua.
+# - Derived outputs are native plugin artifacts in permitted worktree paths,
+#   compiled parsers and assembled queries in the declared Tree-sitter runtime,
+#   and an offline schema catalog built from the local schemastore source.
+#   Hash-pinned release archives can supply Tree-sitter inputs instead of Git
+#   files; both the archive and its extracted cache are verified.
+#
+# Command behavior
+# ----------------
+# install:
+#   Sync production packages when the corresponding manager/config exists.
+#   Preserve a usable dev-synced Python environment rather than prune its tools.
+#   Then ensure pinned sources, release inputs, catalog, native artifacts, and
+#   Tree-sitter outputs, and ensure the Neovim config link. Current managed state
+#   skips source/build/runtime work, but not package checks or config linking.
+# install --refresh:
+#   Bypass that whole-state fast path and refresh Git refs before ensuring the
+#   same manifest pins. This does not choose newer commits or force rebuilds
+#   of artifacts whose own state checks still pass.
+# install --offline:
+#   Do not sync packages, fetch sources, or rebuild native plugins. Verify local
+#   source/native state and regenerate the catalog and Tree-sitter runtime from
+#   available local inputs. If the Tree-sitter CLI is missing or too old, warn
+#   and skip both its runtime rebuild and validation for this run; other checks
+#   and config linking still apply. Success can therefore leave Tree-sitter
+#   unvalidated. --offline and --refresh are mutually exclusive.
+# check [--fix]:
+#   Verify managed prerequisites and checked-in plugin snapshots, then run Ruff,
+#   ty, Python regressions, StyLua, and Lua language-server checks. With --fix,
+#   formatters and Ruff's safe fixes can edit project code. Run the explicit
+#   Plenary Neovim test harness only after prerequisite/development checks pass.
+#   Do not install missing development tools or synchronize their environments.
+# scan [--strict] [paths...]:
+#   Run Semgrep using active rules/ configurations on supplied targets or the
+#   existing managed vendor directories. .disabled rule files are not loaded.
+#   ERROR findings fail by default; --strict also selects WARNING findings and
+#   never weakens ERROR enforcement. Scanner failures fail the command, but
+#   scanner-reported timeouts/skipped files can still accompany a zero exit.
+#
+# Safety, freshness, and failure boundaries
+# -----------------------------------------
+# - Managed paths stay within their owning roots, including resolved symlink
+#   targets. Source repositories/worktrees do not overlap derived-runtime roots.
+#   Native output and dependency-overlay paths stay within allowedDirtyPaths.
+# - Native builds wait for all managed Git sources, including declared build
+#   dependencies, to be ready. Tree-sitter builds also require ready release
+#   inputs. Native builds recheck output paths and source cleanliness before
+#   recording a successful build revision.
+# - Freshness is more than existence: source identity, build/configuration
+#   metadata, platform, and generation signatures govern reuse. Tree-sitter
+#   installation and checking share one resolved output plan and exact file
+#   inventory. Generation-rule changes need the relevant generator-version bump.
+# - Stale native libraries and stamps are removed before rebuilding and after
+#   failed/skipped builds. Optional native absence preserves runtime fallback;
+#   it is not a current build, and a leftover stamp without its artifact fails
+#   state checking. Required native absence is a failure.
+# - Build Tree-sitter/catalog outputs in staging; validate required Tree-sitter
+#   files/signatures and catalog serialization before publication. Publish owned
+#   directories with backups and rollback attempts; preserve the release cache.
+#   Report recovery/cleanup failures and retained backup locations. The entire
+#   install is not a transaction: earlier successful work can remain after a
+#   later failure, and config linking can still be attempted.
+# - Install/check do not implicitly run scan or perform supply-chain review.
+#   Review candidate dependency revisions and scan them before loading their
+#   runtime code. Apart from check's explicit Plenary harness, Neovim invocations
+#   here use --clean for built-in queries, not dependency execution/builds.
+# - Commands return 0 for their defined success state and 1 for reported
+#   operational/check failures; argparse handles usage errors separately.
+#   A successful install is not proof that all optional tools/features exist.
+#   A successful scan is not proof of safety or complete dependency coverage.
+#
 """Small management CLI for this Neovim configuration."""
 
 import argparse
