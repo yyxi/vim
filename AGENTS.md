@@ -6,6 +6,7 @@ This file records only non-obvious guidance for coding agents. Do not treat it a
 - Treat `manage`, `init.lua`, and `lua/yyxi/utilities/` as the source of truth for current behavior.
 - Keep `manage` as a standalone Python 3 standard-library CLI. It must stay safe to run from any working directory.
 - Neovim must not clone, update, compile, or repair managed dependencies at startup. That lifecycle belongs to `manage`.
+- Scope the strict-scan requirement to Neovim dependency sources; do not extend it to external tooling dependency updates.
 - `manage` must not invoke Neovim in a way that loads runtime code from managed dependencies before those dependencies have been reviewed and scanned. Keep Neovim invocations limited to built-in queries (`--clean`) or the explicit `plenary.nvim` test harness used by `./manage check`.
 - For sources with declared `plugin.nativeBuild`, `manage` may write generated build outputs into the Git worktree only under explicitly allowed `allowedDirtyPaths`. Do not reintroduce a separate published native-runtime layer.
 - Vendored plugins are checked-in, trimmed source snapshots, not install-time acquisitions. `manage install` must not fetch, copy, update, or repair them. Keep runtime code plus docs/README/LICENSE, and do not reintroduce tests/examples/CI scaffolding or commit vendored `doc/tags`.
