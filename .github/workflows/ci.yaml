@@ -1,172 +1,200 @@
 name: ci
 on:
+  workflow_dispatch:
+    inputs:
+      archive:
+        description: Build native archives instead of running routine checks
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      archive:
+        description: Build and smoke-test the declared native release archives
+        type: boolean
+        default: false
+      release_tag:
+        description: Safe tag used in release asset names (probe when omitted)
+        type: string
+        default: ''
+    outputs:
+      archive_profiles:
+        description: Profile names required by the release matrix
+        value: ${{ jobs.policy.outputs.profiles }}
   push:
-    branches:
-      - trunk
+    branches: [trunk]
   pull_request:
-    branches:
-      - trunk
+    branches: [trunk]
 env:
   NEOVIM_VERSION: v0.12.2
   TREE_SITTER_VERSION: v0.26.1
   STYLUA_VERSION: v2.5.2
   LUA_LANGUAGE_SERVER_VERSION: 3.18.2
-
+  MACOSX_DEPLOYMENT_TARGET: '14.0'
+defaults:
+  run:
+    shell: bash
 permissions: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
-  checks:
-    name: checks
-    runs-on: ${{ matrix.os }}
+  policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
+    outputs:
+      matrix: ${{ steps.policy.outputs.matrix }}
+      profiles: ${{ steps.policy.outputs.profiles }}
+      python_minors: ${{ steps.policy.outputs.python_minors }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
-      - name: restore managed vendor cache
-        id: vendor-cache-restore
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - id: policy
+        env:
+          NATIVE_ARCHIVES: ${{ inputs.archive || false }}
+        run: |
+          ./manage policy > "$RUNNER_TEMP/runtime-policy.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          policy = json.loads((Path(os.environ['RUNNER_TEMP']) / 'runtime-policy.json').read_text())
+          entries = policy['archives'] if os.environ['NATIVE_ARCHIVES'] == 'true' else [{'os': 'ubuntu-latest', 'profile': ''}]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for name, value in {'matrix': {'include': entries}, 'profiles': sorted(p['profile'] for p in policy['archives']), 'python_minors': policy['pythonMinors']}.items():
+                  output.write(name + '=' + json.dumps(value) + '\n')
+          PY
+
+  checks:
+    name: checks
+    needs: policy
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      PYTHON_MINORS: ${{ needs.policy.outputs.python_minors }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.policy.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: |
             vendor/git/repositories
             vendor/git/worktrees
             vendor/treesitter
           key: managed-vendor-${{ runner.os }}-${{ runner.arch }}-${{ env.TREE_SITTER_VERSION }}-${{ hashFiles('source-manifest.json', 'manage') }}
-      - name: install the latest version of uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
-          cache-dependency-glob: |
-            pyproject.toml
-            uv.lock
-            **/pyproject.toml
+          version: '0.11.7'
           enable-cache: true
           ignore-nothing-to-cache: true
-          version: 'latest'
-      - name: install node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: lts/*
+          node-version: '24.16.0'
           package-manager-cache: false
-      - name: install pnpm
-        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
         with:
+          version: '11.5.2'
           cache: true
           cache_dependency_path: pnpm-lock.yaml
           run_install: false
-      - name: dependencies
+      - name: build tools
         run: |
           mkdir -p "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            sudo apt-get update
-            sudo apt-get install -y unzip
-          elif [ "$RUNNER_OS" != "macOS" ]; then
-            echo "unsupported runner OS: $RUNNER_OS" >&2
-            exit 1
-          fi
-
-          case "$RUNNER_OS/$RUNNER_ARCH" in
-            Linux/X64)
-              nvim_archive='nvim-linux-x86_64.tar.gz'
-              tree_sitter_archive='tree-sitter-linux-x64.gz'
-              stylua_archive='stylua-linux-x86_64.zip'
-              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-linux-x64.tar.gz"
-              ;;
-            Linux/ARM64)
-              nvim_archive='nvim-linux-arm64.tar.gz'
-              tree_sitter_archive='tree-sitter-linux-arm64.gz'
-              stylua_archive='stylua-linux-aarch64.zip'
-              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-linux-arm64.tar.gz"
-              ;;
-            macOS/X64)
-              nvim_archive='nvim-macos-x86_64.tar.gz'
-              tree_sitter_archive='tree-sitter-macos-x64.gz'
-              stylua_archive='stylua-macos-x86_64.zip'
-              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-darwin-x64.tar.gz"
-              ;;
-            macOS/ARM64)
-              nvim_archive='nvim-macos-arm64.tar.gz'
-              tree_sitter_archive='tree-sitter-macos-arm64.gz'
-              stylua_archive='stylua-macos-aarch64.zip'
-              lua_ls_archive="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-darwin-arm64.tar.gz"
-              ;;
-            *)
-              echo "unsupported runner platform: ${RUNNER_OS}/${RUNNER_ARCH}" >&2
-              exit 1
-              ;;
+          case "$RUNNER_OS" in
+            Linux) os=linux ;;
+            macOS) os=macos ;;
+            *) exit 1 ;;
           esac
-
-          rm -rf "$HOME/.neovim-dist"
+          case "$RUNNER_ARCH" in
+            X64) nvim_cpu=x86_64; ts_cpu=x64 ;;
+            ARM64) nvim_cpu=arm64; ts_cpu=arm64 ;;
+            *) exit 1 ;;
+          esac
           mkdir -p "$HOME/.neovim-dist"
-          curl -fsSL -o nvim.tar.gz "https://github.com/neovim/neovim/releases/download/${NEOVIM_VERSION}/${nvim_archive}"
-          tar xzf nvim.tar.gz --strip-components=1 -C "$HOME/.neovim-dist"
-          rm -f nvim.tar.gz
-          ln -sf "$HOME/.neovim-dist/bin/nvim" "$HOME/.local/bin/nvim"
-
-          curl -fsSL -o tree-sitter.gz "https://github.com/tree-sitter/tree-sitter/releases/download/${TREE_SITTER_VERSION}/${tree_sitter_archive}"
-          gzip -d -c tree-sitter.gz > "$HOME/.local/bin/tree-sitter"
-          rm -f tree-sitter.gz
+          curl -fsSL "https://github.com/neovim/neovim/releases/download/${NEOVIM_VERSION}/nvim-${os}-${nvim_cpu}.tar.gz" |
+            tar xzf - --strip-components=1 -C "$HOME/.neovim-dist"
+          ln -s "$HOME/.neovim-dist/bin/nvim" "$HOME/.local/bin/nvim"
+          curl -fsSL "https://github.com/tree-sitter/tree-sitter/releases/download/${TREE_SITTER_VERSION}/tree-sitter-${os}-${ts_cpu}.gz" |
+            gzip -d > "$HOME/.local/bin/tree-sitter"
           chmod +x "$HOME/.local/bin/tree-sitter"
-
-          curl -fsSL -o stylua.zip "https://github.com/JohnnyMorganz/StyLua/releases/download/${STYLUA_VERSION}/${stylua_archive}"
-          unzip -q -o stylua.zip -d "$HOME/.local/bin"
-          rm -f stylua.zip
-          chmod +x "$HOME/.local/bin/stylua"
-
-          rm -rf "$HOME/.local/share/lua-language-server"
+          uv sync --locked --python 3.12 --link-mode=clone
+      - name: development check tools
+        if: ${{ !inputs.archive }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          curl -fsSL -o "$RUNNER_TEMP/stylua.zip" "https://github.com/JohnnyMorganz/StyLua/releases/download/${STYLUA_VERSION}/stylua-linux-x86_64.zip"
+          unzip -q "$RUNNER_TEMP/stylua.zip" -d "$HOME/.local/bin"
           mkdir -p "$HOME/.local/share/lua-language-server"
-          curl -fsSL -o lua-language-server.tar.gz "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LANGUAGE_SERVER_VERSION}/${lua_ls_archive}"
-          tar xzf lua-language-server.tar.gz -C "$HOME/.local/share/lua-language-server"
-          rm -f lua-language-server.tar.gz
-          ln -sf "$HOME/.local/share/lua-language-server/bin/lua-language-server" "$HOME/.local/bin/lua-language-server"
-
-          uv sync --locked
+          curl -fsSL "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LANGUAGE_SERVER_VERSION}/lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-linux-x64.tar.gz" |
+            tar xzf - -C "$HOME/.local/share/lua-language-server"
+          cat > "$HOME/.local/bin/lua-language-server" <<'SH'
+          #!/bin/sh
+          exec "$HOME/.local/share/lua-language-server/bin/lua-language-server" "$@"
+          SH
+          chmod +x "$HOME/.local/bin/lua-language-server"
       - name: install
+        run: |
+          ln -s "$PWD" "$HOME/.vim"
+          ./manage install
+      - name: reuse offline
+        if: ${{ !inputs.archive }}
+        run: ./manage install --offline
+      - name: scan reviewed sources
+        run: ./manage scan --strict
+      - name: Neovim and development checks
+        if: ${{ !inputs.archive }}
+        run: ./manage check
+      - name: export and smoke-test release
+        if: inputs.archive
         env:
-          CACHE_HIT: ${{ steps.vendor-cache-restore.outputs.cache-hit }}
+          RELEASE_TAG: ${{ inputs.release_tag || 'probe' }}
+          ARCHIVE_PROFILE: ${{ matrix.profile }}
         run: |
-          ln -s "$(pwd)" ~/.vim
-          if [ "$CACHE_HIT" = "true" ]; then
-            ~/.vim/manage install --offline
-          else
-            ~/.vim/manage install
-          fi
-      - name: check
-        run: |
-          ~/.vim/manage check
-      - name: scan
-        run: |
-          ~/.vim/manage scan
-      - name: save managed vendor cache
-        if: success() && steps.vendor-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          from pathlib import Path
+          tag, profile = os.environ['RELEASE_TAG'], os.environ['ARCHIVE_PROFILE']
+          if re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', tag) is None:
+              raise SystemExit('unsafe asset tag')
+          # Prepare all shipped wheels; smoke-test one interpreter, not a matrix.
+          minors = json.loads(os.environ['PYTHON_MINORS'])
+          subprocess.run(['uv', 'python', 'install', *minors], check=True)
+          interpreters = [subprocess.check_output(['uv', 'python', 'find', '--system', '--no-python-downloads', minor], text=True).strip() for minor in minors]
+          for interpreter in interpreters:
+              subprocess.run([interpreter, './manage', 'install'], check=True)
+          directory = Path(os.environ['RUNNER_TEMP']) / 'accepted-archives'
+          directory.mkdir()
+          archive = directory / f'nvim-offline-{tag}-{profile}.tar.gz'
+          subprocess.run([interpreters[0], './manage', 'archive', '--output', str(archive)], check=True)
+          subprocess.run([interpreters[0], 'tests/release_smoke.py', '--repository', os.getcwd(), '--archive', str(archive), '--python', interpreters[0]], check=True)
+          PY
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: success() && inputs.archive
         with:
-          path: |
-            vendor/git/repositories
-            vendor/git/worktrees
-            vendor/treesitter
-          key: managed-vendor-${{ runner.os }}-${{ runner.arch }}-${{ env.TREE_SITTER_VERSION }}-${{ hashFiles('source-manifest.json', 'manage') }}
+          name: accepted-archive-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ runner.temp }}/accepted-archives/*.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
 
   continuous-integration:
     name: continuous-integration
     if: ${{ always() }}
-    needs:
-      - checks
+    needs: [policy, checks]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: fail if any required job did not succeed
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
-        run: exit 1
-      - name: pass if all required jobs succeeded
-        if: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')) }}
-        run: exit 0
+      - env:
+          POLICY_RESULT: ${{ needs.policy.result }}
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$POLICY_RESULT/$CHECKS_RESULT" = success/success

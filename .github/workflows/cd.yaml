@@ -1,0 +1,227 @@
+name: offline dependency archives
+on:
+  push:
+    tags: ['v*']
+permissions: {}
+concurrency:
+  group: offline-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      commit: ${{ steps.identity.outputs.commit }}
+      ref_sha: ${{ steps.identity.outputs.ref_sha }}
+    steps:
+      - name: validate immutable pushed tag identity
+        id: identity
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        with:
+          script: |
+            const tag = process.env.RELEASE_TAG;
+            if (context.eventName !== 'push' || context.ref !== `refs/tags/${tag}` || !/^v[A-Za-z0-9._+-]+$/.test(tag)) {
+              throw new Error('only safe v* tag pushes may release');
+            }
+            const pushed = context.payload.after;
+            const {data: ref} = await github.rest.git.getRef({...context.repo, ref: `tags/${tag}`});
+            if (!/^[a-f0-9]{40}$/.test(pushed) || ref.object.sha !== pushed) {
+              throw new Error('pushed tag is missing or moved');
+            }
+            let object = ref.object;
+            const seen = new Set();
+            while (object.type === 'tag') {
+              if (seen.has(object.sha)) throw new Error('cyclic annotated tag');
+              seen.add(object.sha);
+              const {data: annotated} = await github.rest.git.getTag({...context.repo, tag_sha: object.sha});
+              object = annotated.object;
+            }
+            if (object.type !== 'commit') throw new Error('release tag must identify a commit');
+            core.setOutput('commit', object.sha);
+            core.setOutput('ref_sha', pushed);
+
+  build:
+    needs: tag
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yaml
+    with:
+      archive: true
+      release_tag: ${{ github.ref_name }}
+
+  provenance:
+    needs: [tag, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: download only accepted current-run payloads
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          pattern: accepted-archive-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-assets
+      - name: bind every declared profile to checksums
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          ASSET_DIRECTORY: ${{ runner.temp }}/release-assets
+          EXPECTED_PROFILES: ${{ needs.build.outputs.archive_profiles }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, re
+          from pathlib import Path
+          tag = os.environ['RELEASE_TAG']
+          if re.fullmatch(r'v[A-Za-z0-9._+-]+', tag) is None:
+              raise SystemExit('unsafe tag')
+          root = Path(os.environ['ASSET_DIRECTORY'])
+          profiles = json.loads(os.environ['EXPECTED_PROFILES'])
+          if not isinstance(profiles, list) or not profiles or any(not isinstance(p, str) or re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', p) is None for p in profiles) or len(set(profiles)) != len(profiles):
+              raise SystemExit('invalid accepted profile policy')
+          names = sorted(f'nvim-offline-{tag}-{profile}.tar.gz' for profile in profiles)
+          if {p.name for p in root.iterdir()} != set(names):
+              raise SystemExit('every declared profile, and only those profiles, is required')
+          lines = []
+          for name in names:
+              path = root / name
+              if path.is_symlink() or not path.is_file() or not 0 < path.stat().st_size < 2 * 1024**3:
+                  raise SystemExit('invalid release file: ' + name)
+              with path.open('rb') as file:
+                  digest = hashlib.file_digest(file, 'sha256').hexdigest()
+              lines.append(f'{digest}  {name}\n')
+          (root / 'SHA256SUMS').write_text(''.join(lines))
+          PY
+      - name: attest payload and checksum provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        with:
+          subject-path: ${{ runner.temp }}/release-assets/*
+      - name: retain attested checksums for publication
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: attested-checksums
+          path: ${{ runner.temp }}/release-assets/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [tag, build, provenance]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Configure protection for this environment before public release use.
+    # The repository currently has no configured protected environment.
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      # No checkout and no tagged dependency/runtime/script execution here.
+      - name: download accepted current-run payloads
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          pattern: accepted-archive-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/release-assets
+      - name: download attested checksums
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: attested-checksums
+          path: ${{ runner.temp }}/release-assets
+      - name: resume matching draft without clobbering published assets
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          EXPECTED_COMMIT: ${{ needs.tag.outputs.commit }}
+          EXPECTED_REF_SHA: ${{ needs.tag.outputs.ref_sha }}
+          EXPECTED_PROFILES: ${{ needs.build.outputs.archive_profiles }}
+          ASSET_DIRECTORY: ${{ runner.temp }}/release-assets
+        with:
+          script: |
+            // PUBLICATION_POLICY_BEGIN: tests exercise this exact inline policy.
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const crypto = require('node:crypto');
+            const tag = process.env.RELEASE_TAG;
+            const commit = process.env.EXPECTED_COMMIT;
+            const refSha = process.env.EXPECTED_REF_SHA;
+            const directory = process.env.ASSET_DIRECTORY;
+            if (!/^v[A-Za-z0-9._+-]+$/.test(tag) || !/^[a-f0-9]{40}$/.test(commit) || !/^[a-f0-9]{40}$/.test(refSha)) {
+              throw new Error('invalid publication identity');
+            }
+            const {data: ref} = await github.rest.git.getRef({...context.repo, ref: `tags/${tag}`});
+            if (ref.object.sha !== refSha) throw new Error('tag moved after acceptance');
+            // The read-only build declares its complete matrix policy. Treat
+            // outputs as data only; never checkout or execute tagged scripts.
+            const profiles = JSON.parse(process.env.EXPECTED_PROFILES);
+            if (!Array.isArray(profiles) || profiles.length === 0 || profiles.some(p => typeof p !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p)) || new Set(profiles).size !== profiles.length) {
+              throw new Error('invalid accepted profile policy');
+            }
+            const names = profiles.map(p => `nvim-offline-${tag}-${p}.tar.gz`).sort();
+            const expected = [...names, 'SHA256SUMS'].sort();
+            if (JSON.stringify(fs.readdirSync(directory).sort()) !== JSON.stringify(expected)) {
+              throw new Error('missing or unexpected accepted release files');
+            }
+            async function digest(name) {
+              const file = path.join(directory, name);
+              const stat = fs.lstatSync(file);
+              if (!stat.isFile() || stat.size <= 0 || stat.size >= 2 * 1024**3) throw new Error(`invalid asset: ${name}`);
+              const hash = crypto.createHash('sha256');
+              for await (const block of fs.createReadStream(file)) hash.update(block);
+              return hash.digest('hex');
+            }
+            const hashes = new Map();
+            for (const name of expected) hashes.set(name, await digest(name));
+            const checksumText = names.map(n => `${hashes.get(n)}  ${n}\n`).join('');
+            if (fs.readFileSync(path.join(directory, 'SHA256SUMS'), 'utf8') !== checksumText) {
+              throw new Error('accepted payload digests disagree with attested checksums');
+            }
+            let release;
+            try {
+              ({data: release} = await github.rest.repos.getReleaseByTag({...context.repo, tag}));
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              // The tag endpoint documents published releases only. Search
+              // authenticated draft listings before creating a release.
+              const releases = await github.paginate(github.rest.repos.listReleases, {...context.repo, per_page: 100});
+              const matches = releases.filter(r => r.tag_name === tag);
+              if (matches.length > 1) throw new Error('ambiguous existing releases for tag');
+              if (matches.length === 1) release = matches[0];
+              else ({data: release} = await github.rest.repos.createRelease({...context.repo, tag_name: tag,
+                target_commitish: commit, name: tag, draft: true, prerelease: tag.includes('-'),
+                body: 'Offline managed dependencies. Verify tag, SHA256SUMS, and GitHub provenance before extraction into a fresh matching clone. See README at this tag.'}));
+            }
+            if (release.tag_name !== tag || release.target_commitish !== commit) {
+              throw new Error('existing release is not bound to the accepted commit');
+            }
+            // Validate every collision before uploading anything. Published or
+            // draft files with changed/unverifiable digests are never replaced.
+            for (const name of expected) {
+              const asset = release.assets.find(a => a.name === name);
+              if (asset && asset.digest !== `sha256:${hashes.get(name)}`) throw new Error(`refusing changed asset: ${name}`);
+              if (!asset && !release.draft) throw new Error(`published release is incomplete: ${name}`);
+            }
+            for (const name of expected) {
+              if (release.assets.some(a => a.name === name)) continue;
+              const file = path.join(directory, name);
+              // Sequential bounded-size uploads. No repair/delete/clobber API.
+              const {data: uploaded} = await github.rest.repos.uploadReleaseAsset({...context.repo, release_id: release.id, name,
+                headers: {'content-type': name.endsWith('.gz') ? 'application/gzip' : 'text/plain',
+                          'content-length': fs.statSync(file).size}, data: fs.readFileSync(file)});
+              if (uploaded.name !== name || uploaded.state !== 'uploaded' || uploaded.digest !== `sha256:${hashes.get(name)}`) {
+                throw new Error(`uploaded asset verification failed; draft retained: ${name}`);
+              }
+            }
+            // Recheck the tag immediately before publishing. Upload failures
+            // leave the matching draft and successfully uploaded assets intact.
+            const {data: current} = await github.rest.git.getRef({...context.repo, ref: `tags/${tag}`});
+            if (current.object.sha !== refSha) throw new Error('tag moved during publication; draft retained');
+            if (release.draft) await github.rest.repos.updateRelease({...context.repo, release_id: release.id, draft: false});
+            // Preserve existing prerelease status on all reruns.
+            // PUBLICATION_POLICY_END

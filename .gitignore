@@ -16,6 +16,7 @@ vimrc
 /vendor/plugins/**/doc/tags
 /vendor/git/
 /vendor/treesitter/
+/vendor/python/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
