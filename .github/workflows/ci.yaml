@@ -178,7 +178,7 @@ jobs:
           subprocess.run([interpreters[0], './manage', 'archive', '--output', str(archive)], check=True)
           subprocess.run([interpreters[0], 'tests/release_smoke.py', '--repository', os.getcwd(), '--archive', str(archive), '--python', interpreters[0]], check=True)
           PY
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: success() && inputs.archive
         with:
           name: accepted-archive-${{ runner.os }}-${{ runner.arch }}
