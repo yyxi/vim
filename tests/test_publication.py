@@ -2,12 +2,12 @@
 
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import textwrap
 import unittest
+from pathlib import Path
 
 from support import manage
 
@@ -85,6 +85,7 @@ publish().catch(error=>{state.error=String(error);}).finally(()=>{state.draft=re
                 text=True,
                 capture_output=True,
                 timeout=20,
+                check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             return json.loads(result.stdout)

@@ -2,9 +2,9 @@
 
 import ntpath
 import os
-from pathlib import Path
 import posixpath
 import tarfile
+from pathlib import Path
 
 from support import load_manage
 

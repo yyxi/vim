@@ -3,9 +3,9 @@
 
 import argparse
 import os
-from pathlib import Path
 import subprocess
 import tempfile
+from pathlib import Path
 
 from archive_headers import inspect_headers
 

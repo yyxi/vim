@@ -2,9 +2,9 @@
 
 import io
 import os
-from pathlib import Path
 import tarfile
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from archive_headers import inspect_headers

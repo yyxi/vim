@@ -128,10 +128,11 @@ import tarfile
 import tempfile
 import time
 import tomllib
-import zipfile
 import urllib.error
 import urllib.request
-from typing import Dict, Literal, Mapping, Optional, Sequence, TypeAlias, cast
+import zipfile
+from collections.abc import Mapping, Sequence
+from typing import Literal, cast
 
 # Policy declarations
 # ===================
@@ -198,8 +199,8 @@ CARGO_BUILD_RELEASE = ("build", "--release", "--locked")
 class NativeBuildPolicy:
     fields: frozenset[str]
     outputs: tuple[str, ...]
-    artifact: Optional[str]
-    revision: Optional[str]
+    artifact: str | None
+    revision: str | None
     make_directories: tuple[str, ...] = ()
     make_arguments: tuple[str, ...] = ()
     publish: tuple[tuple[str, str], ...] = ()
@@ -302,7 +303,7 @@ SCHEMASTORE_URL_PATTERN = re.compile(
 # is the verbatim catalog URL; each value is the vendored filename. When the
 # file exists at install time the override fires and the entry survives with a
 # file:// URL; when it doesn't, the entry falls back to the normal drop path.
-SCHEMA_CATALOG_OVERRIDES: Dict[str, str] = {
+SCHEMA_CATALOG_OVERRIDES: dict[str, str] = {
     "https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json": "lefthook.json",
     "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/pyproject.json": "pyproject.json",
     "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/uv.json": "uv.json",
@@ -319,11 +320,11 @@ DEFAULT_WORKTREE_LOCKED = True
 WORKTREE_LOCK_REASON = "managed by ./manage; do not edit in place"
 SOURCE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
-JSONScalar: TypeAlias = None | bool | int | float | str
-JSONValue: TypeAlias = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
-JSONObject: TypeAlias = dict[str, JSONValue]
-JSONMapping: TypeAlias = Mapping[str, JSONValue]
-NativeBuildOutcome: TypeAlias = Literal["built", "skipped", "failed"]
+type JSONScalar = None | bool | int | float | str
+type JSONValue = JSONScalar | list[JSONValue] | dict[str, JSONValue]
+type JSONObject = dict[str, JSONValue]
+type JSONMapping = Mapping[str, JSONValue]
+type NativeBuildOutcome = Literal["built", "skipped", "failed"]
 
 
 # Mechanisms
@@ -337,7 +338,7 @@ def info(message: str) -> None:
 
 
 def warn(message: str) -> None:
-    print("warning: {0}".format(message), file=sys.stderr)
+    print(f"warning: {message}", file=sys.stderr)
 
 
 def home_dir() -> str:
@@ -362,7 +363,7 @@ def prepend_existing_directories(path: str, directories: Sequence[str]) -> str:
     return os.pathsep.join(entries)
 
 
-def install_environment(home: str) -> Dict[str, str]:
+def install_environment(home: str) -> dict[str, str]:
     env = os.environ.copy()
     env["PATH"] = prepend_existing_directories(
         env.get("PATH", ""), local_bin_directories(home)
@@ -372,7 +373,7 @@ def install_environment(home: str) -> Dict[str, str]:
 
 def run_logged_probe(
     command: Sequence[str], env: Mapping[str, str], repository: str
-) -> Optional[int]:
+) -> int | None:
     print_command(command)
     completed = run_captured_command(command, env, repository)
     return completed.returncode if completed is not None else None
@@ -431,11 +432,11 @@ def sync_uv_production_if_needed(env: Mapping[str, str], repository: str) -> boo
     return python_state_ok(env, repository)
 
 
-def component_inputs(repository: str, names: Sequence[str]) -> Optional[JSONObject]:
+def component_inputs(repository: str, names: Sequence[str]) -> JSONObject | None:
     return output_hashes(repository, names)
 
 
-def read_component_state(path: str, version: int) -> Optional[JSONObject]:
+def read_component_state(path: str, version: int) -> JSONObject | None:
     """Read regular owned metadata of the expected component schema."""
     if os.path.islink(path) or not os.path.isfile(path):
         return None
@@ -472,7 +473,7 @@ def raise_walk_error(error: OSError) -> None:
     raise error
 
 
-def package_inventory(root: str, exclude: Sequence[str] = ()) -> Optional[JSONObject]:
+def package_inventory(root: str, exclude: Sequence[str] = ()) -> JSONObject | None:
     """Record bytes/modes and contained links, without following linked trees."""
     result: JSONObject = {}
     try:
@@ -635,8 +636,8 @@ def sync_pnpm_production(env: Mapping[str, str], repository: str) -> bool:
 
 
 def python_package_environment(
-    env: Mapping[str, str], bootstrap: Optional[str] = None
-) -> Dict[str, str]:
+    env: Mapping[str, str], bootstrap: str | None = None
+) -> dict[str, str]:
     result = {
         k: v for k, v in env.items() if not k.startswith(("PIP_", "PYTHON", "UV_"))
     }
@@ -654,7 +655,7 @@ def python_driver() -> str:
 
 def python_runtime_identity(
     python: str, env: Mapping[str, str], repository: str
-) -> Optional[JSONObject]:
+) -> JSONObject | None:
     result = run_captured_command(
         [
             python,
@@ -684,12 +685,12 @@ def python_runtime_identity(
         return None
 
 
-def production_requirements(text: str) -> Optional[Dict[str, set[str]]]:
+def production_requirements(text: str) -> dict[str, set[str]] | None:
     """Accept only uv's pinned, hashed registry interoperability format."""
     lines = "\n".join(
         line for line in text.splitlines() if not line.lstrip().startswith("#")
     )
-    result: Dict[str, set[str]] = {}
+    result: dict[str, set[str]] = {}
     for line in lines.replace("\\\n", " ").splitlines():
         if not line.strip():
             continue
@@ -710,7 +711,7 @@ def production_requirements(text: str) -> Optional[Dict[str, set[str]]]:
     return result
 
 
-def python_environment_inventory(repository: str) -> Optional[JSONObject]:
+def python_environment_inventory(repository: str) -> JSONObject | None:
     root = os.path.join(repository, ".venv")
     if os.path.islink(root):
         return None
@@ -844,7 +845,7 @@ def python_cache_path(repository: str) -> str:
     return os.path.join(repository, "vendor", "python", "wheels")
 
 
-def python_cache_state(repository: str) -> Optional[JSONObject]:
+def python_cache_state(repository: str) -> JSONObject | None:
     root = python_cache_path(repository)
     state = read_component_state(
         os.path.join(root, "state.json"), PYTHON_WHEEL_STATE_VERSION
@@ -904,7 +905,7 @@ def python_cache_state(repository: str) -> Optional[JSONObject]:
     return state
 
 
-def pip_bootstrap(root: str, state: JSONMapping, scratch: str) -> Optional[str]:
+def pip_bootstrap(root: str, state: JSONMapping, scratch: str) -> str | None:
     files = state.get("wheels")
     requirements = state.get("requirements")
     if not isinstance(files, dict) or not isinstance(requirements, str):
@@ -1067,8 +1068,9 @@ def prepare_python_cache(uv: str, env: Mapping[str, str], repository: str) -> bo
                 "inputs": inputs,
                 "requirements": text,
                 "wheels": hashes,
-                "pythonMinors": sorted(
-                    set(cast(list[str], minors)) | {str(identity["minor"])}
+                "pythonMinors": cast(
+                    list[JSONValue],
+                    sorted(set(cast(list[str], minors)) | {str(identity["minor"])}),
                 ),
                 "platform": dict(
                     current_platform_signature(), requirements=runtime_requirements()
@@ -1193,17 +1195,17 @@ def check_neovim_config_link(
     nvim_config = neovim_config_path(home)
     if not os.path.lexists(nvim_config):
         if emit_warnings:
-            warn("{0} is missing; run ./manage install".format(nvim_config))
+            warn(f"{nvim_config} is missing; run ./manage install")
         return False
     try:
         if os.path.realpath(nvim_config) == os.path.realpath(repository):
             return True
     except OSError as exc:
         if emit_warnings:
-            warn("unable to inspect {0}: {1}".format(nvim_config, exc))
+            warn(f"unable to inspect {nvim_config}: {exc}")
         return False
     if emit_warnings:
-        warn("{0} exists and does not point to {1}".format(nvim_config, repository))
+        warn(f"{nvim_config} exists and does not point to {repository}")
     return False
 
 
@@ -1212,7 +1214,7 @@ def link_neovim_config(home: str, repository: str) -> bool:
     try:
         os.makedirs(config_dir, exist_ok=True)
     except OSError as exc:
-        warn("unable to create {0}: {1}".format(config_dir, exc))
+        warn(f"unable to create {config_dir}: {exc}")
         return False
 
     if check_neovim_config_link(home, repository, emit_warnings=False):
@@ -1227,7 +1229,7 @@ def link_neovim_config(home: str, repository: str) -> bool:
     except FileExistsError:
         return os.path.realpath(nvim_config) == os.path.realpath(repository)
     except OSError as exc:
-        warn("unable to link {0} to {1}: {2}".format(nvim_config, repository, exc))
+        warn(f"unable to link {nvim_config} to {repository}: {exc}")
         return False
 
     return True
@@ -1235,23 +1237,22 @@ def link_neovim_config(home: str, repository: str) -> bool:
 
 def run_captured_command(
     command: Sequence[str], env: Mapping[str, str], repository: str
-) -> Optional[subprocess.CompletedProcess[str]]:
+) -> subprocess.CompletedProcess[str] | None:
     try:
         return subprocess.run(
             command,
             env=env,
             cwd=repository,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             check=False,
         )
     except OSError as exc:
-        warn("unable to run {0}: {1}".format(command[0], exc))
+        warn(f"unable to run {command[0]}: {exc}")
         return None
 
 
-def download_retry_delay(headers: object, body: str, attempt: int) -> Optional[int]:
+def download_retry_delay(headers: object, body: str, attempt: int) -> int | None:
     get = getattr(headers, "get", None)
     if not callable(get):
         return None
@@ -1285,37 +1286,27 @@ def urlopen_with_retries(request: urllib.request.Request, timeout: int, purpose:
             ):
                 if delay > MAX_AUTOMATIC_DOWNLOAD_RETRY_DELAY_SECONDS:
                     warn(
-                        "{0} is rate-limited for {1} seconds; try again after the reset".format(
-                            purpose, delay
-                        )
+                        f"{purpose} is rate-limited for {delay} seconds; try again after the reset"
                     )
                     return None
                 warn(
-                    "{0} is rate-limited; waiting {1} seconds before retrying".format(
-                        purpose, delay
-                    )
+                    f"{purpose} is rate-limited; waiting {delay} seconds before retrying"
                 )
                 time.sleep(delay)
                 continue
-            warn(
-                "{0} failed for {1}: HTTP {2}: {3}".format(
-                    purpose, request.full_url, exc.code, body
-                )
-            )
+            warn(f"{purpose} failed for {request.full_url}: HTTP {exc.code}: {body}")
             return None
         except OSError as exc:
             if attempt < max_attempts - 1:
                 delay = min(30, 2 * (attempt + 1))
                 warn(
-                    "{0} failed for {1}: {2}; retrying in {3} seconds".format(
-                        purpose, request.full_url, exc, delay
-                    )
+                    f"{purpose} failed for {request.full_url}: {exc}; retrying in {delay} seconds"
                 )
                 time.sleep(delay)
                 continue
-            warn("{0} failed for {1}: {2}".format(purpose, request.full_url, exc))
+            warn(f"{purpose} failed for {request.full_url}: {exc}")
             return None
-    warn("{0} failed for {1}".format(purpose, request.full_url))
+    warn(f"{purpose} failed for {request.full_url}")
     return None
 
 
@@ -1327,11 +1318,10 @@ def download_url(url: str, destination: str) -> bool:
     if response is None:
         return False
     try:
-        with response:
-            with open(destination, "wb") as output:
-                shutil.copyfileobj(response, output)
+        with response, open(destination, "wb") as output:
+            shutil.copyfileobj(response, output)
     except OSError as exc:
-        warn("unable to write {0}: {1}".format(destination, exc))
+        warn(f"unable to write {destination}: {exc}")
         return False
     return True
 
@@ -1346,11 +1336,11 @@ def path_within_repository(repository: str, path: str) -> bool:
     return common == repository_realpath
 
 
-def repository_path(repository: str, relative_path: str) -> Optional[str]:
+def repository_path(repository: str, relative_path: str) -> str | None:
     return source_subpath(repository, relative_path)
 
 
-def load_git_worktrees_lock(repository: str) -> Optional[JSONObject]:
+def load_git_worktrees_lock(repository: str) -> JSONObject | None:
     lock = read_json_object_file(
         os.path.join(repository, SOURCE_MANIFEST_NAME), emit_warnings=True
     )
@@ -1365,7 +1355,7 @@ def validate_manifest(repository: str, lock: JSONMapping) -> bool:
         return False
     for field in ("roots", "treesitter"):
         if field in lock and not isinstance(lock[field], dict):
-            warn("manifest {0} must be an object".format(field))
+            warn(f"manifest {field} must be an object")
             return False
     metadata = root_treesitter_metadata(lock)
     defaults = metadata.get("defaults", {})
@@ -1395,7 +1385,7 @@ def validate_manifest(repository: str, lock: JSONMapping) -> bool:
     languages: set[str] = set()
     for source_id, source in sources.items():
         if not valid_source_id(source_id) or not isinstance(source, dict):
-            warn("invalid manifest source: {0}".format(source_id))
+            warn(f"invalid manifest source: {source_id}")
             return False
         if not validate_source_settings(source_id, source):
             return False
@@ -1414,12 +1404,12 @@ def validate_manifest(repository: str, lock: JSONMapping) -> bool:
                 or owner.startswith(real + os.sep)
                 for owner in owners
             ):
-                warn("managed paths overlap: {0}".format(path))
+                warn(f"managed paths overlap: {path}")
                 return False
             owners.append(real)
         parsers = source_treesitter(source).get("parsers", {})
         if not isinstance(parsers, dict):
-            warn("source {0} treesitter.parsers must be an object".format(source_id))
+            warn(f"source {source_id} treesitter.parsers must be an object")
             return False
         for language, data in parsers.items():
             if (
@@ -1427,11 +1417,15 @@ def validate_manifest(repository: str, lock: JSONMapping) -> bool:
                 or not isinstance(data, dict)
                 or language in languages
             ):
-                warn("invalid or duplicate parser language: {0}".format(language))
+                warn(f"invalid or duplicate parser language: {language}")
                 return False
             name = data.get("parser", language)
-            if not valid_source_id(name) or name in parser_names:
-                warn("invalid or duplicate parser output: {0}".format(name))
+            if (
+                not isinstance(name, str)
+                or not valid_source_id(name)
+                or name in parser_names
+            ):
+                warn(f"invalid or duplicate parser output: {name}")
                 return False
             parser_names.add(name)
             languages.add(language)
@@ -1440,7 +1434,7 @@ def validate_manifest(repository: str, lock: JSONMapping) -> bool:
                 not isinstance(location, str)
                 or validated_relative_subpath_or_current(location) is None
             ):
-                warn("invalid parser location for {0}".format(language))
+                warn(f"invalid parser location for {language}")
                 return False
             if not validate_query_settings(data, "parser " + language):
                 return False
@@ -1456,24 +1450,20 @@ def validate_manifest(repository: str, lock: JSONMapping) -> bool:
             dependency not in sources or dependency == source_id
             for dependency in dependencies.values()
         ):
-            warn(
-                "unknown or self-referencing native dependency for {0}".format(
-                    source_id
-                )
-            )
+            warn(f"unknown or self-referencing native dependency for {source_id}")
             return False
     for language, data in treesitter_languages(lock).items():
         query_source = data.get(
             "querySource", defaults.get("querySource", TREE_SITTER_QUERY_SOURCE)
         )
         if query_source not in sources:
-            warn("unknown query source for {0}: {1}".format(language, query_source))
+            warn(f"unknown query source for {language}: {query_source}")
             return False
         if any(
             dependency not in languages
             for dependency in sequence_strings(data.get("dependencies"))
         ):
-            warn("unknown parser dependency for {0}".format(language))
+            warn(f"unknown parser dependency for {language}")
             return False
     groups = defaults.get("supplementalQueryGroups", [])
     if not isinstance(groups, list):
@@ -1500,7 +1490,7 @@ def validate_manifest(repository: str, lock: JSONMapping) -> bool:
                 or supplemental_query_source_path(repository, lock, group, language)
                 is None
             ):
-                warn("invalid or duplicate supplemental query output: {0}".format(key))
+                warn(f"invalid or duplicate supplemental query output: {key}")
                 return False
             group_outputs.add(key)
     return True
@@ -1562,7 +1552,7 @@ def normalize_relative_subpath(path: str) -> str:
     return path.replace("\\", "/")
 
 
-def validated_relative_subpath_or_current(path: str) -> Optional[str]:
+def validated_relative_subpath_or_current(path: str) -> str | None:
     normalized = normalize_relative_subpath(path)
     if (
         normalized.startswith("/")
@@ -1576,14 +1566,14 @@ def validated_relative_subpath_or_current(path: str) -> Optional[str]:
     return normalized
 
 
-def validated_relative_subpath(path: str) -> Optional[str]:
+def validated_relative_subpath(path: str) -> str | None:
     normalized = validated_relative_subpath_or_current(path)
     return normalized if normalized != "." else None
 
 
 def source_subpath(
     root: str, relative_path: str, allow_current: bool = False
-) -> Optional[str]:
+) -> str | None:
     normalized = (
         validated_relative_subpath_or_current(relative_path)
         if allow_current
@@ -1595,7 +1585,7 @@ def source_subpath(
             allow_current or os.path.realpath(path) != os.path.realpath(root)
         ):
             return path
-    warn("path must stay within {0}: {1}".format(root, relative_path))
+    warn(f"path must stay within {root}: {relative_path}")
     return None
 
 
@@ -1605,12 +1595,15 @@ def has_native_library_extension(path: str) -> bool:
 
 def treesitter_released_source_files(released_source: JSONMapping) -> Sequence[str]:
     value = released_source.get("files", [])
-    if isinstance(value, list) and all(isinstance(item, str) for item in value):
-        return [cast(str, validated_relative_subpath(item)) for item in value]
-    return []
+    if not isinstance(value, list):
+        return []
+    files = [item for item in value if isinstance(item, str)]
+    if len(files) != len(value):
+        return []
+    return [cast(str, validated_relative_subpath(item)) for item in files]
 
 
-def relative_path_collection(value: object, context: str) -> Optional[list[str]]:
+def relative_path_collection(value: object, context: str) -> list[str] | None:
     if not isinstance(value, list) or not value:
         warn(context + " must be a non-empty list of relative paths")
         return None
@@ -1658,7 +1651,7 @@ def source_plugin_metadata(source: JSONMapping) -> JSONMapping:
 
 def native_build_dependency_sources(
     source_id: str, native_build: JSONMapping
-) -> Optional[dict[str, str]]:
+) -> dict[str, str] | None:
     value = native_build.get("dependencySources", {})
     context = "source " + source_id + " plugin.nativeBuild.dependencySources"
     if not isinstance(value, dict) or any(
@@ -1704,7 +1697,7 @@ def source_managed_path(
     source_id: str,
     source: JSONMapping,
     role: Literal["repository", "worktree"],
-) -> Optional[str]:
+) -> str | None:
     relative = source.get(role)
     if relative is None:
         root_key = "repositories" if role == "repository" else "worktrees"
@@ -1720,13 +1713,13 @@ def source_managed_path(
 
 def source_repository_path(
     repository: str, lock: JSONMapping, source_id: str, source: JSONMapping
-) -> Optional[str]:
+) -> str | None:
     return source_managed_path(repository, lock, source_id, source, "repository")
 
 
 def source_worktree_path(
     repository: str, lock: JSONMapping, source_id: str, source: JSONMapping
-) -> Optional[str]:
+) -> str | None:
     return source_managed_path(repository, lock, source_id, source, "worktree")
 
 
@@ -1735,7 +1728,7 @@ def source_remote(source: JSONMapping) -> str:
     return remote if isinstance(remote, str) and remote else DEFAULT_GIT_REMOTE
 
 
-def source_filter(source: JSONMapping) -> Optional[str]:
+def source_filter(source: JSONMapping) -> str | None:
     value = source.get("filter", DEFAULT_GIT_FILTER)
     return value if isinstance(value, str) and value else None
 
@@ -1838,7 +1831,7 @@ def validate_source_settings(source_id: str, source: JSONMapping) -> bool:
 
 
 def native_build_paths_ok(
-    worktree: Optional[str], source_id: str, source: JSONMapping
+    worktree: str | None, source_id: str, source: JSONMapping
 ) -> bool:
     native_build = source_native_build(source)
     if not native_build:
@@ -1855,7 +1848,7 @@ def native_build_paths_ok(
     artifact = native_plugin_artifact_path("", native_build)
     revision = native_build_revision_path("", native_build)
     if artifact is None or revision is None:
-        warn("unable to resolve native output paths for source {0}".format(source_id))
+        warn(f"unable to resolve native output paths for source {source_id}")
         return False
     paths.extend(native_runtime_files(native_build))
     paths.append(revision.replace(os.sep, "/"))
@@ -1863,9 +1856,7 @@ def native_build_paths_ok(
     for path in paths:
         if not path_allowed_by(path, allowed):
             warn(
-                "source {0} native build path is not covered by allowedDirtyPaths: {1}".format(
-                    source_id, path
-                )
+                f"source {source_id} native build path is not covered by allowedDirtyPaths: {path}"
             )
             return False
         if worktree is not None:
@@ -1877,9 +1868,7 @@ def native_build_paths_ok(
             ).replace(os.sep, "/")
             if not path_allowed_by(resolved_relative, allowed):
                 warn(
-                    "source {0} native build path resolves outside allowedDirtyPaths: {1}".format(
-                        source_id, path
-                    )
+                    f"source {source_id} native build path resolves outside allowedDirtyPaths: {path}"
                 )
                 return False
     return True
@@ -1887,7 +1876,7 @@ def native_build_paths_ok(
 
 def source_sparse_checkout_paths(
     source: JSONMapping, source_id: str
-) -> Optional[Sequence[str]]:
+) -> Sequence[str] | None:
     if "files" not in source:
         return None
     paths = relative_path_collection(source["files"], "source " + source_id + " files")
@@ -1908,7 +1897,7 @@ def ensure_bare_repository(
 ) -> bool:
     url = source.get("url")
     if not isinstance(url, str) or not url:
-        warn("source {0} url must be a non-empty string".format(source_id))
+        warn(f"source {source_id} url must be a non-empty string")
         return False
 
     remote = source_remote(source)
@@ -1918,7 +1907,7 @@ def ensure_bare_repository(
         try:
             os.makedirs(parent, exist_ok=True)
         except OSError as exc:
-            warn("unable to create {0}: {1}".format(parent, exc))
+            warn(f"unable to create {parent}: {exc}")
             return False
         filter_value = source_filter(source)
         command = [git, "clone", "--bare", "--origin", remote]
@@ -1940,16 +1929,14 @@ def ensure_bare_repository(
         repository,
     )
     if completed is None or completed.returncode != 0:
-        warn("unable to inspect remote {0} for source {1}".format(remote, source_id))
+        warn(f"unable to inspect remote {remote} for source {source_id}")
         if completed is not None:
             print_completed_output(completed)
         return False
     current_urls = completed.stdout.splitlines()
     if current_urls != [url]:
         warn(
-            "source {0} remote {1} mismatch: expected {2}, found {3}".format(
-                source_id, remote, url, current_urls
-            )
+            f"source {source_id} remote {remote} mismatch: expected {url}, found {current_urls}"
         )
         return False
     return True
@@ -1966,7 +1953,7 @@ def fetch_source_commit(
 ) -> bool:
     commit = source.get("commit")
     if not isinstance(commit, str) or not commit:
-        warn("source {0} commit must be a non-empty string".format(source_id))
+        warn(f"source {source_id} commit must be a non-empty string")
         return False
 
     remote = source_remote(source)
@@ -2037,7 +2024,7 @@ def verify_commit(
         repository,
     )
     if completed is None or completed.returncode != 0:
-        warn("source {0} commit is not available: {1}".format(source_id, commit))
+        warn(f"source {source_id} commit is not available: {commit}")
         if completed is not None:
             print_completed_output(completed)
         return False
@@ -2050,7 +2037,7 @@ def is_git_worktree(path: str) -> bool:
 
 def worktree_head(
     git: str, env: Mapping[str, str], repository: str, worktree: str
-) -> Optional[str]:
+) -> str | None:
     completed = run_captured_command(
         [git, "-C", worktree, "rev-parse", "HEAD"], env, repository
     )
@@ -2063,7 +2050,7 @@ def worktree_head(
 
 def worktree_sparse_checkout_enabled(
     git: str, env: Mapping[str, str], repository: str, worktree: str
-) -> Optional[bool]:
+) -> bool | None:
     # --worktree rejects full checkouts without extensions.worktreeConfig.
     # Effective config includes worktree settings when that extension is enabled.
     completed = run_captured_command(
@@ -2091,7 +2078,7 @@ def worktree_sparse_checkout_enabled(
 
 def worktree_sparse_checkout_list(
     git: str, env: Mapping[str, str], repository: str, worktree: str
-) -> Optional[Sequence[str]]:
+) -> Sequence[str] | None:
     completed = run_captured_command(
         [git, "-C", worktree, "sparse-checkout", "list"], env, repository
     )
@@ -2106,12 +2093,12 @@ def configure_worktree_sparse_checkout(
     repository: str,
     source_id: str,
     worktree: str,
-    sparse_paths: Optional[Sequence[str]],
+    sparse_paths: Sequence[str] | None,
     initialize: bool,
 ) -> bool:
     enabled = worktree_sparse_checkout_enabled(git, env, repository, worktree)
     if enabled is None:
-        warn("unable to inspect source {0} sparse checkout state".format(source_id))
+        warn(f"unable to inspect source {source_id} sparse checkout state")
         return False
 
     if sparse_paths is None:
@@ -2127,7 +2114,7 @@ def configure_worktree_sparse_checkout(
     if not initialize and enabled:
         actual = worktree_sparse_checkout_list(git, env, repository, worktree)
         if actual is None:
-            warn("unable to inspect source {0} sparse checkout paths".format(source_id))
+            warn(f"unable to inspect source {source_id} sparse checkout paths")
             return False
         if list(actual) == list(sparse_paths):
             return True
@@ -2151,7 +2138,7 @@ def configure_worktree_sparse_checkout(
     )
 
 
-def local_git_environment(env: Mapping[str, str]) -> Dict[str, str]:
+def local_git_environment(env: Mapping[str, str]) -> dict[str, str]:
     return dict(
         env,
         GIT_NO_LAZY_FETCH="1",
@@ -2284,7 +2271,7 @@ def ensure_worktree(
 ) -> bool:
     commit = source.get("commit")
     if not isinstance(commit, str) or not commit:
-        warn("source {0} commit must be a non-empty string".format(source_id))
+        warn(f"source {source_id} commit must be a non-empty string")
         return False
 
     sparse_paths = source_sparse_checkout_paths(source, source_id)
@@ -2294,9 +2281,7 @@ def ensure_worktree(
     if os.path.exists(worktree):
         if not is_git_worktree(worktree):
             warn(
-                "source {0} worktree exists but is not a Git worktree: {1}".format(
-                    source_id, worktree
-                )
+                f"source {source_id} worktree exists but is not a Git worktree: {worktree}"
             )
             return False
         if not worktree_registration_ok(git_dir, worktree, relative=False):
@@ -2335,7 +2320,7 @@ def ensure_worktree(
                 return False
         head = worktree_head(git, env, repository, worktree)
         if head is None:
-            warn("unable to inspect source {0} HEAD".format(source_id))
+            warn(f"unable to inspect source {source_id} HEAD")
             return False
         if head != commit and not run_logged_command(
             [git, "-C", worktree, "checkout", "--detach", commit],
@@ -2353,9 +2338,7 @@ def ensure_worktree(
             os.makedirs(os.path.dirname(worktree), exist_ok=True)
         except OSError as exc:
             warn(
-                "unable to create parent directory for source {0} worktree: {1}".format(
-                    source_id, exc
-                )
+                f"unable to create parent directory for source {source_id} worktree: {exc}"
             )
             return False
         args = ["worktree", "add", "--detach", "--relative-paths"]
@@ -2450,7 +2433,7 @@ def check_worktree_pristine(
     )
     if status is None or status.returncode != 0:
         if emit_warnings:
-            warn("unable to inspect source {0} worktree status".format(source_id))
+            warn(f"unable to inspect source {source_id} worktree status")
             if status is not None:
                 print_completed_output(status)
         return False
@@ -2470,7 +2453,7 @@ def check_worktree_pristine(
     )
     if ignored is None or ignored.returncode != 0:
         if emit_warnings:
-            warn("unable to inspect source {0} ignored files".format(source_id))
+            warn(f"unable to inspect source {source_id} ignored files")
             if ignored is not None:
                 print_completed_output(ignored)
         return False
@@ -2488,11 +2471,8 @@ def check_worktree_pristine(
         dirty.append("\n".join(ignored_dirty))
     if dirty:
         if emit_warnings:
-            warn(
-                "source {0} worktree is not pristine:\n{1}".format(
-                    source_id, "\n".join(dirty)
-                )
-            )
+            details = "\n".join(dirty)
+            warn(f"source {source_id} worktree is not pristine:\n{details}")
         return False
     return True
 
@@ -2503,7 +2483,7 @@ def worktree_record(
     repository: str,
     git_dir: str,
     worktree: str,
-) -> Optional[list[str]]:
+) -> list[str] | None:
     completed = run_captured_command(
         git_dir_command(git, git_dir, ["worktree", "list", "--porcelain"]),
         env,
@@ -2533,7 +2513,7 @@ def worktree_lock_state(
     repository: str,
     git_dir: str,
     worktree: str,
-) -> Optional[bool]:
+) -> bool | None:
     lines = worktree_record(git, env, repository, git_dir, worktree)
     if lines is None:
         return None
@@ -2550,7 +2530,7 @@ def ensure_worktree_lock_state(
 ) -> bool:
     current = worktree_lock_state(git, env, repository, git_dir, worktree)
     if current is None:
-        warn("unable to inspect Git worktree lock state: {0}".format(worktree))
+        warn(f"unable to inspect Git worktree lock state: {worktree}")
         return False
     if current == locked:
         return True
@@ -2583,17 +2563,15 @@ def check_worktree_lock_state(
     current = worktree_lock_state(git, env, repository, git_dir, worktree)
     if current is None:
         if emit_warnings:
-            warn("unable to inspect source {0} worktree lock state".format(source_id))
+            warn(f"unable to inspect source {source_id} worktree lock state")
         return False
     if current == locked:
         return True
     if emit_warnings:
+        expected = "locked" if locked else "unlocked"
+        found = "locked" if current else "unlocked"
         warn(
-            "source {0} worktree lock mismatch: expected {1}, found {2}".format(
-                source_id,
-                "locked" if locked else "unlocked",
-                "locked" if current else "unlocked",
-            )
+            f"source {source_id} worktree lock mismatch: expected {expected}, found {found}"
         )
     return False
 
@@ -2666,35 +2644,29 @@ def check_worktree_sparse_checkout(
     enabled = worktree_sparse_checkout_enabled(git, env, repository, worktree)
     if enabled is None:
         if emit_warnings:
-            warn("unable to inspect source {0} sparse checkout state".format(source_id))
+            warn(f"unable to inspect source {source_id} sparse checkout state")
         return False
     if expected is None:
         if enabled:
             if emit_warnings:
-                warn(
-                    "source {0} sparse checkout is enabled unexpectedly".format(
-                        source_id
-                    )
-                )
+                warn(f"source {source_id} sparse checkout is enabled unexpectedly")
             return False
         return True
     if not enabled:
         if emit_warnings:
-            warn("source {0} sparse checkout is not enabled".format(source_id))
+            warn(f"source {source_id} sparse checkout is not enabled")
         return False
     actual = worktree_sparse_checkout_list(git, env, repository, worktree)
     if actual is None:
         if emit_warnings:
-            warn("unable to inspect source {0} sparse checkout paths".format(source_id))
+            warn(f"unable to inspect source {source_id} sparse checkout paths")
         return False
     if list(actual) != list(expected):
         if emit_warnings:
+            expected_text = ", ".join(expected)
+            actual_text = ", ".join(actual)
             warn(
-                "source {0} sparse checkout mismatch: expected {1}, found {2}".format(
-                    source_id,
-                    ", ".join(expected),
-                    ", ".join(actual),
-                )
+                f"source {source_id} sparse checkout mismatch: expected {expected_text}, found {actual_text}"
             )
         return False
     return True
@@ -2720,17 +2692,13 @@ def git_sources_state_ok(
             continue
         if not os.path.isdir(git_dir):
             if emit_warnings:
-                warn(
-                    "source {0} repository not found; run ./manage install".format(
-                        source_id
-                    )
-                )
+                warn(f"source {source_id} repository not found; run ./manage install")
             ok = False
             continue
         url = source_value.get("url")
         if not isinstance(url, str) or not url:
             if emit_warnings:
-                warn("source {0} url must be a non-empty string".format(source_id))
+                warn(f"source {source_id} url must be a non-empty string")
             ok = False
             continue
         remote = source_remote(source_value)
@@ -2745,11 +2713,7 @@ def git_sources_state_ok(
         )
         if completed is None or completed.returncode != 0:
             if emit_warnings:
-                warn(
-                    "unable to inspect remote {0} for source {1}".format(
-                        remote, source_id
-                    )
-                )
+                warn(f"unable to inspect remote {remote} for source {source_id}")
                 if completed is not None:
                     print_completed_output(completed)
             ok = False
@@ -2758,34 +2722,24 @@ def git_sources_state_ok(
         if current_urls != [url]:
             if emit_warnings:
                 warn(
-                    "source {0} remote {1} mismatch: expected {2}, found {3}".format(
-                        source_id, remote, url, current_urls
-                    )
+                    f"source {source_id} remote {remote} mismatch: expected {url}, found {current_urls}"
                 )
             ok = False
         if not commit_available(git, env, repository, git_dir, commit):
             if emit_warnings:
                 warn(
-                    "source {0} commit is not available in bare repository: {1}".format(
-                        source_id, commit
-                    )
+                    f"source {source_id} commit is not available in bare repository: {commit}"
                 )
             ok = False
         if not os.path.exists(worktree):
             if emit_warnings:
-                warn(
-                    "source {0} worktree not found; run ./manage install".format(
-                        source_id
-                    )
-                )
+                warn(f"source {source_id} worktree not found; run ./manage install")
             ok = False
             continue
         if not is_git_worktree(worktree):
             if emit_warnings:
                 warn(
-                    "source {0} worktree exists but is not a Git worktree: {1}".format(
-                        source_id, worktree
-                    )
+                    f"source {source_id} worktree exists but is not a Git worktree: {worktree}"
                 )
             ok = False
             continue
@@ -2804,9 +2758,7 @@ def git_sources_state_ok(
         if head != commit:
             if emit_warnings:
                 warn(
-                    "source {0} HEAD mismatch: expected {1}, found {2}".format(
-                        source_id, commit, head
-                    )
+                    f"source {source_id} HEAD mismatch: expected {commit}, found {head}"
                 )
             ok = False
         if not check_worktree_lock_state(
@@ -2849,7 +2801,7 @@ def check_git_sources(
     return git_sources_state_ok(env, repository, lock, emit_warnings=True)
 
 
-def parse_version_tuple(text: str) -> Optional[tuple[int, int, int]]:
+def parse_version_tuple(text: str) -> tuple[int, int, int] | None:
     match = re.search(r"(\d+)\.(\d+)\.(\d+)", text)
     if not match:
         return None
@@ -2870,10 +2822,9 @@ def check_tree_sitter_cli(
         return False
     version = parse_version_tuple(completed.stdout)
     if version is None or version < minimum:
+        minimum_text = ".".join(str(part) for part in minimum)
         warn(
-            "tree-sitter-cli >= {0} is required; found {1}".format(
-                ".".join(str(part) for part in minimum), completed.stdout.strip()
-            )
+            f"tree-sitter-cli >= {minimum_text} is required; found {completed.stdout.strip()}"
         )
         return False
     return True
@@ -2936,7 +2887,7 @@ def platform_state_ok(state: JSONMapping) -> bool:
     return True
 
 
-def output_hashes(root: str, paths: Sequence[str]) -> Optional[JSONObject]:
+def output_hashes(root: str, paths: Sequence[str]) -> JSONObject | None:
     result: JSONObject = {}
     for relative in sorted(paths):
         path = source_subpath(root, relative)
@@ -2950,7 +2901,7 @@ def output_hashes(root: str, paths: Sequence[str]) -> Optional[JSONObject]:
 
 
 def treesitter_runtime_signature(
-    configuration_sha256: str, tree_sitter_version: Optional[str]
+    configuration_sha256: str, tree_sitter_version: str | None
 ) -> JSONObject:
     signature = dict(current_platform_signature())
     signature["parserExtension"] = parser_extension()
@@ -2962,8 +2913,8 @@ def treesitter_runtime_signature(
     return signature
 
 
-def treesitter_languages(lock: JSONMapping) -> Dict[str, JSONObject]:
-    languages: Dict[str, JSONObject] = {}
+def treesitter_languages(lock: JSONMapping) -> dict[str, JSONObject]:
+    languages: dict[str, JSONObject] = {}
     for source_id, source in manifest_sources(lock).items():
         parsers = cast(
             Mapping[str, JSONMapping], source_treesitter(source).get("parsers", {})
@@ -2975,7 +2926,7 @@ def treesitter_languages(lock: JSONMapping) -> Dict[str, JSONObject]:
     return languages
 
 
-def tree_sitter_runtime_site(repository: str, lock: JSONMapping) -> Optional[str]:
+def tree_sitter_runtime_site(repository: str, lock: JSONMapping) -> str | None:
     treesitter = root_treesitter_metadata(lock)
     return repository_path(
         repository, cast(str, treesitter.get("runtimeSite", TREE_SITTER_RUNTIME_SITE))
@@ -2984,20 +2935,20 @@ def tree_sitter_runtime_site(repository: str, lock: JSONMapping) -> Optional[str
 
 def source_worktree_by_id(
     repository: str, lock: JSONMapping, source_id: str
-) -> Optional[str]:
+) -> str | None:
     source = manifest_sources(lock).get(source_id)
     if source is None:
-        warn("unknown source id: {0}".format(source_id))
+        warn(f"unknown source id: {source_id}")
         return None
     return source_worktree_path(repository, lock, source_id, source)
 
 
-def source_commit_by_id(lock: JSONMapping, source_id: str) -> Optional[str]:
+def source_commit_by_id(lock: JSONMapping, source_id: str) -> str | None:
     source = manifest_sources(lock).get(source_id)
     return cast(str, source["commit"]) if source is not None else None
 
 
-def treesitter_sources_root(repository: str, lock: JSONMapping) -> Optional[str]:
+def treesitter_sources_root(repository: str, lock: JSONMapping) -> str | None:
     runtime_site = tree_sitter_runtime_site(repository, lock)
     if runtime_site is None:
         return None
@@ -3006,7 +2957,7 @@ def treesitter_sources_root(repository: str, lock: JSONMapping) -> Optional[str]
 
 def treesitter_released_source_root_path(
     repository: str, lock: JSONMapping, source_id: str
-) -> Optional[str]:
+) -> str | None:
     root = treesitter_sources_root(repository, lock)
     if root is None:
         return None
@@ -3015,7 +2966,7 @@ def treesitter_released_source_root_path(
 
 def treesitter_released_source_archive_path(
     repository: str, lock: JSONMapping, source_id: str
-) -> Optional[str]:
+) -> str | None:
     root = treesitter_released_source_root_path(repository, lock, source_id)
     if root is None:
         return None
@@ -3024,7 +2975,7 @@ def treesitter_released_source_archive_path(
 
 def treesitter_released_source_source_path(
     repository: str, lock: JSONMapping, source_id: str
-) -> Optional[str]:
+) -> str | None:
     root = treesitter_released_source_root_path(repository, lock, source_id)
     if root is None:
         return None
@@ -3033,7 +2984,7 @@ def treesitter_released_source_source_path(
 
 def treesitter_released_source_metadata_path(
     repository: str, lock: JSONMapping, source_id: str
-) -> Optional[str]:
+) -> str | None:
     root = treesitter_released_source_root_path(repository, lock, source_id)
     if root is None:
         return None
@@ -3042,13 +2993,13 @@ def treesitter_released_source_metadata_path(
 
 def treesitter_source_root_by_id(
     repository: str, lock: JSONMapping, source_id: str
-) -> Optional[str]:
+) -> str | None:
     sources = lock.get("sources", {})
     if not isinstance(sources, dict):
         return None
     source = sources.get(source_id)
     if not isinstance(source, dict):
-        warn("unknown source id: {0}".format(source_id))
+        warn(f"unknown source id: {source_id}")
         return None
     if source_treesitter_released_source(cast(JSONMapping, source)):
         return treesitter_released_source_source_path(repository, lock, source_id)
@@ -3057,18 +3008,14 @@ def treesitter_source_root_by_id(
 
 def copy_query_dir(source_dir: str, destination_dir: str) -> bool:
     if not os.path.isdir(source_dir):
-        warn("query source not found: {0}".format(source_dir))
+        warn(f"query source not found: {source_dir}")
         return False
     try:
         if os.path.exists(destination_dir):
             shutil.rmtree(destination_dir)
         shutil.copytree(source_dir, destination_dir)
     except OSError as exc:
-        warn(
-            "unable to copy query directory {0} to {1}: {2}".format(
-                source_dir, destination_dir, exc
-            )
-        )
+        warn(f"unable to copy query directory {source_dir} to {destination_dir}: {exc}")
         return False
     return True
 
@@ -3096,7 +3043,7 @@ def query_source_path(
     lock: JSONMapping,
     language: str,
     parser_data: JSONMapping,
-) -> Optional[tuple[str, str]]:
+) -> tuple[str, str] | None:
     metadata = root_treesitter_metadata(lock)
     defaults = metadata.get("defaults", {})
     if not isinstance(defaults, dict):
@@ -3105,7 +3052,7 @@ def query_source_path(
         "querySource", defaults.get("querySource", TREE_SITTER_QUERY_SOURCE)
     )
     if not isinstance(source_id, str):
-        warn("querySource for {0} must be a string".format(language))
+        warn(f"querySource for {language} must be a string")
         return None
     query_path = parser_data.get("queryPath")
     if not isinstance(query_path, str):
@@ -3116,7 +3063,7 @@ def query_source_path(
         query_path = template.replace("{language}", language)
     normalized_query_path = validated_relative_subpath(query_path)
     if normalized_query_path is None:
-        warn("queryPath for {0} must be a non-empty relative path".format(language))
+        warn(f"queryPath for {language} must be a non-empty relative path")
         return None
     source_root = treesitter_source_root_by_id(repository, lock, source_id)
     if source_root is None:
@@ -3167,29 +3114,21 @@ def supplemental_query_languages(group: JSONMapping) -> Sequence[str]:
 
 def supplemental_query_source_path(
     repository: str, lock: JSONMapping, group: JSONMapping, language: str
-) -> Optional[tuple[str, str, str]]:
+) -> tuple[str, str, str] | None:
     group_name = group.get("name")
     source_id = group.get("source")
     if not isinstance(group_name, str) or not group_name:
         warn("supplemental query group name must be a non-empty string")
         return None
     if not isinstance(source_id, str) or not source_id:
-        warn(
-            "supplemental query group {0} source must be a non-empty string".format(
-                group_name
-            )
-        )
+        warn(f"supplemental query group {group_name} source must be a non-empty string")
         return None
 
     query_path = group.get("path")
     if not isinstance(query_path, str):
         template = group.get("pathTemplate", SUPPLEMENTAL_QUERY_PATH_TEMPLATE)
         if not isinstance(template, str):
-            warn(
-                "supplemental query group {0} pathTemplate must be a string".format(
-                    group_name
-                )
-            )
+            warn(f"supplemental query group {group_name} pathTemplate must be a string")
             return None
         query_path = template.replace("{language}", language).replace(
             "{group}", group_name
@@ -3197,9 +3136,7 @@ def supplemental_query_source_path(
     normalized_query_path = validated_relative_subpath(query_path)
     if normalized_query_path is None:
         warn(
-            "supplemental query group {0} path must be a non-empty relative path".format(
-                group_name
-            )
+            f"supplemental query group {group_name} path must be a non-empty relative path"
         )
         return None
 
@@ -3221,7 +3158,7 @@ def remove_path(path: str) -> bool:
         else:
             os.unlink(path)
     except OSError as exc:
-        warn("unable to remove {0}: {1}".format(path, exc))
+        warn(f"unable to remove {path}: {exc}")
         return False
     return True
 
@@ -3230,23 +3167,21 @@ def publish_directories(pairs: Sequence[tuple[str, str]]) -> bool:
     """Publish an owned set of directories, retaining backups if recovery fails."""
     for target, staged in pairs:
         if not os.path.isdir(staged) or path_within_repository(target, staged):
-            warn("invalid publication staging directory: {0}".format(staged))
+            warn(f"invalid publication staging directory: {staged}")
             return False
     backups: list[tuple[str, str]] = []
     published: list[str] = []
     try:
         for target, _ in pairs:
             if os.path.lexists(target):
-                backup = target + ".previous.{0}.{1}".format(
-                    os.getpid(), time.time_ns()
-                )
+                backup = target + f".previous.{os.getpid()}.{time.time_ns()}"
                 os.rename(target, backup)
                 backups.append((target, backup))
         for target, staged in pairs:
             os.rename(staged, target)
             published.append(target)
     except OSError as exc:
-        warn("unable to publish directories: {0}".format(exc))
+        warn(f"unable to publish directories: {exc}")
         for target in reversed(published):
             if not remove_path(target):
                 warn("unable to clear published path during recovery: " + target)
@@ -3255,9 +3190,7 @@ def publish_directories(pairs: Sequence[tuple[str, str]]) -> bool:
                 os.rename(backup, target)
             except OSError as restore_error:
                 warn(
-                    "recovery failed for {0}: {1}; previous contents remain at {2}".format(
-                        target, restore_error, backup
-                    )
+                    f"recovery failed for {target}: {restore_error}; previous contents remain at {backup}"
                 )
         return False
     cleaned = [remove_path(backup) for _, backup in backups]
@@ -3274,7 +3207,7 @@ def treesitter_runtime_signature_path(runtime_site: str) -> str:
 
 def tree_sitter_cli_version_text(
     tree_sitter: str, env: Mapping[str, str], repository: str
-) -> Optional[str]:
+) -> str | None:
     completed = run_captured_command([tree_sitter, "--version"], env, repository)
     if completed is None or completed.returncode != 0:
         return None
@@ -3302,7 +3235,7 @@ def write_treesitter_runtime_signature(
             json.dump(signature, file, indent=2)
             file.write("\n")
     except OSError as exc:
-        warn("unable to write Treesitter runtime signature {0}: {1}".format(path, exc))
+        warn(f"unable to write Treesitter runtime signature {path}: {exc}")
         return False
     return True
 
@@ -3313,7 +3246,7 @@ def publish_runtime_subdirectories(
     try:
         os.makedirs(runtime_site, exist_ok=True)
     except OSError as exc:
-        warn("unable to create {0}: {1}".format(runtime_site, exc))
+        warn(f"unable to create {runtime_site}: {exc}")
         return False
 
     pairs: list[tuple[str, str]] = []
@@ -3330,13 +3263,13 @@ def sha256_stream(stream: io.BufferedIOBase) -> str:
     return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def sha256_file(path: str, emit_warnings: bool = True) -> Optional[str]:
+def sha256_file(path: str, emit_warnings: bool = True) -> str | None:
     try:
         with open(path, "rb") as stream:
             return sha256_stream(stream)
     except OSError as exc:
         if emit_warnings:
-            warn("unable to read {0}: {1}".format(path, exc))
+            warn(f"unable to read {path}: {exc}")
         return None
 
 
@@ -3346,16 +3279,12 @@ def verify_file_sha256(path: str, expected: str, emit_warnings: bool = True) -> 
         return False
     if actual != expected:
         if emit_warnings:
-            warn(
-                "SHA-256 mismatch for {0}: expected {1}, got {2}".format(
-                    path, expected, actual
-                )
-            )
+            warn(f"SHA-256 mismatch for {path}: expected {expected}, got {actual}")
         return False
     return True
 
 
-def normalize_archive_member_path(path: str) -> Optional[str]:
+def normalize_archive_member_path(path: str) -> str | None:
     return validated_relative_subpath(path)
 
 
@@ -3374,17 +3303,13 @@ def extract_tar_gz(archive: str, destination: str) -> bool:
                     return False
                 if member.islnk() or member.issym():
                     warn(
-                        "unsupported symlink in Treesitter released source archive: {0}".format(
-                            member.name
-                        )
+                        f"unsupported symlink in Treesitter released source archive: {member.name}"
                     )
                     return False
                 target = os.path.join(destination, normalized)
                 if not path_within_repository(destination, target):
                     warn(
-                        "Treesitter released source archive path escapes extraction root: {0}".format(
-                            member.name
-                        )
+                        f"Treesitter released source archive path escapes extraction root: {member.name}"
                     )
                     return False
                 if member.isdir():
@@ -3396,20 +3321,13 @@ def extract_tar_gz(archive: str, destination: str) -> bool:
                 extracted = tar.extractfile(member)
                 if extracted is None:
                     warn(
-                        "unable to extract Treesitter released source archive member: {0}".format(
-                            member.name
-                        )
+                        f"unable to extract Treesitter released source archive member: {member.name}"
                     )
                     return False
-                with extracted:
-                    with open(target, "wb") as output:
-                        shutil.copyfileobj(extracted, output)
+                with extracted, open(target, "wb") as output:
+                    shutil.copyfileobj(extracted, output)
     except (OSError, tarfile.TarError) as exc:
-        warn(
-            "unable to extract Treesitter released source archive {0}: {1}".format(
-                archive, exc
-            )
-        )
+        warn(f"unable to extract Treesitter released source archive {archive}: {exc}")
         return False
     return True
 
@@ -3422,11 +3340,7 @@ def copy_treesitter_released_source_paths(
             source = os.path.join(source_root, relative_path)
             destination = os.path.join(destination_root, relative_path)
             if not os.path.exists(source):
-                warn(
-                    "Treesitter released source retained path missing: {0}".format(
-                        source
-                    )
-                )
+                warn(f"Treesitter released source retained path missing: {source}")
                 return False
             if os.path.isdir(source):
                 shutil.copytree(source, destination)
@@ -3434,7 +3348,7 @@ def copy_treesitter_released_source_paths(
                 os.makedirs(os.path.dirname(destination), exist_ok=True)
                 shutil.copy2(source, destination)
     except OSError as exc:
-        warn("unable to copy Treesitter released source paths: {0}".format(exc))
+        warn(f"unable to copy Treesitter released source paths: {exc}")
         return False
     return True
 
@@ -3443,21 +3357,21 @@ def reject_json_constant(value: str) -> None:
     raise ValueError("non-finite JSON number: " + value)
 
 
-def read_json_object_file(path: str, emit_warnings: bool) -> Optional[JSONObject]:
+def read_json_object_file(path: str, emit_warnings: bool) -> JSONObject | None:
     try:
         with open(path, encoding="utf-8") as file:
             value = json.load(file, parse_constant=reject_json_constant)
     except OSError as exc:
         if emit_warnings:
-            warn("unable to read {0}: {1}".format(path, exc))
+            warn(f"unable to read {path}: {exc}")
         return None
     except ValueError as exc:
         if emit_warnings:
-            warn("unable to parse {0}: {1}".format(path, exc))
+            warn(f"unable to parse {path}: {exc}")
         return None
     if not isinstance(value, dict):
         if emit_warnings:
-            warn("{0} must contain a JSON object".format(path))
+            warn(f"{path} must contain a JSON object")
         return None
     return value
 
@@ -3484,9 +3398,7 @@ def treesitter_released_source_state_ok(
     if not os.path.isfile(archive):
         if emit_warnings:
             warn(
-                "Treesitter released source archive missing: {0}; run ./manage install".format(
-                    archive
-                )
+                f"Treesitter released source archive missing: {archive}; run ./manage install"
             )
         return False
 
@@ -3508,9 +3420,7 @@ def treesitter_released_source_state_ok(
     ):
         if emit_warnings:
             warn(
-                "Treesitter released source metadata mismatch for {0}; run ./manage install".format(
-                    source_id
-                )
+                f"Treesitter released source metadata mismatch for {source_id}; run ./manage install"
             )
         return False
 
@@ -3521,9 +3431,7 @@ def treesitter_released_source_state_ok(
         if not os.path.exists(path):
             if emit_warnings:
                 warn(
-                    "Treesitter released source path missing: {0}; run ./manage install".format(
-                        path
-                    )
+                    f"Treesitter released source path missing: {path}; run ./manage install"
                 )
             return False
     return released_source_contents_ok(
@@ -3561,7 +3469,7 @@ def released_source_contents_ok(
                     return False
     except (OSError, tarfile.TarError) as exc:
         if emit_warnings:
-            warn("unable to verify released source contents: {0}".format(exc))
+            warn(f"unable to verify released source contents: {exc}")
         return False
     actual = file_inventory(source_root, emit_warnings)
     if actual != expected:
@@ -3595,23 +3503,19 @@ def materialize_treesitter_released_source(
     sha256 = released_source.get("sha256")
     files = list(treesitter_released_source_files(released_source))
     if not isinstance(url, str) or not isinstance(sha256, str) or not files:
-        warn(
-            "invalid Treesitter released source metadata for source {0}".format(
-                source_id
-            )
-        )
+        warn(f"invalid Treesitter released source metadata for source {source_id}")
         return False
 
     parent = os.path.dirname(root)
     try:
         os.makedirs(parent, exist_ok=True)
     except OSError as exc:
-        warn("unable to create {0}: {1}".format(parent, exc))
+        warn(f"unable to create {parent}: {exc}")
         return False
 
-    info("materializing Treesitter released source {0}".format(source_id))
+    info(f"materializing Treesitter released source {source_id}")
     with tempfile.TemporaryDirectory(
-        prefix=".{0}.{1}.".format(source_id, os.getpid()), dir=parent
+        prefix=f".{source_id}.{os.getpid()}.", dir=parent
     ) as staging_root:
         staged_root = os.path.join(staging_root, "install")
         staged_source_root = os.path.join(staged_root, "source")
@@ -3620,11 +3524,7 @@ def materialize_treesitter_released_source(
             os.makedirs(staged_source_root, exist_ok=True)
             os.makedirs(extracted_root, exist_ok=True)
         except OSError as exc:
-            warn(
-                "unable to create staging directories for {0}: {1}".format(
-                    source_id, exc
-                )
-            )
+            warn(f"unable to create staging directories for {source_id}: {exc}")
             return False
 
         staged_archive = os.path.join(staged_root, "archive.tar.gz")
@@ -3653,9 +3553,7 @@ def materialize_treesitter_released_source(
                 file.write("\n")
         except OSError as exc:
             warn(
-                "unable to write Treesitter released source metadata for {0}: {1}".format(
-                    source_id, exc
-                )
+                f"unable to write Treesitter released source metadata for {source_id}: {exc}"
             )
             return False
         if not replace_directory(root, staged_root):
@@ -3699,7 +3597,7 @@ def copy_source_for_build(
     scratch_root: str,
     source_id: str,
     copied_sources: set[str],
-) -> Optional[str]:
+) -> str | None:
     destination = os.path.join(scratch_root, "sources", source_id)
     if source_id in copied_sources:
         return destination
@@ -3711,7 +3609,7 @@ def copy_source_for_build(
             shutil.rmtree(destination)
         shutil.copytree(source_root, destination, ignore=shutil.ignore_patterns(".git"))
     except OSError as exc:
-        warn("unable to stage Treesitter build source {0}: {1}".format(source_id, exc))
+        warn(f"unable to stage Treesitter build source {source_id}: {exc}")
         return None
     copied_sources.add(source_id)
     return destination
@@ -3721,14 +3619,14 @@ def copy_source_for_build(
 class TreesitterPlan:
     """Resolved output ownership shared by the builder and both state checks."""
 
-    parsers: Dict[str, JSONObject]
+    parsers: dict[str, JSONObject]
     queries: dict[str, tuple[str, str]]
     supplemental: dict[str, tuple[str, str]]
     files: set[str]
     configuration_sha256: str
 
 
-def file_inventory(root: str, emit_warnings: bool) -> Optional[set[str]]:
+def file_inventory(root: str, emit_warnings: bool) -> set[str] | None:
     files: set[str] = set()
     pending = [root]
     try:
@@ -3747,14 +3645,14 @@ def file_inventory(root: str, emit_warnings: bool) -> Optional[set[str]]:
                         raise OSError("unsupported file type: " + entry.path)
     except OSError as exc:
         if emit_warnings:
-            warn("unable to inventory {0}: {1}".format(root, exc))
+            warn(f"unable to inventory {root}: {exc}")
         return None
     return files
 
 
 def treesitter_plan(
     repository: str, lock: JSONMapping, emit_warnings: bool
-) -> Optional[TreesitterPlan]:
+) -> TreesitterPlan | None:
     parsers = treesitter_languages(lock)
     queries: dict[str, tuple[str, str]] = {}
     supplemental: dict[str, tuple[str, str]] = {}
@@ -3834,7 +3732,7 @@ def treesitter_plan(
 def treesitter_matches_plan(
     runtime_site: str,
     plan: TreesitterPlan,
-    env: Optional[Mapping[str, str]],
+    env: Mapping[str, str] | None,
     repository: str,
     emit_warnings: bool,
 ) -> bool:
@@ -3854,9 +3752,7 @@ def treesitter_matches_plan(
         if signature.get(key) != value:
             if emit_warnings:
                 warn(
-                    "Treesitter runtime signature mismatch ({0}); run ./manage install".format(
-                        key
-                    )
+                    f"Treesitter runtime signature mismatch ({key}); run ./manage install"
                 )
             return False
     actual: set[str] = set()
@@ -3868,9 +3764,7 @@ def treesitter_matches_plan(
     if actual != plan.files:
         if emit_warnings:
             warn(
-                "Treesitter output mismatch; missing: {0}; obsolete: {1}; run ./manage install".format(
-                    sorted(plan.files - actual), sorted(actual - plan.files)
-                )
+                f"Treesitter output mismatch; missing: {sorted(plan.files - actual)}; obsolete: {sorted(actual - plan.files)}; run ./manage install"
             )
         return False
     parser_abis = signature.get("parserAbi")
@@ -3925,7 +3819,7 @@ def treesitter_matches_plan(
                 return False
     except OSError as exc:
         if emit_warnings:
-            warn("unable to inspect Treesitter parser: {0}".format(exc))
+            warn(f"unable to inspect Treesitter parser: {exc}")
         return False
     return True
 
@@ -4042,7 +3936,7 @@ def install_treesitter_runtime(
                 runtime_site, staged, ("parser", "queries", "state")
             )
     except OSError as exc:
-        warn("unable to build Treesitter runtime: {0}".format(exc))
+        warn(f"unable to build Treesitter runtime: {exc}")
         return False
 
 
@@ -4050,7 +3944,7 @@ def treesitter_runtime_state_ok(
     repository: str,
     lock: JSONMapping,
     emit_warnings: bool,
-    env: Optional[Mapping[str, str]] = None,
+    env: Mapping[str, str] | None = None,
 ) -> bool:
     plan = treesitter_plan(repository, lock, emit_warnings)
     runtime_site = tree_sitter_runtime_site(repository, lock)
@@ -4072,7 +3966,7 @@ def check_treesitter_runtime(
     return ok
 
 
-def read_text_file(path: str) -> Optional[str]:
+def read_text_file(path: str) -> str | None:
     try:
         with open(path, encoding="utf-8") as file:
             return file.read().strip()
@@ -4092,25 +3986,25 @@ def schema_catalog_metadata_path(repository: str) -> str:
     return os.path.join(schema_catalog_root(repository), SCHEMA_CATALOG_METADATA_NAME)
 
 
-def schemastore_worktree(repository: str, lock: JSONMapping) -> Optional[str]:
+def schemastore_worktree(repository: str, lock: JSONMapping) -> str | None:
     return source_worktree_by_id(repository, lock, SCHEMASTORE_SOURCE_ID)
 
 
-def schemastore_catalog_json_path(repository: str, lock: JSONMapping) -> Optional[str]:
+def schemastore_catalog_json_path(repository: str, lock: JSONMapping) -> str | None:
     worktree = schemastore_worktree(repository, lock)
     if worktree is None:
         return None
     return os.path.join(worktree, SCHEMA_CATALOG_SRC_CATALOG)
 
 
-def schemastore_schemas_dir(repository: str, lock: JSONMapping) -> Optional[str]:
+def schemastore_schemas_dir(repository: str, lock: JSONMapping) -> str | None:
     worktree = schemastore_worktree(repository, lock)
     if worktree is None:
         return None
     return os.path.join(worktree, SCHEMA_CATALOG_SRC_SCHEMAS)
 
 
-def repository_relative_posix(repository: str, path: str) -> Optional[str]:
+def repository_relative_posix(repository: str, path: str) -> str | None:
     try:
         relative = os.path.relpath(path, repository)
     except ValueError:
@@ -4120,12 +4014,12 @@ def repository_relative_posix(repository: str, path: str) -> Optional[str]:
 
 # Result kind for classify_schemastore_url. "kept" pairs with a non-None path;
 # "external" and "missing" pair with None. These cases partition every URL.
-SchemaUrlKind: TypeAlias = Literal["kept", "external", "missing"]
+type SchemaUrlKind = Literal["kept", "external", "missing"]
 
 
 def classify_schemastore_url(
     url: object, repository: str, schemas_dir: str, schemas_dir_real: str
-) -> tuple[SchemaUrlKind, Optional[str]]:
+) -> tuple[SchemaUrlKind, str | None]:
     if not isinstance(url, str):
         return "external", None
     match = SCHEMASTORE_URL_PATTERN.match(url)
@@ -4153,7 +4047,7 @@ class SchemaClassificationCounts:
 
 def resolve_schema_catalog_override(
     url: object, repository: str, schemas_dir: str, schemas_dir_real: str
-) -> Optional[str]:
+) -> str | None:
     """Return the repo-relative POSIX path for an overridden URL, or None.
 
     Honors the same path-traversal containment as classify_schemastore_url.
@@ -4252,7 +4146,7 @@ def lua_quote(value: str) -> str:
         elif char == "\t":
             buffer.append("\\t")
         elif code < 32 or code == 127:
-            buffer.append("\\{0:03d}".format(code))
+            buffer.append(f"\\{code:03d}")
         else:
             buffer.append(char)
     buffer.append("'")
@@ -4284,13 +4178,13 @@ def write_schema_catalog_lua(path: str, entries: Sequence[JSONMapping]) -> bool:
             "-- stylua: ignore end\n"
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
-        warn("unable to serialize schema catalog: {0}".format(exc))
+        warn(f"unable to serialize schema catalog: {exc}")
         return False
     try:
         with open(path, "wb") as file:
             file.write(content)
     except OSError as exc:
-        warn("unable to write {0}: {1}".format(path, exc))
+        warn(f"unable to write {path}: {exc}")
         return False
     return True
 
@@ -4331,11 +4225,7 @@ def schema_catalog_state_ok(
 
     if os.path.islink(lua_path) or not os.path.isfile(lua_path):
         if emit_warnings:
-            warn(
-                "schema catalog missing/linked: {0}; run ./manage install".format(
-                    lua_path
-                )
-            )
+            warn(f"schema catalog missing/linked: {lua_path}; run ./manage install")
         return False
 
     metadata = read_json_object_file(metadata_path, emit_warnings=emit_warnings)
@@ -4350,11 +4240,7 @@ def schema_catalog_state_ok(
     for key, value in expected.items():
         if metadata.get(key) != value:
             if emit_warnings:
-                warn(
-                    "schema catalog state mismatch ({0}); run ./manage install".format(
-                        key
-                    )
-                )
+                warn(f"schema catalog state mismatch ({key}); run ./manage install")
             return False
     output_sha = sha256_file(lua_path, emit_warnings=emit_warnings)
     if output_sha is None or metadata.get("outputSha256") != output_sha:
@@ -4378,15 +4264,13 @@ def materialize_schema_catalog(repository: str, lock: JSONMapping) -> bool:
 
     if not os.path.isfile(catalog_json):
         warn(
-            "schemastore catalog missing: {0}; run ./manage install --refresh".format(
-                catalog_json
-            )
+            f"schemastore catalog missing: {catalog_json}; run ./manage install --refresh"
         )
         return False
     if not os.path.isdir(schemas_dir):
         warn(
-            "schemastore schemas directory missing: {0}; "
-            "run ./manage install --refresh".format(schemas_dir)
+            f"schemastore schemas directory missing: {schemas_dir}; "
+            "run ./manage install --refresh"
         )
         return False
 
@@ -4408,31 +4292,22 @@ def materialize_schema_catalog(repository: str, lock: JSONMapping) -> bool:
     try:
         os.makedirs(parent, exist_ok=True)
     except OSError as exc:
-        warn("unable to create {0}: {1}".format(parent, exc))
+        warn(f"unable to create {parent}: {exc}")
         return False
 
     info(
-        "materializing schema catalog ({0} entries kept including {1} via "
-        "override; dropped {2} entries ({3} missing, {4} external) and {5} "
-        "version aliases ({6} missing, {7} external))".format(
-            len(entries),
-            counts.entries_overridden,
-            counts.entries_missing + counts.entries_external,
-            counts.entries_missing,
-            counts.entries_external,
-            counts.versions_missing + counts.versions_external,
-            counts.versions_missing,
-            counts.versions_external,
-        )
+        f"materializing schema catalog ({len(entries)} entries kept including {counts.entries_overridden} via "
+        f"override; dropped {counts.entries_missing + counts.entries_external} entries ({counts.entries_missing} missing, {counts.entries_external} external) and {counts.versions_missing + counts.versions_external} "
+        f"version aliases ({counts.versions_missing} missing, {counts.versions_external} external))"
     )
     with tempfile.TemporaryDirectory(
-        prefix=".{0}.{1}.".format(SCHEMASTORE_SOURCE_ID, os.getpid()), dir=parent
+        prefix=f".{SCHEMASTORE_SOURCE_ID}.{os.getpid()}.", dir=parent
     ) as staging_root:
         staged_root = os.path.join(staging_root, "install")
         try:
             os.makedirs(staged_root, exist_ok=True)
         except OSError as exc:
-            warn("unable to create staging directory: {0}".format(exc))
+            warn(f"unable to create staging directory: {exc}")
             return False
 
         if not write_schema_catalog_lua(
@@ -4443,9 +4318,7 @@ def materialize_schema_catalog(repository: str, lock: JSONMapping) -> bool:
         output_sha = sha256_file(os.path.join(staged_root, SCHEMA_CATALOG_LUA_NAME))
         if output_sha is None:
             return False
-        metadata: JSONObject = dict(
-            schema_catalog_metadata_signature(expected_commit, catalog_sha)
-        )
+        metadata = schema_catalog_metadata_signature(expected_commit, catalog_sha)
         metadata["outputSha256"] = output_sha
         metadata["entries"] = len(entries)
         metadata["entriesMissing"] = counts.entries_missing
@@ -4462,7 +4335,7 @@ def materialize_schema_catalog(repository: str, lock: JSONMapping) -> bool:
                 json.dump(metadata, file, indent=2, sort_keys=True)
                 file.write("\n")
         except OSError as exc:
-            warn("unable to write schema catalog metadata: {0}".format(exc))
+            warn(f"unable to write schema catalog metadata: {exc}")
             return False
 
         if not replace_directory(root, staged_root):
@@ -4564,10 +4437,10 @@ def install(offline: bool, refresh: bool) -> int:
 
 def archive_file_selection(
     env: Mapping[str, str], repository: str, lock: JSONMapping
-) -> tuple[Dict[str, str], Dict[str, bytes]]:
+) -> tuple[dict[str, str], dict[str, bytes]]:
     """Select ordinary managed state; sanitization never modifies its sources."""
-    selected: Dict[str, str] = {}
-    replacements: Dict[str, bytes] = {}
+    selected: dict[str, str] = {}
+    replacements: dict[str, bytes] = {}
     git = resolve_required("git", env)
     if git is None:
         raise RuntimeError("Git is required for export")
@@ -4825,7 +4698,7 @@ def runtime_policy() -> JSONObject:
     }
 
 
-def archive_profile() -> Optional[str]:
+def archive_profile() -> str | None:
     signature = current_platform_signature()
     profile = ARCHIVE_PROFILES.get((sys.platform, str(signature.get("machine"))))
     expected = ARCHIVE_OS_REQUIREMENTS.get(sys.platform)
@@ -4879,7 +4752,7 @@ def command_name(command: Sequence[str]) -> str:
 
 
 def print_command(command: Sequence[str]) -> None:
-    info("$ {0}".format(command_name(command)))
+    info(f"$ {command_name(command)}")
 
 
 def print_completed_output(completed: subprocess.CompletedProcess[str]) -> None:
@@ -4897,7 +4770,7 @@ def run_logged_command(
     command: Sequence[str],
     env: Mapping[str, str],
     repository: str,
-    success_message: Optional[str] = None,
+    success_message: str | None = None,
     show_success_output_on_stderr: bool = True,
 ) -> bool:
     print_command(command)
@@ -4913,23 +4786,21 @@ def run_logged_command(
 
     print_completed_output(completed)
     warn(
-        "command failed with exit code {0}: {1}".format(
-            completed.returncode, command_name(command)
-        )
+        f"command failed with exit code {completed.returncode}: {command_name(command)}"
     )
     return False
 
 
-def resolve_required(name: str, env: Mapping[str, str]) -> Optional[str]:
+def resolve_required(name: str, env: Mapping[str, str]) -> str | None:
     path = shutil.which(name, path=env.get("PATH"))
     if not path:
-        warn("{0} not found on PATH".format(name))
+        warn(f"{name} not found on PATH")
     return path
 
 
 def neovim_value(
     nvim: str, expression: str, env: Mapping[str, str], repository: str
-) -> Optional[str]:
+) -> str | None:
     command = [
         nvim,
         "--clean",
@@ -4943,17 +4814,17 @@ def neovim_value(
     if completed is None:
         return None
     if completed.returncode != 0:
-        warn("unable to query nvim: {0}".format(completed.stderr.strip()))
+        warn(f"unable to query nvim: {completed.stderr.strip()}")
         return None
 
     value = completed.stdout.strip()
     if not value:
-        warn("nvim returned an empty value for {0}".format(expression))
+        warn(f"nvim returned an empty value for {expression}")
         return None
     return value
 
 
-def neovim_runtime(nvim: str, env: Mapping[str, str], repository: str) -> Optional[str]:
+def neovim_runtime(nvim: str, env: Mapping[str, str], repository: str) -> str | None:
     return neovim_value(nvim, "vim.env.VIMRUNTIME", env, repository)
 
 
@@ -4979,19 +4850,19 @@ def native_build_optional(native_build: JSONMapping) -> bool:
 
 def native_build_minimum_cargo_version(
     native_build: JSONMapping,
-) -> Optional[tuple[int, int, int]]:
+) -> tuple[int, int, int] | None:
     value = native_build.get("minimumCargoVersion")
     if not isinstance(value, str):
         return None
     return parse_version_tuple(value)
 
 
-def native_build_cargo_package(native_build: JSONMapping) -> Optional[str]:
+def native_build_cargo_package(native_build: JSONMapping) -> str | None:
     value = native_build.get("package")
     return value if isinstance(value, str) and value else None
 
 
-def native_build_cargo_artifact_stem(native_build: JSONMapping) -> Optional[str]:
+def native_build_cargo_artifact_stem(native_build: JSONMapping) -> str | None:
     value = native_build.get("artifactStem")
     if not isinstance(value, str) or not value:
         return None
@@ -5025,7 +4896,7 @@ def native_build_cargo_command(native_build: JSONMapping) -> Sequence[str]:
 
 def cargo_version(
     cargo: str, env: Mapping[str, str], repository: str
-) -> Optional[tuple[int, int, int]]:
+) -> tuple[int, int, int] | None:
     completed = run_captured_command([cargo, "--version"], env, repository)
     if completed is None or completed.returncode != 0:
         return None
@@ -5054,9 +4925,7 @@ def native_library_extension() -> str:
     return NATIVE_LIBRARY_EXTENSIONS.get(sys.platform, ".so")
 
 
-def native_plugin_artifact_path(
-    worktree: str, native_build: JSONMapping
-) -> Optional[str]:
+def native_plugin_artifact_path(worktree: str, native_build: JSONMapping) -> str | None:
     kind = native_build.get("kind")
     if kind == "cargo":
         artifact_stem = native_build_cargo_artifact_stem(native_build)
@@ -5072,9 +4941,7 @@ def native_plugin_artifact_path(
     )
 
 
-def native_build_revision_path(
-    worktree: str, native_build: JSONMapping
-) -> Optional[str]:
+def native_build_revision_path(worktree: str, native_build: JSONMapping) -> str | None:
     kind = native_build.get("kind")
     if kind == "cargo":
         artifact_path = native_plugin_artifact_path(worktree, native_build)
@@ -5089,19 +4956,18 @@ def native_build_revision_path(
 
 def native_build_platform_signature_lines() -> Sequence[str]:
     return [
-        "platform {0} {1}".format(key, value)
-        for key, value in current_platform_signature().items()
+        f"platform {key} {value}" for key, value in current_platform_signature().items()
     ]
 
 
 def native_build_revision_text(
     lock: JSONMapping, source_id: str, native_build: JSONMapping
-) -> Optional[str]:
+) -> str | None:
     commit = source_commit_by_id(lock, source_id)
     if commit is None:
-        warn("source {0} commit must be a non-empty string".format(source_id))
+        warn(f"source {source_id} commit must be a non-empty string")
         return None
-    lines = ["source {0} {1}".format(source_id, commit)]
+    lines = [f"source {source_id} {commit}"]
     dependency_sources = native_build_dependency_sources(source_id, native_build)
     if dependency_sources is None:
         return None
@@ -5109,32 +4975,26 @@ def native_build_revision_text(
         dependency_commit = source_commit_by_id(lock, dependency_source_id)
         if dependency_commit is None:
             warn(
-                "source {0} dependency source commit is not available: {1}".format(
-                    source_id, dependency_source_id
-                )
+                f"source {source_id} dependency source commit is not available: {dependency_source_id}"
             )
             return None
         lines.append(
-            "dependency {0} {1} {2}".format(
-                relative_path, dependency_source_id, dependency_commit
-            )
+            f"dependency {relative_path} {dependency_source_id} {dependency_commit}"
         )
     if native_build.get("kind") == "cargo":
         package = native_build_cargo_package(native_build)
         if package is not None:
-            lines.append("cargo package {0}".format(package))
+            lines.append(f"cargo package {package}")
         artifact_stem = native_build_cargo_artifact_stem(native_build)
         if artifact_stem is None:
             warn(
-                "source {0} plugin.nativeBuild.artifactStem must be a non-empty worktree-relative path without a native library extension".format(
-                    source_id
-                )
+                f"source {source_id} plugin.nativeBuild.artifactStem must be a non-empty worktree-relative path without a native library extension"
             )
             return None
-        lines.append("cargo artifactStem {0}".format(artifact_stem))
+        lines.append(f"cargo artifactStem {artifact_stem}")
         features = native_build_cargo_features(native_build)
         if features:
-            lines.append("cargo features {0}".format(",".join(features)))
+            lines.append("cargo features " + ",".join(features))
     lines.extend(native_build_platform_signature_lines())
     return "\n".join(lines)
 
@@ -5153,7 +5013,7 @@ def native_runtime_files(native_build: JSONMapping) -> Sequence[str]:
 
 def native_build_state(
     worktree: str, lock: JSONMapping, source_id: str, native_build: JSONMapping
-) -> Optional[JSONObject]:
+) -> JSONObject | None:
     revision = native_build_revision_text(lock, source_id, native_build)
     hashes = output_hashes(worktree, native_runtime_files(native_build))
     if revision is None or hashes is None or not hashes:
@@ -5180,11 +5040,7 @@ def write_native_build_revision(
             json.dump(state, file, indent=2)
             file.write("\n")
     except OSError as exc:
-        warn(
-            "unable to write native build revision for source {0}: {1}".format(
-                source_id, exc
-            )
-        )
+        warn(f"unable to write native build revision for source {source_id}: {exc}")
         return False
     return True
 
@@ -5248,9 +5104,10 @@ def overlay_native_build_dependency_sources(
         if destination is None:
             return False
         try:
-            if os.path.exists(destination) or os.path.islink(destination):
-                if not remove_path(destination):
-                    return False
+            if (
+                os.path.exists(destination) or os.path.islink(destination)
+            ) and not remove_path(destination):
+                return False
             shutil.copytree(
                 dependency_worktree,
                 destination,
@@ -5258,9 +5115,7 @@ def overlay_native_build_dependency_sources(
             )
         except OSError as exc:
             warn(
-                "unable to overlay native build dependency source {0} into {1}: {2}".format(
-                    dependency_source_id, destination, exc
-                )
+                f"unable to overlay native build dependency source {dependency_source_id} into {destination}: {exc}"
             )
             return False
     return True
@@ -5310,7 +5165,7 @@ def build_native_plugin_runtime(
         if cargo is None:
             return optional_native_build_outcome(
                 native_build,
-                "source {0} requires cargo on PATH".format(source_id),
+                f"source {source_id} requires cargo on PATH",
             )
         minimum_version = native_build_minimum_cargo_version(native_build)
         if minimum_version is not None:
@@ -5318,16 +5173,14 @@ def build_native_plugin_runtime(
             if version is None:
                 return optional_native_build_outcome(
                     native_build,
-                    "unable to query cargo version for source {0}".format(source_id),
+                    f"unable to query cargo version for source {source_id}",
                 )
             if version < minimum_version:
+                minimum_text = ".".join(str(part) for part in minimum_version)
+                found_text = ".".join(str(part) for part in version)
                 return optional_native_build_outcome(
                     native_build,
-                    "source {0} requires cargo >= {1}; found {2}".format(
-                        source_id,
-                        ".".join(str(part) for part in minimum_version),
-                        ".".join(str(part) for part in version),
-                    ),
+                    f"source {source_id} requires cargo >= {minimum_text}; found {found_text}",
                 )
         build_env = dict(env, CARGO_TARGET_DIR=os.path.join(worktree, "target"))
         built = run_logged_command(
@@ -5350,15 +5203,13 @@ def build_native_plugin_runtime(
             return "failed"
         built = build_make_runtime(make, env, repository, worktree, policy)
     else:
-        warn("unsupported native build kind for source {0}".format(source_id))
+        warn(f"unsupported native build kind for source {source_id}")
         return "failed"
     artifact = native_plugin_artifact_path(worktree, native_build)
     if not built or artifact is None or not os.path.isfile(artifact):
         return optional_native_build_outcome(
             native_build,
-            "native build failed or produced no artifact for source {0}".format(
-                source_id
-            ),
+            f"native build failed or produced no artifact for source {source_id}",
         )
     if not native_build_paths_ok(worktree, source_id, source):
         return "failed"
@@ -5410,9 +5261,7 @@ def install_native_plugin_artifacts(
             worktree, lock, source_id, native_build
         ):
             warn(
-                "native build did not produce a current artifact for source {0}".format(
-                    source_id
-                )
+                f"native build did not produce a current artifact for source {source_id}"
             )
             outcome = "failed"
         if outcome != "built":
@@ -5441,9 +5290,7 @@ def native_plugin_artifacts_state_ok(
         if artifact is None:
             if emit_warnings:
                 warn(
-                    "native plugin artifact path is not defined for source {0}".format(
-                        source_id
-                    )
+                    f"native plugin artifact path is not defined for source {source_id}"
                 )
             ok = False
             continue
@@ -5453,24 +5300,18 @@ def native_plugin_artifacts_state_ok(
                 if revision_path is not None and os.path.lexists(revision_path):
                     if emit_warnings:
                         warn(
-                            "orphaned native build revision for source {0}; run ./manage install".format(
-                                source_id
-                            )
+                            f"orphaned native build revision for source {source_id}; run ./manage install"
                         )
                     ok = False
                     continue
                 if emit_warnings:
                     info(
-                        "optional native plugin artifact not installed for source {0}".format(
-                            source_id
-                        )
+                        f"optional native plugin artifact not installed for source {source_id}"
                     )
             else:
                 if emit_warnings:
                     warn(
-                        "native plugin artifact missing: {0}; run ./manage install".format(
-                            artifact
-                        )
+                        f"native plugin artifact missing: {artifact}; run ./manage install"
                     )
                 ok = False
             continue
@@ -5486,7 +5327,7 @@ def check_native_plugin_artifacts(repository: str, lock: JSONMapping) -> bool:
     return native_plugin_artifacts_state_ok(repository, lock, emit_warnings=True)
 
 
-def read_json_object(path: str) -> Optional[JSONObject]:
+def read_json_object(path: str) -> JSONObject | None:
     return read_json_object_file(path, emit_warnings=True)
 
 
@@ -5495,20 +5336,20 @@ def validate_upstream_metadata(path: str, metadata: JSONMapping) -> bool:
     for key in required_strings:
         value = metadata.get(key)
         if not isinstance(value, str) or not value:
-            warn("{0} {1} must be a non-empty string".format(path, key))
+            warn(f"{path} {key} must be a non-empty string")
             return False
 
     optional_strings = ("ref", "importedAt", "notes")
     for key in optional_strings:
         value = metadata.get(key)
         if value is not None and not isinstance(value, str):
-            warn("{0} {1} must be a string".format(path, key))
+            warn(f"{path} {key} must be a string")
             return False
 
     return True
 
 
-def nested_git_path(path: str) -> Optional[str]:
+def nested_git_path(path: str) -> str | None:
     for current_root, directory_names, file_names in os.walk(path):
         if ".git" in directory_names:
             return os.path.join(current_root, ".git")
@@ -5517,13 +5358,13 @@ def nested_git_path(path: str) -> Optional[str]:
     return None
 
 
-def discover_vendored_plugins(repository: str) -> Optional[Sequence[str]]:
+def discover_vendored_plugins(repository: str) -> Sequence[str] | None:
     init_path = os.path.join(repository, "init.lua")
     try:
         with open(init_path, encoding="utf-8") as file:
             text = file.read()
     except OSError as exc:
-        warn("unable to read {0}: {1}".format(init_path, exc))
+        warn(f"unable to read {init_path}: {exc}")
         return None
     return sorted(set(VENDORED_PLUGIN_CALL_PATTERN.findall(text)))
 
@@ -5539,15 +5380,15 @@ def check_vendored_plugins(repository: str) -> bool:
         path = vendored_plugin_dir(repository, plugin_name)
         realpath = os.path.realpath(path)
         if not os.path.isdir(path):
-            warn("vendored plugin not found: {0}".format(path))
+            warn(f"vendored plugin not found: {path}")
             ok = False
             continue
         if not path_within_repository(repository_realpath, realpath):
-            warn("vendored plugin escapes repository: {0}".format(path))
+            warn(f"vendored plugin escapes repository: {path}")
             ok = False
         git_path = nested_git_path(path)
         if git_path is not None:
-            warn("vendored plugin contains nested .git: {0}".format(git_path))
+            warn(f"vendored plugin contains nested .git: {git_path}")
             ok = False
         upstream_path = os.path.join(path, UPSTREAM_METADATA_NAME)
         if os.path.exists(upstream_path):
@@ -5561,7 +5402,7 @@ def check_vendored_plugins(repository: str) -> bool:
 
 def expand_lua_library_path(
     path: str, env: Mapping[str, str], repository: str
-) -> Optional[str]:
+) -> str | None:
     if "${3rd}" in path:
         return None
 
@@ -5577,12 +5418,10 @@ def expand_lua_library_path(
 
     expanded = ENV_VARIABLE_PATTERN.sub(replace_env, path)
     if missing:
-        raise RuntimeError(
-            "environment variable missing in .luarc.json: {0}".format(missing[0])
-        )
+        raise RuntimeError(f"environment variable missing in .luarc.json: {missing[0]}")
 
     if "${" in expanded:
-        raise RuntimeError("unsupported variable in .luarc.json path: {0}".format(path))
+        raise RuntimeError(f"unsupported variable in .luarc.json path: {path}")
 
     if os.path.isabs(expanded):
         return expanded
@@ -5591,7 +5430,7 @@ def expand_lua_library_path(
 
 def lua_workspace_libraries(
     env: Mapping[str, str], repository: str
-) -> Optional[Sequence[str]]:
+) -> Sequence[str] | None:
     config = read_json_object_file(
         os.path.join(repository, ".luarc.json"), emit_warnings=True
     )
@@ -5676,19 +5515,19 @@ def check(fix: bool) -> int:
     missing_libraries = [library for library in libraries if not os.path.isdir(library)]
     if missing_libraries:
         for library in missing_libraries:
-            warn("{0} not found; run ./manage install".format(library))
+            warn(f"{library} not found; run ./manage install")
         return 1
 
     plenary = source_worktree_by_id(repository, lock, PLENARY_PLUGIN_NAME)
     if plenary is None:
         return 1
     if not os.path.isdir(plenary):
-        warn("{0} not found; run ./manage install".format(plenary))
+        warn(f"{plenary} not found; run ./manage install")
         return 1
 
     specs = discover_lua_specs(repository)
     if not specs:
-        warn("no Lua spec files found under {0}".format(LUA_CHECK_PATH))
+        warn(f"no Lua spec files found under {LUA_CHECK_PATH}")
         return 1
 
     lua_language_server_commands = [
@@ -5726,11 +5565,7 @@ def check(fix: bool) -> int:
         *lua_language_server_commands,
     ]
 
-    runtimepath_command = (
-        "lua vim.opt.runtimepath:prepend({0}); vim.opt.runtimepath:prepend({1})".format(
-            lua_quote(plenary), lua_quote(repository)
-        )
-    )
+    runtimepath_command = f"lua vim.opt.runtimepath:prepend({lua_quote(plenary)}); vim.opt.runtimepath:prepend({lua_quote(repository)})"
     plenary_command = [
         nvim,
         "--headless",
@@ -5754,7 +5589,7 @@ def check(fix: bool) -> int:
         plenary_command,
         env,
         repository,
-        "plenary: {0} Lua spec file(s) passed".format(len(specs)),
+        f"plenary: {len(specs)} Lua spec file(s) passed",
         show_success_output_on_stderr=False,
     ):
         ok = False
@@ -5779,11 +5614,7 @@ def scan(strict: bool, paths: Sequence[str]) -> int:
 
     rules_dir = os.path.join(repository, SCAN_RULES_DIR)
     if not os.path.isdir(rules_dir):
-        warn(
-            "rules directory not found: {0}; expected at {1}".format(
-                SCAN_RULES_DIR, rules_dir
-            )
-        )
+        warn(f"rules directory not found: {SCAN_RULES_DIR}; expected at {rules_dir}")
         return 1
 
     if paths:
@@ -5797,11 +5628,7 @@ def scan(strict: bool, paths: Sequence[str]) -> int:
         ]
         if invalid_targets:
             for path in invalid_targets:
-                warn(
-                    "scan target must be an existing file or directory: {0}".format(
-                        path
-                    )
-                )
+                warn(f"scan target must be an existing file or directory: {path}")
             return 1
     else:
         targets = [
@@ -5902,7 +5729,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
