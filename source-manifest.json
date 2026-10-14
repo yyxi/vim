@@ -6,7 +6,7 @@
   "sources": {
     "nvim-treesitter": {
       "url": "https://github.com/nvim-treesitter/nvim-treesitter.git",
-      "commit": "4916d6592ede8c07973490d9322f187e07dfefac",
+      "commit": "ca581c3436fc2b236847f5b739ebc263739e5ca6",
       "ref": "refs/heads/main",
       "files": [
         "autoload",
@@ -47,7 +47,7 @@
     },
     "tree-sitter-json": {
       "url": "https://github.com/tree-sitter/tree-sitter-json.git",
-      "commit": "001c28d7a29832b06b0e831ec77845553c89b56d",
+      "commit": "254c42a6476413b776221e03982ac8ae159eeb72",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -68,7 +68,7 @@
     },
     "tree-sitter-json5": {
       "url": "https://github.com/Joakker/tree-sitter-json5.git",
-      "commit": "aa630ef48903ab99e406a8acd2e2933077cc34e1",
+      "commit": "248b8564567087d7866be76569b182f6dd7e14e9",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -89,7 +89,7 @@
     },
     "tree-sitter-markdown": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-markdown.git",
-      "commit": "f969cd3ae3f9fbd4e43205431d0ae286014c05b5",
+      "commit": "a0a00f817d02412bd92c54d316f164d827b57b5c",
       "ref": "refs/heads/split_parser",
       "files": [
         "tree-sitter-markdown",
@@ -122,7 +122,7 @@
     },
     "tree-sitter-lean": {
       "url": "https://github.com/Julian/tree-sitter-lean.git",
-      "commit": "259a2daf7a699cc047221f1e043e4d045fcd6be2",
+      "commit": "916c44f4d89c970f66dd34a49e7ce848f4d29e72",
       "ref": "refs/heads/main",
       "files": [
         "queries",
@@ -152,7 +152,7 @@
     },
     "tree-sitter-moonbit": {
       "url": "https://github.com/moonbitlang/tree-sitter-moonbit.git",
-      "commit": "ebdb3f38d46309a3a7f81c2af357da05ec8a4470",
+      "commit": "5435c307c6cf2ef0d508a99047b06f35a4308444",
       "ref": "refs/heads/main",
       "files": [
         "queries",
@@ -241,7 +241,7 @@
     },
     "tree-sitter-yaml": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-yaml.git",
-      "commit": "4463985dfccc640f3d6991e3396a2047610cf5f8",
+      "commit": "a1c4812a73ec5e089de8e441fdea3a921e8d5079",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -307,7 +307,7 @@
     },
     "tree-sitter-fish": {
       "url": "https://github.com/ram02z/tree-sitter-fish.git",
-      "commit": "fa2143f5d66a9eb6c007ba9173525ea7aaafe788",
+      "commit": "b7f1d682941e0c62dfcd6bf9ef481638351bab16",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -329,7 +329,7 @@
     },
     "tree-sitter-git-config": {
       "url": "https://github.com/the-mikedavis/tree-sitter-git-config.git",
-      "commit": "0fbc9f99d5a28865f9de8427fb0672d66f9d83a5",
+      "commit": "3a61756a81a86291a0f48e3eeeaa0692b9981aa9",
       "ref": "refs/heads/main",
       "files": [
         "src",
@@ -350,7 +350,7 @@
     },
     "tree-sitter-git-rebase": {
       "url": "https://github.com/the-mikedavis/tree-sitter-git-rebase.git",
-      "commit": "760ba8e34e7a68294ffb9c495e1388e030366188",
+      "commit": "32686d6b72980b36f876ae2d07719c9c3ed154e2",
       "ref": "refs/heads/main",
       "files": [
         "src",
@@ -371,7 +371,7 @@
     },
     "tree-sitter-vim": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-vim.git",
-      "commit": "3092fcd99eb87bbd0fc434aa03650ba58bd5b43b",
+      "commit": "039c8d0aa1deae00ddeb0374dd70bcc0ec56938d",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -413,7 +413,7 @@
     },
     "tree-sitter-julia": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-julia.git",
-      "commit": "8454f266717232525ed03c7b09164b0404a03150",
+      "commit": "9b92fddcedb55003b32601238653b121bc46f544",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -491,7 +491,7 @@
     },
     "tree-sitter-diff": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-diff.git",
-      "commit": "2520c3f934b3179bb540d23e0ef45f75304b5fed",
+      "commit": "ada384ac7bfc1307f32de474620120add29998fb",
       "ref": "refs/heads/main",
       "files": [
         "src",
@@ -512,7 +512,7 @@
     },
     "tree-sitter-ssh-config": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-ssh-config.git",
-      "commit": "71d2693deadaca8cdc09e38ba41d2f6042da1616",
+      "commit": "0c35b243392268f48fd096607da192d76c843398",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -805,7 +805,7 @@
     },
     "tree-sitter-nginx": {
       "url": "https://github.com/opa-oz/tree-sitter-nginx.git",
-      "commit": "47ade644d754cce57974aac44d2c9450e823d4f4",
+      "commit": "7cdf006ed1addef698fc680ae31721950f85e5e9",
       "ref": "refs/heads/main",
       "files": [
         "src",
@@ -826,7 +826,7 @@
     },
     "tree-sitter-nix": {
       "url": "https://github.com/nix-community/tree-sitter-nix.git",
-      "commit": "eabf96807ea4ab6d6c7f09b671a88cd483542840",
+      "commit": "f9765b709987418e7526cca8b9dcf73429ddf169",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -911,8 +911,8 @@
     },
     "tree-sitter-swift": {
       "url": "https://github.com/alex-pinkus/tree-sitter-swift.git",
-      "commit": "8abb3e8b33256d89127a35e87480736f74755ff9",
-      "ref": "refs/tags/0.7.2",
+      "commit": "171fa3bc343233fe07f5e17205aaada33d778825",
+      "ref": "refs/tags/0.7.4",
       "files": [
         "grammar.js",
         "tree-sitter.json",
@@ -1030,7 +1030,7 @@
     },
     "tree-sitter-c": {
       "url": "https://github.com/tree-sitter/tree-sitter-c.git",
-      "commit": "ae19b676b13bdcc13b7665397e6d9b14975473dd",
+      "commit": "b780e47fc780ddc8da13afa35a3f4ed5c157823d",
       "ref": "refs/tags/v0.24.2",
       "files": [
         "src",
@@ -1052,7 +1052,7 @@
     },
     "tree-sitter-cpp": {
       "url": "https://github.com/tree-sitter/tree-sitter-cpp.git",
-      "commit": "8b5b49eb196bec7040441bee33b2c9a4838d6967",
+      "commit": "c009222808634c1014f82438d4883753516a2c24",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -1116,7 +1116,7 @@
     },
     "tree-sitter-elixir": {
       "url": "https://github.com/elixir-lang/tree-sitter-elixir.git",
-      "commit": "7937d3b4d65fa574163cfa59394515d3c1cf16f4",
+      "commit": "4b0c7118760af58a2e7081bbc8396e136f820b37",
       "ref": "refs/heads/main",
       "files": [
         "src",
@@ -1139,7 +1139,7 @@
     },
     "tree-sitter-haskell": {
       "url": "https://github.com/tree-sitter-grammars/tree-sitter-haskell.git",
-      "commit": "7fa19f195803a77855f036ee7f49e4b22856e338",
+      "commit": "98aedbd2d6947a168ba3ba3755d70b0cb6b78395",
       "ref": "refs/heads/master",
       "files": [
         "src",
@@ -1160,8 +1160,8 @@
     },
     "tree-sitter-ocaml": {
       "url": "https://github.com/tree-sitter/tree-sitter-ocaml.git",
-      "commit": "5a979b3ec7f1fe990b8e8c4412294a0cf7228e45",
-      "ref": "refs/tags/v0.25.0",
+      "commit": "e3c9cf368f68bffd2f81188229aefa7b434eda65",
+      "ref": "refs/tags/v0.26.0",
       "files": [
         "common",
         "grammars/ocaml",
@@ -1183,7 +1183,7 @@
     },
     "tree-sitter-latex": {
       "url": "https://github.com/latex-lsp/tree-sitter-latex.git",
-      "commit": "7e0ecdc02926c7b9b2e0c76003d4fe7b0944f957",
+      "commit": "fa8df448fc2c0192a8c2f8cfc97de53cb2b4ecb9",
       "ref": "refs/heads/master",
       "files": [
         "grammar.js",
@@ -1227,7 +1227,7 @@
     },
     "nvim-treesitter-textobjects": {
       "url": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects.git",
-      "commit": "851e865342e5a4cb1ae23d31caf6e991e1c99f1e",
+      "commit": "5c7b0263797dfd1bd6202f2b219f3b53a80b2187",
       "ref": "refs/heads/main",
       "files": [
         "queries",
@@ -1267,7 +1267,7 @@
     },
     "none-ls.nvim": {
       "url": "https://github.com/nvimtools/none-ls.nvim.git",
-      "commit": "f9d557ac7cd28a3a993b5ea49716498bd540b01f",
+      "commit": "c4b82bb63b13856ba4d6b971b7aad3bb38fc6fe2",
       "ref": "refs/heads/main",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1280,7 +1280,7 @@
     },
     "nvim-lspconfig": {
       "url": "https://github.com/neovim/nvim-lspconfig.git",
-      "commit": "246572944c2a1e2a646c2e7609ff619b0fe74c18",
+      "commit": "ac062d0d01c019c0dbdb798968f3e5d8b35c3853",
       "ref": "refs/heads/master",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1295,7 +1295,7 @@
     },
     "schemastore": {
       "url": "https://github.com/SchemaStore/schemastore.git",
-      "commit": "40bc7f0b802c45e431ccb3bb2eec01eb654383f8",
+      "commit": "46091b72e2514ae0d3ebde6cac61b5cc08da9002",
       "ref": "refs/heads/master",
       "files": [
         "src/api/json/catalog.json",
@@ -1306,7 +1306,7 @@
     },
     "conform.nvim": {
       "url": "https://github.com/stevearc/conform.nvim.git",
-      "commit": "18aeab3d63d350dcf44d64c462cc489a3412af40",
+      "commit": "016802de402556da54c36bd7359b441266b01cdd",
       "ref": "refs/heads/master",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1320,13 +1320,12 @@
     },
     "telescope.nvim": {
       "url": "https://github.com/nvim-telescope/telescope.nvim.git",
-      "commit": "b4da76be54691e854d3e0e02c36b0245f945c2c7",
+      "commit": "40aedd8a68c78a656a10a8d62d80c54af59420fb",
       "ref": "refs/heads/master",
       "allowedDirtyPaths": [
         "doc/tags"
       ],
       "files": [
-        "autoload",
         "data",
         "doc",
         "ftplugin",
@@ -1337,7 +1336,7 @@
     },
     "snacks.nvim": {
       "url": "https://github.com/folke/snacks.nvim.git",
-      "commit": "ad9ede6a9cddf16cedbd31b8932d6dcdee9b716e",
+      "commit": "882c996cf28183f4d63640de0b4c02ec886d01f2",
       "ref": "refs/heads/main",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1352,7 +1351,7 @@
     },
     "lualine.nvim": {
       "url": "https://github.com/nvim-lualine/lualine.nvim.git",
-      "commit": "131a558e13f9f28b15cd235557150ccb23f89286",
+      "commit": "221ce6b2d999187044529f49da6554a92f740a96",
       "ref": "refs/heads/master",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1365,7 +1364,7 @@
     },
     "mini.base16": {
       "url": "https://github.com/nvim-mini/mini.base16.git",
-      "commit": "91c852a07a4907895cba714fab337aedb6bd9d87",
+      "commit": "ecbcb4e363169a663ece476f35fd87870c6d6a8b",
       "ref": "refs/heads/stable",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1379,7 +1378,7 @@
     },
     "mini.bufremove": {
       "url": "https://github.com/nvim-mini/mini.bufremove.git",
-      "commit": "4cfbb201b2760da79ca6e1a00e9f67cbc99cbb8f",
+      "commit": "6e9c563cb71a8e4d57c4fb4089eb90a3bf3e8851",
       "ref": "refs/heads/main",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1392,7 +1391,7 @@
     },
     "ibl": {
       "url": "https://github.com/lukas-reineke/indent-blankline.nvim.git",
-      "commit": "d28a3f70721c79e3c5f6693057ae929f3d9c0a03",
+      "commit": "f1e186e44d3b7f9ae918008e2c28ce37c6023d2d",
       "ref": "refs/heads/master",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1406,7 +1405,7 @@
     },
     "mini.hipatterns": {
       "url": "https://github.com/nvim-mini/mini.hipatterns.git",
-      "commit": "add8d8abad602787377ec5d81f6b248605828e0f",
+      "commit": "607d604e650cdf21d71f863d040c496a1d0cb320",
       "ref": "refs/heads/stable",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1419,7 +1418,7 @@
     },
     "friendly-snippets": {
       "url": "https://github.com/rafamadriz/friendly-snippets.git",
-      "commit": "6cd7280adead7f586db6fccbd15d2cac7e2188b9",
+      "commit": "b4d01b0fdf3c9a549961c2f9ffe8dc09be166219",
       "ref": "refs/heads/main",
       "files": [
         "package.json",
@@ -1429,7 +1428,7 @@
     },
     "treesj": {
       "url": "https://github.com/Wansmer/treesj.git",
-      "commit": "5fa4e7ba3517f8fe743bb4488f9e9c7ce83330fc",
+      "commit": "9f349ba62c524f065d6f43254d731ddf8319b9bf",
       "ref": "refs/heads/main",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1442,7 +1441,7 @@
     },
     "vim-matchup": {
       "url": "https://github.com/andymass/vim-matchup.git",
-      "commit": "dccb2d12ef2a703d2f076b3cda36a3339449d1eb",
+      "commit": "0106b1afd4a2f7e1098037b5ceb161bab7471088",
       "ref": "refs/heads/master",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1458,7 +1457,7 @@
     },
     "nvim-ts-autotag": {
       "url": "https://github.com/windwp/nvim-ts-autotag.git",
-      "commit": "88c1453db4ba7dd24131086fe51fdf74e587d275",
+      "commit": "d7220b55e16ed3c04e88086256def5d282429493",
       "ref": "refs/heads/main",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1471,7 +1470,7 @@
     },
     "nvim-autopairs": {
       "url": "https://github.com/windwp/nvim-autopairs.git",
-      "commit": "7b9923abad60b903ece7c52940e1321d39eccc79",
+      "commit": "3172f40c16563db871a58f20d205c710ad782311",
       "ref": "refs/heads/master",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1508,7 +1507,7 @@
     },
     "mini.ai": {
       "url": "https://github.com/nvim-mini/mini.ai.git",
-      "commit": "bfb26d9072670c3aaefab0f53024b2f3729c8083",
+      "commit": "d73c36349aa7b0bab5f77ad71701a1d42211a1df",
       "ref": "refs/heads/stable",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1521,7 +1520,7 @@
     },
     "mini.surround": {
       "url": "https://github.com/nvim-mini/mini.surround.git",
-      "commit": "88c52297ed3e69ecf9f8652837888ecc727a28ee",
+      "commit": "580e4cb98c5900d9fe743865fb5a5b2178b4ab18",
       "ref": "refs/heads/stable",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1534,7 +1533,7 @@
     },
     "flash.nvim": {
       "url": "https://github.com/folke/flash.nvim.git",
-      "commit": "fcea7ff883235d9024dc41e638f164a450c14ca2",
+      "commit": "5f0f270fdc7c5b0c21d903ee85b9cb06f2ac636a",
       "ref": "refs/heads/main",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1547,7 +1546,7 @@
     },
     "mini.align": {
       "url": "https://github.com/nvim-mini/mini.align.git",
-      "commit": "60c61c8c63dca41b5ac6bfc36b52df69b1a03e6b",
+      "commit": "8cebe89d82f20e6d21b27346bcde4b4b6244a9f1",
       "ref": "refs/heads/stable",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1601,7 +1600,7 @@
     },
     "yanky.nvim": {
       "url": "https://github.com/gbprod/yanky.nvim.git",
-      "commit": "784188e0a7363e762e53140f39124d786aec0832",
+      "commit": "adcabd8512bead30184916fa9277e73c021ef099",
       "ref": "refs/heads/main",
       "allowedDirtyPaths": [
         "doc/tags"
@@ -1634,7 +1633,7 @@
     },
     "LuaSnip": {
       "url": "https://github.com/L3MON4D3/LuaSnip.git",
-      "commit": "642b0c595e11608b4c18219e93b88d7637af27bc",
+      "commit": "0abc8f390b278c3b4aabc4c004ac8a088b65cf24",
       "ref": "refs/heads/master",
       "files": [
         "Makefile",
