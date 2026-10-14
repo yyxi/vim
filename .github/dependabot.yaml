@@ -6,6 +6,12 @@ updates:
       include:
         - '*'
     directory: '/'
+    ignore:
+      # pnpm/action-setup 6.1.0 bootstraps pnpm 11.25.0, whose engine identity
+      # check fails on Intel macOS (fixed in pnpm 11.26.0). Lift once the action's
+      # bootstrap moves to pnpm >= 11.26.0. See AGENTS.md.
+      - dependency-name: 'pnpm/action-setup'
+        versions: ['>= 6.1.0']
     groups:
       actions:
         update-types:
