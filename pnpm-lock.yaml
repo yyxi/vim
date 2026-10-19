@@ -7,52 +7,46 @@ importers:
     configDependencies: {}
     packageManagerDependencies:
       '@pnpm/exe':
-        specifier: 11.5.2
-        version: 11.5.2
+        specifier: 11.28.5
+        version: 11.28.5
       pnpm:
-        specifier: 11.5.2
-        version: 11.5.2
+        specifier: 11.28.5
+        version: 11.28.5
 
 packages:
 
-  '@pnpm/exe@11.5.2':
-    resolution: {integrity: sha512-4UFnP2rhNu1xjAQ+I1GdIUUEtCJuTYJlbpiWSFA4POAID3Lpt+2vrjImWO7eOJ7iCY3vpc4TFe2IW3sAolW4Kg==}
+  '@pnpm/exe@11.28.5':
+    resolution: {integrity: sha512-5gL/LJs72d+DVukoAt5UfEhbAd4atakeYezrSbJ4x872hHklk7i29TVisnOzS7xN51W3gbWj9SvW0VYiXK2Waw==}
     hasBin: true
 
-  '@pnpm/linux-arm64@11.5.2':
-    resolution: {integrity: sha512-MbJySnu2y9cCBqlODLjUlZ87JnRC3Inq40rvGHWJSrSQ0PnuHeSw2NDMnLI8Hf9hCY+ooussRc5iiR4IAkjUvg==}
+  '@pnpm/linux-arm64@11.28.5':
+    resolution: {integrity: sha512-5ung+TbPRcdomPTttXwTI4FMjBXYBeP6wfTBjVed241/Fz+ehyeXb0xfCmTPH4/9i8Rajb0dXw/uQeyU9O4z/w==}
     cpu: [arm64]
     os: [linux]
 
-  '@pnpm/linux-x64@11.5.2':
-    resolution: {integrity: sha512-g6g2BGpQA47wUACy6B1MdeSHPtnl6x4AeCg0IOWQ7xXorEtC+VRiSHhLpA5kByFGeSwyYh/nLc7mLul5DAaELw==}
+  '@pnpm/linux-x64@11.28.5':
+    resolution: {integrity: sha512-s3oD4zDc/dZeszEMjBe1PdydmLHVxxtP7LT8sBAmSCwOcfncf8836gy2VhD5l3g8btGrREuXPCALA86DdUUpSQ==}
     cpu: [x64]
     os: [linux]
 
-  '@pnpm/linuxstatic-arm64@11.5.2':
-    resolution: {integrity: sha512-xTxs9BLxYW39BPNGnmvYCUBnMPWm4mzmzujmdYbpRxDnBXrx55qPR5K/3LSohX7VrmsdDrYxuH6AmG1AaOlIfA==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@pnpm/linuxstatic-x64@11.5.2':
-    resolution: {integrity: sha512-RGmmc/SoGLD90gmOHcU85UEKNoNRstLvizli4wzDASmETz/VeqJOqU5nD1YBgjzcP72sUMS352dh4bmzTfKyvQ==}
+  '@pnpm/linuxstatic-x64@11.28.5':
+    resolution: {integrity: sha512-pwO1FT/TYJ0LQ2nDIBPtC47xRKu15LehFtKEOhkQXc1ySmNOKOoBLVfQ4/nuCCA7huqUdcxJtxiESdjiWXjBJQ==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@pnpm/macos-arm64@11.5.2':
-    resolution: {integrity: sha512-gW3A2jRlC3SJRw8qX2SAzjMIu9o98daTSqCKzeeYcjF/uEbtbz3dn4HqYrYffBnenKbc4hsgZQmNOHAvUKIlSg==}
+  '@pnpm/macos-arm64@11.28.5':
+    resolution: {integrity: sha512-TvRUQkV4wwUtz56r47Do+wCp7vQiVauguQ9dU4W9KPvh49ttYDAfUwqg+SjP1xPxowuqNjWh/JpZaSERD8hZ/g==}
     cpu: [arm64]
     os: [darwin]
 
-  '@pnpm/win-arm64@11.5.2':
-    resolution: {integrity: sha512-+VJCDoH/pRzLXBikwjvxgAnGfQufT8EALBX8cfSmrwD40JABUZvgPtjBjde7OwEoK/XwtlH8w+ZceFV0K3/YHQ==}
+  '@pnpm/win-arm64@11.28.5':
+    resolution: {integrity: sha512-ut/aa+cJaXsp+UeOXrhRE4PLl75ojl/+nd7sML7agERe9KdV2yzvrig4NefieJLWJkPoCfi+zPRj/tJwYr7eFA==}
     cpu: [arm64]
     os: [win32]
 
-  '@pnpm/win-x64@11.5.2':
-    resolution: {integrity: sha512-zgglREh75RbFgV/E0tNRS03ElX+hJOV43KRSSeaboxtj3ei1rrguxOgOCXUs/GsizoHVsuD+qXGABE4Kc4GMCg==}
+  '@pnpm/win-x64@11.28.5':
+    resolution: {integrity: sha512-f8l6ER01EakAjo5gbLW0TlsOQBODXTfHIgc2XRX64hxgFB2LUJ+XUcyk9uoU1sOCaBMf1jyrYri9AAc4cQvWiw==}
     cpu: [x64]
     os: [win32]
 
@@ -116,45 +110,41 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
-  pnpm@11.5.2:
-    resolution: {integrity: sha512-ccYx44IGbvwlYl1c8CkHXeB7YbN/bic1D72Esb2lhkyMGWetwoB3a0XDCnFcA1mjvgj+9C1bsJ4rmQKZeWkpFg==}
+  pnpm@11.28.5:
+    resolution: {integrity: sha512-SEVj0wtMKtJ8tIqpT/KzAtvOvI/2vyiBbCWJiG4UbOf3bzVPO8GkOOb16XaMMCqgpvet2CMpA81M+BQmy8FNng==}
     engines: {node: '>=22.13'}
     hasBin: true
 
 snapshots:
 
-  '@pnpm/exe@11.5.2':
+  '@pnpm/exe@11.28.5':
     dependencies:
       '@reflink/reflink': 0.1.19
       detect-libc: 2.1.2
     optionalDependencies:
-      '@pnpm/linux-arm64': 11.5.2
-      '@pnpm/linux-x64': 11.5.2
-      '@pnpm/linuxstatic-arm64': 11.5.2
-      '@pnpm/linuxstatic-x64': 11.5.2
-      '@pnpm/macos-arm64': 11.5.2
-      '@pnpm/win-arm64': 11.5.2
-      '@pnpm/win-x64': 11.5.2
+      '@pnpm/linux-arm64': 11.28.5
+      '@pnpm/linux-x64': 11.28.5
+      '@pnpm/linuxstatic-x64': 11.28.5
+      '@pnpm/macos-arm64': 11.28.5
+      '@pnpm/win-arm64': 11.28.5
+      '@pnpm/win-x64': 11.28.5
 
-  '@pnpm/linux-arm64@11.5.2':
+  '@pnpm/linux-arm64@11.28.5':
     optional: true
 
-  '@pnpm/linux-x64@11.5.2':
+  '@pnpm/linux-x64@11.28.5':
     optional: true
 
-  '@pnpm/linuxstatic-arm64@11.5.2':
+  '@pnpm/linuxstatic-x64@11.28.5':
     optional: true
 
-  '@pnpm/linuxstatic-x64@11.5.2':
+  '@pnpm/macos-arm64@11.28.5':
     optional: true
 
-  '@pnpm/macos-arm64@11.5.2':
+  '@pnpm/win-arm64@11.28.5':
     optional: true
 
-  '@pnpm/win-arm64@11.5.2':
-    optional: true
-
-  '@pnpm/win-x64@11.5.2':
+  '@pnpm/win-x64@11.28.5':
     optional: true
 
   '@reflink/reflink-darwin-arm64@0.1.19':
@@ -194,7 +184,7 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
-  pnpm@11.5.2: {}
+  pnpm@11.28.5: {}
 
 ---
 lockfileVersion: '9.0'
@@ -215,19 +205,19 @@ importers:
         version: 0.3.0
       '@vue/language-server':
         specifier: ^3.2.9
-        version: 3.3.12(typescript@5.9.3)
+        version: 3.3.13(typescript@5.9.3)
       neovim:
         specifier: ^5.4.0
         version: 5.5.0
       tombi:
         specifier: ^1.1.3
-        version: 1.7.3
+        version: 1.8.1
       vscode-langservers-extracted:
         specifier: ^4.10.0
         version: 4.10.0
       yaml-language-server:
         specifier: ^1.23.0
-        version: 1.24.0
+        version: 1.25.0
 
 packages:
 
@@ -299,60 +289,60 @@ packages:
   '@so-ric/colorspace@1.1.6':
     resolution: {integrity: sha512-/KiKkpHNOBgkFJwu9sh48LkHSMYGyuTcSFK/qMBdnOAlrRJzRSXAOFB5qwzaVQuDl8wAvHVMkaASQDReTahxuw==}
 
-  '@tombi-toml/cli-darwin-arm64@1.7.3':
-    resolution: {integrity: sha512-hU2rJV5FGGFi6s166LuJqZvrkiOE6+AhrRlhU14yLzwgKqF8SuvF8t1lPa0oKW9JFm1DhAb8hyyw/fS1TCTN8w==}
+  '@tombi-toml/cli-darwin-arm64@1.8.1':
+    resolution: {integrity: sha512-IdsFsQwUG3Kwaa3lYMvbYYrdAhHnJKbCBpuL+dXe+jgISEgbXF/ku5WzM5JyiBxgrY1T90If+v6Oa2nHciqwMA==}
     engines: {node: '>=14.0.0'}
     cpu: [arm64]
     os: [darwin]
 
-  '@tombi-toml/cli-darwin-x64@1.7.3':
-    resolution: {integrity: sha512-9lgO5e9n/uoydFrG1kUs5l0JasCb93evw+V81dD4Fj8eaLVvmAPVmSWphc+NIbDMRC2ySeSkXvUu+YswKJRV9A==}
+  '@tombi-toml/cli-darwin-x64@1.8.1':
+    resolution: {integrity: sha512-zCIWgPXr5eVDRYMYUnA6NbiPPCrLe/Ms81yh26WfPzWGveP0JsA2MtaabsUiFoUKSTpVx8wnHOe63TCOAip4jQ==}
     engines: {node: '>=14.0.0'}
     cpu: [x64]
     os: [darwin]
 
-  '@tombi-toml/cli-linux-arm64-musl@1.7.3':
-    resolution: {integrity: sha512-eu0tQh5kbAg+C/0MMsW9rYRDaKeCLq+IdPfDcQsXu7D7+TJtzSiMqHnLh9E+AEGLU4NejNSNpHJUe/NSqWEtMg==}
+  '@tombi-toml/cli-linux-arm64-musl@1.8.1':
+    resolution: {integrity: sha512-E/oTKnjOCVx+FGLvbEsOzVLMtll6vkALdnIoXwGus1BDvsMJKr9kuI55eZDPLTJjGmvQDxx7ISIH0VtM0R1UvQ==}
     engines: {node: '>=14.0.0'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@tombi-toml/cli-linux-arm64@1.7.3':
-    resolution: {integrity: sha512-Y7WB4w6X0y5VUKdPqaKlgduAH1QZZ353+czVsi5c7Go6aOT0fogGNrweeXaFhQHi2xdTkL4HuifL6WAz44XTMA==}
+  '@tombi-toml/cli-linux-arm64@1.8.1':
+    resolution: {integrity: sha512-R4S5Mu3KjdxoK2dGeDhfsSHP89iNPl92eBP5zIXGhA9AYPrQSaZbJEa6B2cT+gRUOxzq+T3Z5F3mgMNkHixLPg==}
     engines: {node: '>=14.0.0'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@tombi-toml/cli-linux-x64-musl@1.7.3':
-    resolution: {integrity: sha512-gokqNUL0gwMDGc4kKMFoZW59VK5HEFZpi186zp6t7xGK1gMAbQeD/bB2r+d4OEsMDbZQjMkKtzqWDQK/MU1qIw==}
+  '@tombi-toml/cli-linux-x64-musl@1.8.1':
+    resolution: {integrity: sha512-ujmicSlywVP50Ce2NzL+wBO8RaZpnN/KwAx8P0Oy/bpxfRkKz8rtw+SEoKPV9Wg1+bE/o1NjzCA/tSHVlSdxng==}
     engines: {node: '>=14.0.0'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@tombi-toml/cli-linux-x64@1.7.3':
-    resolution: {integrity: sha512-QshLGGFcnNZMjBjpr8C4pNcPsZvjmOI6IzFBLA1PW1tuvC7vE4Tk5RlCgZYTj4VgGuBIcWKHD6ePHuqXsRUxtw==}
+  '@tombi-toml/cli-linux-x64@1.8.1':
+    resolution: {integrity: sha512-h7Kv86SxWD8PB5cfHoGIhyO3CDXXm5e3lnxmnwNXv0SZEnc/X9HbxcxTRiOXxlOTxh3rlqSjqKNJohbsaeKyAg==}
     engines: {node: '>=14.0.0'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@tombi-toml/cli-sunos-x64@1.7.3':
-    resolution: {integrity: sha512-CU+0IcWP8Ph2ghn8sAfmMCRmUfcPwkSKmRkNjHX/UrLPaBnEQa9S6ruNaGxpfh9dhlXhUNAPZrF2hM5gq0pZPQ==}
+  '@tombi-toml/cli-sunos-x64@1.8.1':
+    resolution: {integrity: sha512-fOIGBCQKj5/Ku0MJWR1yVa4AxWkLbhuCobX1oXusGT6KfjQMrGJu/otcv0MlooW4GWI9TnC+nHcWLdjQN/KvWw==}
     engines: {node: '>=14.0.0'}
     cpu: [x64]
     os: [sunos]
 
-  '@tombi-toml/cli-win32-arm64@1.7.3':
-    resolution: {integrity: sha512-aGs78OqtvBNz/7XX8V6eBb8VvOt2nW5KTrd3SXmf3avmwK9PeXisvEml2ycw+ucyQL4e3QvD+j3eYowUtj+qMA==}
+  '@tombi-toml/cli-win32-arm64@1.8.1':
+    resolution: {integrity: sha512-ux0ns42d6Z9UYxvJQEuxUnVT//x7QrGCRk+zbZsF4CClyespb7eiNJ+OyY8HBtkYeCPkBqydTOpLTa0l7nQSQA==}
     engines: {node: '>=14.0.0'}
     cpu: [arm64]
     os: [win32]
 
-  '@tombi-toml/cli-win32-x64@1.7.3':
-    resolution: {integrity: sha512-acFu+bWgz5seBLZ58ork8h+MfYtjPkwEZmmFH3dnnCogF02rGNxmf8IycTLOYebrDkb0ALJgm6cImk1CxjM3Cg==}
+  '@tombi-toml/cli-win32-x64@1.8.1':
+    resolution: {integrity: sha512-plIhE4mXC+nqYzgTY6U+StYpwRZ5OhrHS88+R0AOEE8E33wCLvojzF62Sp9ijvW1gwcIN0o5Vx5st0D6NKY+hg==}
     engines: {node: '>=14.0.0'}
     cpu: [x64]
     os: [win32]
@@ -414,26 +404,26 @@ packages:
   '@vue/compiler-dom@3.5.43':
     resolution: {integrity: sha512-PEZoAk3NQmsn/ejMzSOCyTYqwGqczrWm70PuhBKjjv1+TCoQAaO/zOqNwjV+honlNstT5ILxtc+8r8UUfj+iEQ==}
 
-  '@vue/language-core@3.3.12':
-    resolution: {integrity: sha512-k7uIKR0n4CBidk233y7cac9osnDQ5WRidTl6nsrNvpZ3nf8cx9iJxRVsRzVsoPRHbowT/iKgGMTS9RGov3jeIA==}
+  '@vue/language-core@3.3.13':
+    resolution: {integrity: sha512-axA0Xemn5LuUKuKWob0/kVq7xQ2mJJM6VqA9Exvt35nM9yRC31goWVve/G/Zb2ZCLsXC8FHYjjfXlnshknSCew==}
 
   '@vue/language-plugin-pug@3.2.9':
     resolution: {integrity: sha512-EaRtg3/1TQo9D20nBex1G3NtWElJbSgiiisZe6TwiNKpSCRwFmmvuAkz+AfMmsQc53si3zbkApU8RF0o6ULQag==}
 
-  '@vue/language-server@3.3.12':
-    resolution: {integrity: sha512-xuI8VPxqtR+V8dxOr30wdtbKDAviuFrB1lkl1+6DBUsG2CtIJVjzDygd8eaSFmgNlvZVXebgqN5Kp9Fo+1fASA==}
+  '@vue/language-server@3.3.13':
+    resolution: {integrity: sha512-6r7lkSxoG9KvppQIHifQ7b7SopFCLhnnRlyGjZxkf+pxiOhUhSQZ8Qzv9OXE9tu2BdIQ5Iaw+p/3Ho+QGHbppQ==}
     hasBin: true
     peerDependencies:
       typescript: '*'
 
-  '@vue/language-service@3.3.12':
-    resolution: {integrity: sha512-wwQIdI/guixzxyfhxXyjZrG29T5vZMpwsI1gQeqgd5H3db5lk8/s9nTSTfgcNlMP+LbRPEZcQ7WMWE9ydEdKUQ==}
+  '@vue/language-service@3.3.13':
+    resolution: {integrity: sha512-HmRQz3bEZ0k8wfrydgPCNlnLxW4dHqATb01oQ4pr+tftHE6HxacknrAlzReIbPSZ4Y5d4r/s0AfpUnHtYoDZjA==}
 
   '@vue/shared@3.5.43':
     resolution: {integrity: sha512-uksS7YGMR5NZyr4JNq0Rp+QyLns0ueaz20KwzIPW9R0LH1Vnt4E+XUM29PNseEbf1www2gOuhuDi5AKOIXag9Q==}
 
-  '@vue/typescript-plugin@3.3.12':
-    resolution: {integrity: sha512-svxFiW1e+qV3giEJiRej4UpGyjN2LjMxfd8JpQLboCITX8cjCs70PCg5nt2b3RWdJsJ8t8OI45S6ch8MAJgTwg==}
+  '@vue/typescript-plugin@3.3.13':
+    resolution: {integrity: sha512-L/ht0WIIB5GOPYx0ooWoVQztsI/v1h7lW2/ND0YBuoBYHTteGPfRFzM5j0/uD1nf/rYezqWHhNDDmww2Co53KA==}
 
   acorn@7.4.1:
     resolution: {integrity: sha512-nQyp0o1/mNdbTO1PO6kHkwSrmgZ0MT/jCCpNiwbUjGoRN4dlBhqJtoQuCnEOKzgTVwg0ZWiCoQy6SxMebQVh8A==}
@@ -450,11 +440,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv-i18n@4.2.0:
     resolution: {integrity: sha512-v/ei2UkCEeuKNXh8RToiFsUclmU+G57LO1Oo22OagNMENIw+Yb8eMwvHu7Vn9fmkjJyv6XclhJ8TbuigSglPkg==}
@@ -721,8 +706,8 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
-  prettier@3.9.9:
-    resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
+  prettier@3.9.10:
+    resolution: {integrity: sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -793,8 +778,8 @@ packages:
   token-stream@1.0.0:
     resolution: {integrity: sha512-VSsyNPPW74RpHwR8Fc21uubwHY7wMDeJLys2IX5zJNih+OnAnaifKHo+1LHT7DAdloQ7apeaaWg8l7qnf/TnEg==}
 
-  tombi@1.7.3:
-    resolution: {integrity: sha512-6VTttuWpnOzzuF3UhdjOVNNT1+Nkb8fKGyX6BlQ7GinstxZtyZjtBxwiVVIhAAFV68t7TcYZ13KKrzGVmdGTjg==}
+  tombi@1.8.1:
+    resolution: {integrity: sha512-nrYmbNY2HQqVxtsLI38WbWId06rjzLmrVKknB+uByiiCcADAF+HBX9bNHxbcP6Qt5jWOqk/ItROIhBeF7PFw7w==}
     engines: {node: '>=14.0.0'}
     hasBin: true
 
@@ -826,8 +811,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@14.0.2:
-    resolution: {integrity: sha512-xZe/16rV4aa+HGSOCiY2YeLT1OybRLrrkL/Rqaq7p7GMVXjFh+6wN4oMYgjFmnSnhY8t6Xpdl2l9qmnHYuMHwQ==}
+  uuid@14.0.3:
+    resolution: {integrity: sha512-Sc5u1VVln93y1Xnz4R+CunOZc7R9LUcTmhj7Rc7Eg3HVcf7rVn2FOoa812fe0W8p3jD7xeoGSYbfqCGGH2B6xw==}
     hasBin: true
 
   volar-service-css@0.0.71:
@@ -938,8 +923,8 @@ packages:
   vscode-uri@3.2.0:
     resolution: {integrity: sha512-m2gXo3bn0G1kT9InzMf07fTbqMbGtyckj3bH5ktLO+1Ssv+yiATZ4dhwaQv9UZWxJh6E9IFGnQyjgWVDWVBDrg==}
 
-  vue-component-meta@3.3.12:
-    resolution: {integrity: sha512-UT2ax02yye/xT/eiVBaXjuLDS92spt2V6Aj9C3gJpKKBZg/etrDIGCTLG34M4zGN5qWJEkcpnRjDt3wXBoxOjw==}
+  vue-component-meta@3.3.13:
+    resolution: {integrity: sha512-VnqcGTxB4n56qWfsuroOL+cEvjkV8uEffGy57bqlzePAQKQMLBXAjIKIntyngunmMnxWHMLzkYgRxdx9I1H/hg==}
     peerDependencies:
       typescript: '*'
     peerDependenciesMeta:
@@ -960,8 +945,8 @@ packages:
   yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
 
-  yaml-language-server@1.24.0:
-    resolution: {integrity: sha512-+HGcwu4M7IC+UDhDZScTZR8qsl2MMj/X1E5e83QcWzWn2pctj0fv8HHdrHHcbc1KB3CuRPJ4gc1Nm36D0iCu0g==}
+  yaml-language-server@1.25.0:
+    resolution: {integrity: sha512-SDMkX/TWbP7yzTpvB5PAvirdfwlB+oqkXRZLQ6jR4f1XP42cF/mVeN35Mc1TIG2Dh0dpW82V3NSZ7vaVrdSyZw==}
     hasBin: true
 
   yaml@2.8.3:
@@ -980,14 +965,14 @@ snapshots:
     dependencies:
       '@flatten-js/interval-tree': 2.0.3
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       antsibull-docs: 1.1.4
       glob: 13.0.6
       handlebars: 4.7.10
       ini: 7.0.0
       lodash: 4.18.1
       shell-quote: 1.12.0
-      uuid: 14.0.2
+      uuid: 14.0.3
       vscode-languageserver: 9.0.1
       vscode-languageserver-protocol: 3.18.4
       vscode-languageserver-textdocument: 1.0.15
@@ -1054,31 +1039,31 @@ snapshots:
       color: 5.0.3
       text-hex: 1.0.0
 
-  '@tombi-toml/cli-darwin-arm64@1.7.3':
+  '@tombi-toml/cli-darwin-arm64@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-darwin-x64@1.7.3':
+  '@tombi-toml/cli-darwin-x64@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-linux-arm64-musl@1.7.3':
+  '@tombi-toml/cli-linux-arm64-musl@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-linux-arm64@1.7.3':
+  '@tombi-toml/cli-linux-arm64@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-linux-x64-musl@1.7.3':
+  '@tombi-toml/cli-linux-x64-musl@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-linux-x64@1.7.3':
+  '@tombi-toml/cli-linux-x64@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-sunos-x64@1.7.3':
+  '@tombi-toml/cli-sunos-x64@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-win32-arm64@1.7.3':
+  '@tombi-toml/cli-win32-arm64@1.8.1':
     optional: true
 
-  '@tombi-toml/cli-win32-x64@1.7.3':
+  '@tombi-toml/cli-win32-x64@1.8.1':
     optional: true
 
   '@types/triple-beam@1.3.5': {}
@@ -1162,7 +1147,7 @@ snapshots:
       '@vue/compiler-core': 3.5.43
       '@vue/shared': 3.5.43
 
-  '@vue/language-core@3.3.12':
+  '@vue/language-core@3.3.13':
     dependencies:
       '@volar/language-core': 2.4.28
       '@vue/compiler-dom': 3.5.43
@@ -1180,19 +1165,19 @@ snapshots:
       pug-parser: 6.0.0
       vscode-languageserver-textdocument: 1.0.15
 
-  '@vue/language-server@3.3.12(typescript@5.9.3)':
+  '@vue/language-server@3.3.13(typescript@5.9.3)':
     dependencies:
       '@volar/language-server': 2.4.28(typescript@5.9.3)
-      '@vue/language-core': 3.3.12
-      '@vue/language-service': 3.3.12(typescript@5.9.3)
-      '@vue/typescript-plugin': 3.3.12(typescript@5.9.3)
+      '@vue/language-core': 3.3.13
+      '@vue/language-service': 3.3.13(typescript@5.9.3)
+      '@vue/typescript-plugin': 3.3.13(typescript@5.9.3)
       typescript: 5.9.3
       vscode-uri: 3.2.0
 
-  '@vue/language-service@3.3.12(typescript@5.9.3)':
+  '@vue/language-service@3.3.13(typescript@5.9.3)':
     dependencies:
       '@volar/language-service': 2.4.28(typescript@5.9.3)
-      '@vue/language-core': 3.3.12
+      '@vue/language-core': 3.3.13
       '@vue/shared': 3.5.43
       path-browserify: 1.0.1
       volar-service-css: 0.0.71(@volar/language-service@2.4.28(typescript@5.9.3))
@@ -1209,13 +1194,13 @@ snapshots:
 
   '@vue/shared@3.5.43': {}
 
-  '@vue/typescript-plugin@3.3.12(typescript@5.9.3)':
+  '@vue/typescript-plugin@3.3.13(typescript@5.9.3)':
     dependencies:
       '@volar/typescript': 2.4.28(typescript@5.9.3)
-      '@vue/language-core': 3.3.12
+      '@vue/language-core': 3.3.13
       '@vue/shared': 3.5.43
       path-browserify: 1.0.1
-      vue-component-meta: 3.3.12(typescript@5.9.3)
+      vue-component-meta: 3.3.13(typescript@5.9.3)
     transitivePeerDependencies:
       - typescript
 
@@ -1225,8 +1210,8 @@ snapshots:
     optionalDependencies:
       ajv: 8.20.0
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.20.0
 
   ajv-i18n@4.2.0(ajv@8.20.0):
@@ -1487,7 +1472,7 @@ snapshots:
 
   picomatch@4.0.7: {}
 
-  prettier@3.9.9: {}
+  prettier@3.9.10: {}
 
   pug-error@2.1.0: {}
 
@@ -1542,17 +1527,17 @@ snapshots:
 
   token-stream@1.0.0: {}
 
-  tombi@1.7.3:
+  tombi@1.8.1:
     optionalDependencies:
-      '@tombi-toml/cli-darwin-arm64': 1.7.3
-      '@tombi-toml/cli-darwin-x64': 1.7.3
-      '@tombi-toml/cli-linux-arm64': 1.7.3
-      '@tombi-toml/cli-linux-arm64-musl': 1.7.3
-      '@tombi-toml/cli-linux-x64': 1.7.3
-      '@tombi-toml/cli-linux-x64-musl': 1.7.3
-      '@tombi-toml/cli-sunos-x64': 1.7.3
-      '@tombi-toml/cli-win32-arm64': 1.7.3
-      '@tombi-toml/cli-win32-x64': 1.7.3
+      '@tombi-toml/cli-darwin-arm64': 1.8.1
+      '@tombi-toml/cli-darwin-x64': 1.8.1
+      '@tombi-toml/cli-linux-arm64': 1.8.1
+      '@tombi-toml/cli-linux-arm64-musl': 1.8.1
+      '@tombi-toml/cli-linux-x64': 1.8.1
+      '@tombi-toml/cli-linux-x64-musl': 1.8.1
+      '@tombi-toml/cli-sunos-x64': 1.8.1
+      '@tombi-toml/cli-win32-arm64': 1.8.1
+      '@tombi-toml/cli-win32-x64': 1.8.1
 
   triple-beam@1.4.1: {}
 
@@ -1571,7 +1556,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@14.0.2: {}
+  uuid@14.0.3: {}
 
   volar-service-css@0.0.71(@volar/language-service@2.4.28(typescript@5.9.3)):
     dependencies:
@@ -1715,10 +1700,10 @@ snapshots:
 
   vscode-uri@3.2.0: {}
 
-  vue-component-meta@3.3.12(typescript@5.9.3):
+  vue-component-meta@3.3.13(typescript@5.9.3):
     dependencies:
       '@volar/typescript': 2.4.28(typescript@5.9.3)
-      '@vue/language-core': 3.3.12
+      '@vue/language-core': 3.3.13
       path-browserify: 1.0.1
     optionalDependencies:
       typescript: 5.9.3
@@ -1747,7 +1732,7 @@ snapshots:
 
   yallist@4.0.0: {}
 
-  yaml-language-server@1.24.0:
+  yaml-language-server@1.25.0:
     dependencies:
       '@vscode/l10n': 0.0.18
       ajv: 8.20.0
@@ -1755,7 +1740,7 @@ snapshots:
       ajv-i18n: 4.2.0(ajv@8.20.0)
       jsonc-parser: 3.3.1
       picomatch: 4.0.7
-      prettier: 3.9.9
+      prettier: 3.9.10
       request-light: 0.5.8
       vscode-languageserver: 9.0.1
       vscode-languageserver-textdocument: 1.0.15
