@@ -184,7 +184,6 @@ PNPM_INSTALL_PRODUCTION = (
     "--verify-store-integrity",
     "--reporter",
     "append-only",
-    "--pm-on-fail=error",
     "--config.node-linker=isolated",
     "--config.virtual-store-dir=node_modules/.pnpm",
     "--config.enable-global-virtual-store=false",
