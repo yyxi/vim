@@ -49,8 +49,8 @@ local in_flight = {}
 ---Run conform's CLI formatters from `formatters_by_ft` once, without
 ---touching any LSP. Fires once after the last LSP step so the ordered chain
 ---replicates conform's default LSP-then-CLI behavior. `quiet` suppresses
----the "no formatters available" notification when `formatters_by_ft[ft]`
----is empty (e.g. toml today).
+---the "no formatters available" notification when no formatter of
+---`formatters_by_ft[ft]` is available (e.g. toml outside oxfmt projects).
 ---@param bufnr integer
 ---@param range conform.Range|nil
 ---@param on_done fun()

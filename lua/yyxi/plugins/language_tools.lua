@@ -3,27 +3,52 @@ local M = {}
 local environment = require('yyxi.utilities.environment')
 local lsp_init_params = require('yyxi.lsp.init_params')
 
+-- the config files oxfmt reads: a project with one formats with oxfmt, never with Prettier
+local oxfmt_config_files = { '.oxfmtrc.json', '.oxfmtrc.jsonc', 'oxfmt.config.ts' }
+
+---@param source integer|string buffer or path
+---@return string?
+local function oxfmt_root(source) return vim.fs.root(source, { oxfmt_config_files }) end
+
+-- oxfmt in projects with an oxfmt config, Prettier elsewhere: conform runs the first available
+-- formatter of the list.
+local function oxfmt_or_prettier() return { 'oxfmt', 'prettier', stop_after_first = true } end
+
 function M.conform()
   ---@type conform.setupOpts
   local opts = {
     formatters_by_ft = {
-      javascript = { 'prettier' },
-      json = { 'prettier' },
-      json5 = { 'prettier' },
-      jsonc = { 'prettier' },
+      javascript = oxfmt_or_prettier(),
+      javascriptreact = oxfmt_or_prettier(),
+      json = oxfmt_or_prettier(),
+      json5 = oxfmt_or_prettier(),
+      jsonc = oxfmt_or_prettier(),
       lua = { 'stylua' },
       tex = { 'latexindent' },
-      markdown = { 'prettier' },
+      markdown = oxfmt_or_prettier(),
       go = {},
       rust = {},
       sh = { 'shfmt' },
-      typescript = { 'prettier' },
-      typescriptreact = { 'prettier' },
-      css = { 'prettier' },
-      vue = { 'prettier' },
-      yaml = { 'prettier' },
+      -- after tombi and eslint (see `lsp_format`), and only in oxfmt projects, so `gq`
+      -- elsewhere keeps its fallback instead of reporting a missing formatter
+      toml = function(bufnr) return oxfmt_root(bufnr) and { 'oxfmt' } or {} end,
+      typescript = oxfmt_or_prettier(),
+      typescriptreact = oxfmt_or_prettier(),
+      css = oxfmt_or_prettier(),
+      vue = oxfmt_or_prettier(),
+      yaml = oxfmt_or_prettier(),
     },
     formatters = {
+      -- rooted only at an oxfmt config (conform's default also takes any `vite.config`), so a
+      -- project that merely has oxfmt installed keeps Prettier instead of oxfmt's defaults
+      oxfmt = {
+        cwd = function(_, ctx) return oxfmt_root(ctx.dirname) end,
+        require_cwd = true,
+      },
+      -- never in an oxfmt project, not even before its oxfmt is installed
+      prettier = {
+        condition = function(_, ctx) return oxfmt_root(ctx.dirname) == nil end,
+      },
       shfmt = {
         prepend_args = { '-i', '2' },
       },
@@ -105,10 +130,34 @@ function M.lsp_fix()
         'eslint',
       },
     },
+    -- oxlint before eslint, as `esclint --fix` runs them, and after vtsls, so the lint
+    -- config has the last word on import order
+    javascript = {
+      order = {
+        'vtsls',
+        'oxlint',
+        'eslint',
+      },
+    },
+    javascriptreact = {
+      order = {
+        'vtsls',
+        'oxlint',
+        'eslint',
+      },
+    },
     typescript = {
       order = {
         'ts_ls',
         'vtsls',
+        'oxlint',
+        'eslint',
+      },
+    },
+    typescriptreact = {
+      order = {
+        'vtsls',
+        'oxlint',
         'eslint',
       },
     },
@@ -131,6 +180,7 @@ function M.lsp_fix()
     vue = {
       order = {
         'vtsls',
+        'oxlint',
         'eslint',
       },
     },
@@ -158,6 +208,15 @@ function M.none_ls()
 end
 
 local function concat(first, second) return vim.list_extend(first, second) end
+
+-- the config files esclint runs Oxlint for, and the binary each project installs
+local oxlint_config_files = {
+  'oxlint.config.ts',
+  'oxlint.config.mts',
+  '.oxlintrc.json',
+  '.oxlintrc.jsonc',
+}
+local oxlint_binary = 'node_modules/.bin/oxlint'
 
 local function ternary(condition, true_value, false_value)
   return condition and true_value or false_value
@@ -279,6 +338,14 @@ function M.lsp()
     workspace_command_handler(
       'typescript.sortImports',
       function(ctx) return { vim.api.nvim_buf_get_name(ctx.bufnr) } end,
+      3000
+    ),
+  })
+
+  fix.register('oxlint', {
+    workspace_command_handler(
+      'oxc.fixAll',
+      function(ctx) return { { uri = vim.uri_from_bufnr(ctx.bufnr) } } end,
       3000
     ),
   })
@@ -809,6 +876,36 @@ function M.lsp()
 
       return true
     end),
+    -- One server per project, at its Oxlint config, run from the project's own oxlint found
+    -- upward as esclint finds it, and nowhere else: esclint never runs Oxlint without a config,
+    -- and its binary lives in each project, not on PATH. The config alone decides type-aware
+    -- linting and unused directives, as on the command line, so no settings are sent and
+    -- nvim-lspconfig's `.oxlintrc.json` heuristic for `typeAware` is left out.
+    oxlint = function()
+      vim.lsp.config('oxlint', {
+        capabilities = capabilities,
+        root_dir = function(bufnr, on_dir)
+          -- one nested list: the names have equal priority, so the nearest config wins
+          local root = vim.fs.root(bufnr, { oxlint_config_files })
+          if root and environment.find_upward_executable(root, oxlint_binary) then on_dir(root) end
+        end,
+        cmd = function(dispatchers, config)
+          return vim.lsp.rpc.start({
+            environment.find_upward_executable(config.root_dir, oxlint_binary),
+            '--lsp',
+          }, dispatchers)
+        end,
+        before_init = function(params, config)
+          params.initializationOptions = vim.tbl_deep_extend(
+            'force',
+            config.init_options or {},
+            { settings = config.settings or {} }
+          )
+        end,
+      })
+
+      return true
+    end,
     eslint = ternary(is_installed('vscode-eslint-language-server'), function()
       vim.lsp.config('eslint', {
         filetypes = {

@@ -92,6 +92,26 @@ function M.has_executable(name, path_value)
   return M.find_executable(name, path_value or vim.env.PATH) ~= nil
 end
 
+---Search `start` and then each parent directory for the executable at
+---`relative`, e.g. a project's `node_modules/.bin/oxlint` from a package
+---directory below the workspace root that installed it. A relative `start`
+---is taken from the working directory.
+---@param start string
+---@param relative string
+---@return string?
+function M.find_upward_executable(start, relative)
+  local directory = vim.fs.abspath(start)
+
+  while true do
+    local candidate = vim.fs.joinpath(directory, relative)
+    if M.is_executable(candidate) then return candidate end
+
+    local parent = vim.fs.dirname(directory)
+    if parent == directory then return nil end
+    directory = parent
+  end
+end
+
 ---@param path string
 ---@return string
 function M.normalize_path(path)
