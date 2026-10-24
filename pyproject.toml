@@ -2,7 +2,7 @@
 name = "vim"
 version = "0.1.0"
 requires-python = ">=3.12,<3.15"
-dependencies = ["pip>=25.1.1", "pynvim>=0.5.2", "ruff>=0.15.12", "ty>=0.0.34"]
+dependencies = ["pip>=26.2.2", "pynvim>=0.5.2", "ruff>=0.15.12", "ty>=0.0.34"]
 
 [dependency-groups]
 dev = ["semgrep>=1.90.0"]
@@ -13,6 +13,13 @@ py-modules = []
 [tool.uv]
 managed = true
 exclude-newer = "10 days"
+constraint-dependencies = ["certifi>=2026.10.19"]
+
+# Admit the emSign CA fixes without admitting later, unaged releases.
+# Remove this table on 2026-10-31, once both fixes clear the ten-day delay.
+[tool.uv.exclude-newer-package]
+pip = "2026-10-21T00:00:00Z"
+certifi = "2026-10-21T00:00:00Z"
 
 [tool.uv.workspace]
 members = []

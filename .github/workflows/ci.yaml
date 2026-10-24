@@ -92,16 +92,17 @@ jobs:
           key: managed-vendor-${{ runner.os }}-${{ runner.arch }}-${{ env.TREE_SITTER_VERSION }}-${{ hashFiles('source-manifest.json', 'manage') }}
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          version: '0.11.7'
+          version: 'latest'
           enable-cache: true
           ignore-nothing-to-cache: true
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24.16.0'
+          node-version: 'lts/*'
+          check-latest: true
           package-manager-cache: false
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
-          version: '12.14.0'
+          version: 'latest'
           cache: true
           cache_dependency_path: pnpm-lock.yaml
           run_install: false

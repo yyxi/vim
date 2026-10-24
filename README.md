@@ -5,7 +5,7 @@
 On Linux or macOS, install these tools and make sure they are on your `PATH`:
 
 - Neovim 0.12.x and Git 2.52+.
-- CPython 3.12–3.14 (non-free-threaded), uv, Node.js 24+, and pnpm 12+.
+- CPython 3.12–3.14 (non-free-threaded), uv 0.13.4+, Node.js 24.22.1+, and pnpm 12+.
 - Tree-sitter CLI 0.26.1+, a C/C++ compiler, and Make.
 
 Cargo 1.85+ is optional.

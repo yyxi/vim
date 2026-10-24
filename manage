@@ -145,7 +145,8 @@ PYTHON_RUNTIME_DESCRIPTION = "non-free-threaded CPython " + "–".join(
 )
 PYTHON_PACKAGE_INPUTS = ("pyproject.toml", "uv.lock")
 NODE_PACKAGE_INPUTS = ("package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml")
-NODE_MINIMUM_VERSION = (24, 0, 0)
+# Node 24.22.1 includes the October 2026 Brotli, TLS, and DNS security fixes.
+NODE_MINIMUM_VERSION = (24, 22, 1)
 NODE_RUNTIME_PROBES = (("tombi", "--version"),)
 NODE_STATE_VERSION = 1
 PYTHON_ENV_STATE_VERSION = 1

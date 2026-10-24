@@ -207,6 +207,31 @@ class ManageTests(FixtureTestCase):
                     expected,
                 )
 
+    def test_node_runtime_requires_security_patch_and_successful_probe(self):
+        for output, status, expected in (
+            ("v24.16.0", 0, False),
+            ("v24.22.0", 0, False),
+            ("v24.22.1", 0, True),
+            ("v24.22.2", 0, True),
+            ("v26.12.1", 0, True),
+            ("invalid", 0, False),
+            ("v24.22.1", 1, False),
+        ):
+            result = manage.subprocess.CompletedProcess(
+                ["node", "--version"], status, output, ""
+            )
+            with (
+                self.subTest(output=output, status=status),
+                patch.object(manage, "resolve_required", return_value="node"),
+                patch.object(manage, "run_captured_command", return_value=result),
+            ):
+                self.assertEqual(manage.node_runtime_ok({}, str(self.root)), expected)
+        with (
+            patch.object(manage, "resolve_required", return_value="node"),
+            patch.object(manage, "run_captured_command", return_value=None),
+        ):
+            self.assertFalse(manage.node_runtime_ok({}, str(self.root)))
+
     def test_invalid_manifest_fails_before_installation(self):
         path = self.root / "source-manifest.json"
         for value in ([], {"sources": {"fixture": {"commit": "not-a-commit"}}}):

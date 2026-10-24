@@ -7,6 +7,9 @@ allowBuilds:
 blockExoticSubdeps: true
 childConcurrency: 1
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  # Reviewed URI-normalization security fixes; keep the delay for other releases.
+  - fast-uri@3.1.9
 strictDepBuilds: true
 trustPolicy: no-downgrade
 trustPolicyExclude:
