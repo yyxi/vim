@@ -879,11 +879,14 @@ function M.lsp()
     -- One server per project, at its Oxlint config, run from the project's own oxlint found
     -- upward as esclint finds it, and nowhere else: esclint never runs Oxlint without a config,
     -- and its binary lives in each project, not on PATH. The config alone decides type-aware
-    -- linting and unused directives, as on the command line, so no settings are sent and
-    -- nvim-lspconfig's `.oxlintrc.json` heuristic for `typeAware` is left out.
+    -- linting and unused directives, as on the command line, so nvim-lspconfig's
+    -- `.oxlintrc.json` heuristic for `typeAware` is left out. Nested configs are off: a
+    -- project has one config, and the server would otherwise load the configs of the separate
+    -- projects below it (test fixtures, worktrees) and report their root-only options.
     oxlint = function()
       vim.lsp.config('oxlint', {
         capabilities = capabilities,
+        settings = { disableNestedConfig = true },
         root_dir = function(bufnr, on_dir)
           -- one nested list: the names have equal priority, so the nearest config wins
           local root = vim.fs.root(bufnr, { oxlint_config_files })

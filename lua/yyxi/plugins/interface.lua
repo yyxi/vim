@@ -588,6 +588,7 @@ function M.zen_mode()
       cursorcolumn = false,
       foldcolumn = '0',
       list = false,
+      wrap = false,
     },
     plugins = {
       options = {
